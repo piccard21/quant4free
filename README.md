@@ -81,6 +81,7 @@ Dokumentationsregel:
 ## V. Weitere Dokumentation
 - [Strategie-Dokumentation](docs/strategy.md)
 - [Architektur-Dokumentation](docs/architecture.md)
+- [Datenmodell-Plan](docs/data-model.md)
 - [Troubleshooting Guide](docs/troubleshooting.md)
 
 ## VI. Git & Versionierung
@@ -112,11 +113,14 @@ Die neue modulare Paketstruktur ist angelegt, fachlich aber noch nicht implement
 - `cli/`
 - `shared/`
 
+AP1 ist abgeschlossen: Der Datenmodell-Entwurf und Schema-Plan ist in [docs/data-model.md](docs/data-model.md) dokumentiert. `init.sql` und `stocks_db.sql` bleiben vorerst Legacy-kompatibel; es wurde noch keine Schema-Migration ausgefuehrt.
+
 Der Umbau erfolgt ab hier schrittweise:
 
-1. Fixture-/Demo-Daten nutzbar machen.
-2. Erste Strategie gegen Benchmark evaluieren.
-3. Live-Funktionen anschließend wieder anbinden.
+1. Minimalen Datenzugriff fuer Fixture-/Demo-Daten bauen.
+2. S&P-500-Universum und Benchmark laden.
+3. Erste Strategie gegen Benchmark evaluieren.
+4. Live-Funktionen anschließend wieder anbinden.
 
 Der Arbeitsplan steht in [plan.md](plan.md).
 

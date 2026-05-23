@@ -2,9 +2,19 @@
 
 ## Umsetzungsstand
 
-Stand: AP0 ist abgeschlossen.
+Stand: AP1 ist abgeschlossen.
 
 Erledigt:
+
+AP1:
+
+- Datenmodell-Entwurf und Schema-Plan in `docs/data-model.md` dokumentiert.
+- Bestehende Tabellen aus `init.sql` und `stocks_db.sql` in Rohdaten, Legacy-Settings, Legacy-Snapshots, Live-Betrieb und Research eingeordnet.
+- Zieltabellen fuer Mandanten, Portfolios, Universen, Benchmarks, Strategieinstanzen, Evaluation-Runs und Live-Betrieb festgelegt.
+- Migrationsreihenfolge AP2 bis AP6 definiert.
+- Entscheidung festgehalten: `init.sql` und `stocks_db.sql` bleiben vorerst Legacy-kompatibel; AP1 fuehrt noch keine Schema-Migration aus.
+
+AP0:
 
 - Bestehende Module nach `legacy/current_system/` verschoben:
   - `core/`
@@ -27,7 +37,7 @@ Erledigt:
 - `.gitignore` um lokale IDE-/Venv-Verzeichnisse erweitert.
 - `compileall` fuer Legacy und neue Paketstruktur erfolgreich ausgefuehrt.
 
-Geprueft:
+Geprueft AP0:
 
 ```bash
 python3 -m compileall legacy/current_system
@@ -45,7 +55,7 @@ docker compose run --rm -e PYTHONPATH=/app/legacy/current_system app python -m c
 
 Naechster Schritt:
 
-- AP1: Datenmodell-Entwurf und Schema-Plan.
+- AP2: Minimaler Datenzugriff fuer das neue modulare System.
 
 ## Zielbild
 
