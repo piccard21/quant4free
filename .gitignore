@@ -1,5 +1,8 @@
 *.log
 .env
+.idea/
+.venv/
+.venv-linux/
 __pycache__/
 *.pyc
 .DS_Store

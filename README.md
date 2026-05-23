@@ -1,8 +1,27 @@
 # Quant Portfolio System
 
-Regelbasiertes quantitatives Portfolio-Management-System für Aktien.
+Regelbasiertes quantitatives Portfolio- und Strategie-Evaluationssystem für Aktien.
 
-Dieses System erzeugt Kauf- und Verkaufsvorschläge, simuliert ein regelbasiertes Shadow Portfolio und trackt ein reales Portfolio inklusive Cash, Gebühren, Steuern und Performance.
+Das Projekt wird vom bisherigen operativen Portfolio-System zu einem modularen Quant-Framework weiterentwickelt. Die Kernfrage des neuen Systems lautet:
+
+```text
+Schlägt eine Strategie mit bestimmten Parametern, Indikatoren, Datenquellen und einem definierten Universum ihren passenden Benchmark?
+```
+
+Das System soll Strategien reproduzierbar testen, mit Benchmarks vergleichen und später wieder in einen Live-Betrieb mit Model Portfolio, Shadow Portfolio, Real Portfolio und Execution Gap überführen.
+
+Der aktuelle Default-Use-Case bleibt bewusst konkret:
+
+```text
+Universum      : S&P 500
+Strategie     : Value / Quality / Momentum
+Datenbasis    : tägliche Kerzendaten, Fundamentaldaten, Market-Cap-Daten
+Benchmark     : SPY
+Auswertung    : Strategie-Rendite vs. Benchmark, Equity Curve, Trades, Kennzahlen
+Live-Betrieb  : manuelle Trade-Ausführung, Cash-Ledger, Shadow-vs-Real-Vergleich
+```
+
+Das bestehende operative System bleibt als Legacy-Referenz erhalten. Das neue Framework entsteht daneben in klar getrennten Modulen für Datenzugriff, Universen, Indikatoren, Strategien, Simulation, Evaluation und Live-Betrieb.
 
 Wichtig:
 
@@ -11,12 +30,20 @@ Wichtig:
 - alle Trades werden manuell umgesetzt
 - Fokus auf Nachvollziehbarkeit und Einfachheit
 - keine Blackbox
+- Tests und Experimente sollen ohne API-Zugriff mit Fixture-/Demo-Daten möglich sein
+
+Dokumentationsregel:
+
+- Jede implementierte Änderung, die Setup, Architektur, Bedienung, Datenmodell, Strategie, Tests oder Operator-Workflows betrifft, wird in dieser README dokumentiert.
+- Detaildokumente in `docs/` können ergänzen, die README bleibt aber die erste Orientierung für den aktuellen lauffähigen Stand.
 
 ---
 
 # Inhaltsverzeichnis
 
 ## I. Einführung
+- [Projektstatus](#projektstatus)
+- [Default-Use-Case](#default-use-case)
 - [Was dieses System ist](#was-dieses-system-ist)
 - [Was dieses System nicht ist](#was-dieses-system-nicht-ist)
 - [Ziel des Systems](#ziel-des-systems)
@@ -64,9 +91,68 @@ Wichtig:
 
 ---
 
+# Projektstatus
+
+Das bisherige operative Quant-Portfolio-System ist als Referenz unter `legacy/current_system/` eingefroren:
+
+- `legacy/current_system/core/`
+- `legacy/current_system/cli/`
+- `legacy/current_system/research/`
+- `legacy/current_system/shared/`
+
+Die neue modulare Paketstruktur ist angelegt, fachlich aber noch nicht implementiert:
+
+- `data/`
+- `universes/`
+- `indicators/`
+- `strategies/`
+- `simulation/`
+- `evaluation/`
+- `live/`
+- `cli/`
+- `shared/`
+
+Der Umbau erfolgt ab hier schrittweise:
+
+1. Fixture-/Demo-Daten nutzbar machen.
+2. Erste Strategie gegen Benchmark evaluieren.
+3. Live-Funktionen anschließend wieder anbinden.
+
+Der Arbeitsplan steht in [plan.md](plan.md).
+
+---
+
+# Default-Use-Case
+
+Der erste lauffähige Schnitt des neuen Systems ist:
+
+```text
+bestehende DB/Fixture-Daten lesen
+-> S&P-500-Universum laden
+-> Value/Quality/Momentum-Strategie ausführen
+-> gegen SPY vergleichen
+-> Run-Ergebnis speichern oder anzeigen
+```
+
+Verwendete Rohdaten:
+
+- `tickers`: handelbare Wertpapiere und Stammdaten
+- `daily_candles`: tägliche OHLCV-/Kerzendaten
+- `financial_reports`: Fundamentaldaten
+- `market_cap_snapshots`: Market-Cap-Historie
+
+Die Default-Strategie nutzt:
+
+- Value-Kennzahlen, z. B. EV/EBIT, Free-Cash-Flow-Yield, Earnings Yield
+- Quality-Kennzahlen, z. B. ROE, Debt/Equity, Revenue Growth
+- Momentum-Kennzahlen, z. B. 12-Month Return, 6-Month Return, Relative Strength
+- Trendfilter, z. B. Preis über 200DMA für neue Käufe
+
+---
+
 # Was dieses System ist
 
-Das Projekt ist ein regelbasiertes quantitatives Portfolio-System.
+Das Projekt ist ein regelbasiertes quantitatives Portfolio- und Strategie-Evaluationssystem.
 
 Es kombiniert:
 
@@ -79,6 +165,8 @@ zu einem einfachen und nachvollziehbaren Entscheidungsmodell.
 Das System beantwortet regelmäßig:
 
 ```text
+Welche Strategie schlägt welchen Benchmark?
+Welche Parameter funktionieren auf welchem Universum?
 Welche Aktien würde das Modell aktuell kaufen?
 Welche Aktien sollten verkauft werden?
 Wie stark weicht mein reales Portfolio vom Modell ab?
