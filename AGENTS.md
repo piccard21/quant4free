@@ -25,6 +25,22 @@ This repository is being migrated from an operational quantitative portfolio sys
 
 There is currently no dedicated `tests/` directory.
 
+## Current Migration State
+
+AP0 is complete: the previous operational modules were moved under
+`legacy/current_system/`, and the new top-level package skeleton was created.
+
+AP1 is complete: the data-model and schema plan are documented in
+`docs/data-model.md`. `init.sql` and `stocks_db.sql` intentionally remain
+legacy-compatible for now; no schema migration has been applied yet.
+
+The next planned implementation step is AP2: minimal data access for the new
+modular framework, preferably against existing fixture/demo data before using
+external APIs.
+
+Legacy CLI modules still use imports such as `core.*` and `shared.*`, so legacy
+commands must be run with `PYTHONPATH=/app/legacy/current_system`.
+
 ## Build, Test, and Development Commands
 
 Build the application image:
@@ -71,6 +87,12 @@ docker compose run --rm app python -m compileall data universes indicators strat
 ## Coding Style & Naming Conventions
 
 Use Python 3.10-compatible code, 4-space indentation, descriptive function names, and explicit CLI arguments. Prefer small functions around one pipeline step or query. Treat `legacy/current_system/` as reference code first; do not reshape it unless a task explicitly targets legacy behavior. Keep new framework helpers in the new top-level packages.
+
+Use object orientation only where it represents genuinely interchangeable
+concepts such as strategies, indicators, providers, benchmarks, simulators,
+cost models, tax models, or experiment runners. Keep mass data processing in
+SQL/DataFrames and avoid storing intermediate results that are cheap to
+recompute.
 
 ## Testing Guidelines
 
