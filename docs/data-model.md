@@ -1,6 +1,6 @@
 # Datenmodell-Plan
 
-Stand: AP1 abgeschlossen.
+Stand: AP2 abgeschlossen.
 
 Dieses Dokument beschreibt den Zielzustand des neuen modularen Quant-Frameworks. Es ist noch keine Migration des produktiven Legacy-Schemas. `init.sql` und `stocks_db.sql` bleiben vorerst kompatibel zum eingefrorenen Legacy-System.
 
@@ -178,9 +178,12 @@ tickers
 
 ### AP2: Minimaler Datenzugriff
 
-- Neue `shared`-/`data`-DB-Verbindung fuer das modulare System anlegen.
-- Fixture-Lesepfad fuer `stocks_db.sql` kompatible Tabellen schaffen.
-- Read-only Loader fuer Ticker, Kerzen, Fundamentaldaten und Market-Caps implementieren.
+Status: abgeschlossen.
+
+- Neue `shared`-/`data`-DB-Verbindung fuer das modulare System angelegt.
+- Fixture-Lesepfad fuer `stocks_db.sql` kompatible Tabellen geschaffen.
+- Read-only Loader fuer Ticker, Kerzen, Fundamentaldaten und Market-Caps implementiert.
+- Smoke-Test-CLI `cli.data_status` fuer Rohdatenverfuegbarkeit angelegt.
 
 ### AP3: Universum und Benchmark
 

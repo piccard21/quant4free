@@ -2,9 +2,21 @@
 
 ## Umsetzungsstand
 
-Stand: AP1 ist abgeschlossen.
+Stand: AP2 ist abgeschlossen.
 
 Erledigt:
+
+AP2:
+
+- Neue modulare DB-Verbindung in `shared/db.py` angelegt.
+- Read-only Rohdatenmodelle fuer `tickers`, `daily_candles`, `financial_reports` und `market_cap_snapshots` in `data/models.py` angelegt.
+- Fixture-kompatible Loader in `data/repository.py` implementiert:
+  - Ticker-Liste und einzelne Ticker.
+  - Kerzen-Zeitreihen und letzte Kerze je Ticker.
+  - Fundamentaldaten-Zeitreihen und letzter Report je Ticker.
+  - Market-Cap-Zeitreihen und letzter Snapshot je Ticker.
+- Smoke-Test-CLI `cli.data_status` fuer Rohdatenverfuegbarkeit angelegt.
+- Keine Schema-Migration und keine Aenderung an `legacy/current_system/`.
 
 AP1:
 
@@ -55,7 +67,7 @@ docker compose run --rm -e PYTHONPATH=/app/legacy/current_system app python -m c
 
 Naechster Schritt:
 
-- AP2: Minimaler Datenzugriff fuer das neue modulare System.
+- AP3: Universum und Benchmark auf Basis des neuen Datenzugriffs laden.
 
 ## Zielbild
 

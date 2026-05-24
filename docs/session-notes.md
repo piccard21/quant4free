@@ -34,5 +34,7 @@ Important implementation constraints:
 - Document changes that affect setup, architecture, operation, schema,
   strategies, tests, or operator workflows.
 
-The next planned step is AP2: implement minimal data access for the new modular
-system.
+AP2 is complete. The new modular framework has a read-only SQLAlchemy data
+access path for the legacy-compatible raw data tables, plus a `cli.data_status`
+smoke-check command. The next planned step is AP3: load the first universe and
+benchmark through the new data access layer.

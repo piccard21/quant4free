@@ -101,7 +101,8 @@ Das bisherige operative Quant-Portfolio-System ist als Referenz unter `legacy/cu
 - `legacy/current_system/research/`
 - `legacy/current_system/shared/`
 
-Die neue modulare Paketstruktur ist angelegt, fachlich aber noch nicht implementiert:
+Die neue modulare Paketstruktur ist angelegt. Der erste fachliche Baustein,
+der read-only Rohdatenzugriff aus AP2, ist implementiert:
 
 - `data/`
 - `universes/`
@@ -113,14 +114,17 @@ Die neue modulare Paketstruktur ist angelegt, fachlich aber noch nicht implement
 - `cli/`
 - `shared/`
 
-AP1 ist abgeschlossen: Der Datenmodell-Entwurf und Schema-Plan ist in [docs/data-model.md](docs/data-model.md) dokumentiert. `init.sql` und `stocks_db.sql` bleiben vorerst Legacy-kompatibel; es wurde noch keine Schema-Migration ausgefuehrt.
+AP2 ist abgeschlossen: Der neue modulare Datenzugriff kann die bestehenden
+Rohdatentabellen read-only lesen. Der Datenmodell-Entwurf und Schema-Plan ist
+in [docs/data-model.md](docs/data-model.md) dokumentiert. `init.sql` und
+`stocks_db.sql` bleiben vorerst Legacy-kompatibel; es wurde noch keine
+Schema-Migration ausgefuehrt.
 
 Der Umbau erfolgt ab hier schrittweise:
 
-1. Minimalen Datenzugriff fuer Fixture-/Demo-Daten bauen.
-2. S&P-500-Universum und Benchmark laden.
-3. Erste Strategie gegen Benchmark evaluieren.
-4. Live-Funktionen anschließend wieder anbinden.
+1. S&P-500-Universum und Benchmark laden.
+2. Erste Strategie gegen Benchmark evaluieren.
+3. Live-Funktionen anschließend wieder anbinden.
 
 Der Arbeitsplan steht in [plan.md](plan.md).
 
@@ -144,6 +148,34 @@ Verwendete Rohdaten:
 - `daily_candles`: tägliche OHLCV-/Kerzendaten
 - `financial_reports`: Fundamentaldaten
 - `market_cap_snapshots`: Market-Cap-Historie
+
+Neuer modularer Datenzugriff:
+
+```bash
+docker compose run --rm app python -m cli.data_status --details
+```
+
+Fixture-/Demo-Daten aus `stocks_db.sql` koennen ohne API-Zugriff in eine lokale
+Docker-Datenbank geladen werden:
+
+```bash
+cp .env.example .env
+docker compose up -d db
+docker compose exec -T db sh -lc 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE"' < stocks_db.sql
+docker compose run --rm app python -m cli.data_status --details
+```
+
+Programmatisch kann der AP2-Zugriff so verwendet werden:
+
+```python
+from data import RawDataRepository
+
+repo = RawDataRepository()
+active_tickers = repo.list_tickers(active_only=True)
+prices = repo.load_daily_candles(["AAPL", "MSFT"])
+latest_reports = repo.latest_financial_reports(report_type="ttm")
+benchmark_prices = repo.load_daily_candles(["SPY"])
+```
 
 Die Default-Strategie nutzt:
 
