@@ -47,7 +47,7 @@ therefore not a feature step: it is the move to a stable Linux development
 environment, including Linux venv, requirements installation, Docker/Compose,
 MySQL, fixture/demo data loading, and rerunning the AP3 smoke checks there.
 
-Current AP4 Linux findings:
+AP4 is complete. Current Linux/AP4 findings:
 
 - `.venv-linux` was removed and replaced with the standard Linux venv path
   `.venv`.
@@ -69,6 +69,9 @@ Current AP4 Linux findings:
 - `.venv/bin/python -m cli.data_status --details` succeeds outside the sandbox:
   506 tickers, 200962 daily candles, 1386 financial reports, 1852 market-cap
   snapshots, 503 active tickers, and 524 SPY benchmark rows.
+- `cli.data_status --details` now prints fundamental detail rows by report type:
+  `financial_reports.annual` and `financial_reports.ttm`, with `report_dates`
+  separated from `imported` timestamps.
 - `.venv/bin/python -m cli.framework_status --benchmark-ticker SPY` succeeds
   outside the sandbox with 503 universe members and 524 SPY benchmark rows.
 - The same `cli.data_status` and `cli.framework_status` smoke checks succeed in
@@ -77,3 +80,6 @@ Current AP4 Linux findings:
   the AP4 standard check after switching to the raw-data fixture because
   Legacy-/Live-Snapshot-, Cash-, Trade-, and Portfolio tables are intentionally
   absent.
+
+Next planned step: AP5, make universes and benchmarks configurable instead of
+hard-coding `tickers.is_active = 1` and ad-hoc `SPY` benchmark selection.

@@ -2,9 +2,23 @@
 
 ## Umsetzungsstand
 
-Stand: AP3 ist abgeschlossen.
+Stand: AP4 ist abgeschlossen. Naechster Schritt ist AP5.
 
 Erledigt:
+
+AP4:
+
+- Linux-Standard-venv `.venv` eingerichtet und Requirements installiert.
+- `pip check` erfolgreich ausgefuehrt.
+- Docker/Compose-Zugriff stabilisiert; `sp500_db` laeuft healthy, `sp500_worker` und `sp500_pma` laufen.
+- Bereinigte Rohdaten-Fixture `fixtures/raw_market_data.sql` erzeugt.
+- Lokale `stocks_db` aus `fixtures/raw_market_data.sql` neu aufgebaut.
+- Vollstaendigen Legacy-Dump `stocks_db.sql` entfernt, damit Trade-, Cash- und Portfolio-Historie nicht als Standard-Fixture im Repo bleibt.
+- `cli.data_status --details` erweitert:
+  - trennt `financial_reports.annual` und `financial_reports.ttm`.
+  - zeigt `report_dates` getrennt von `imported`.
+- Lokale und Container-Smoke-Checks fuer `cli.data_status --details` und `cli.framework_status --benchmark-ticker SPY` erfolgreich ausgefuehrt.
+- Hinweis festgehalten: Legacy-Health ist gegen die bereinigte Rohdaten-Fixture kein Standardcheck mehr, weil Legacy-/Live-Tabellen bewusst fehlen.
 
 AP3:
 
@@ -86,8 +100,7 @@ docker compose run --rm -e PYTHONPATH=/app/legacy/current_system app python -m c
 
 Naechster Schritt:
 
-- AP4: Wegen der Windows-/WSL-Probleme aus AP3 auf eine stabile Linux-Entwicklungsumgebung umziehen und dort die lokale Toolchain stabilisieren: Linux-venv, `requirements.txt`, Docker/Compose und Fixture-DB zuerst sauber lauffaehig machen.
-- Danach AP5: Universen und Benchmarks als austauschbare Konfiguration konkretisieren.
+- AP5: Universen und Benchmarks als austauschbare Konfiguration konkretisieren.
 
 ## Zielbild
 
@@ -420,6 +433,8 @@ Tests/Akzeptanz:
 
 ### AP4: Linux-Umzug Und Lokale Toolchain
 
+Status: abgeschlossen.
+
 Ausloeser:
 
 - In AP3 gab es Entwicklungs- und Toolchain-Probleme unter Windows mit WSL.
@@ -466,11 +481,16 @@ Aktueller Linux-Befund:
   Portfolio-Historie nicht als Standard-Fixture zu behalten.
 - Lokale und Container-Smoke-Checks fuer `cli.data_status --details` und
   `cli.framework_status --benchmark-ticker SPY` laufen erfolgreich.
+- `cli.data_status --details` zeigt Fundamentaldaten jetzt nach `annual` und
+  `ttm` getrennt mit `report_dates` und `imported`, damit Report-Stichtage
+  nicht mit Import-Zeitpunkten verwechselt werden.
 - Legacy-Health lief vor der Bereinigung mit dem Full-Dump. Nach Umstellung auf
   die Rohdaten-Fixture ist Legacy-Health nicht mehr der AP4-Standardcheck, weil
   Legacy-/Live-Snapshot-, Cash- und Portfolio-Tabellen bewusst fehlen.
 
 ### AP5: Universen Und Benchmarks
+
+Status: naechster Schritt.
 
 Ziel:
 

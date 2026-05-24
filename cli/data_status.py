@@ -62,6 +62,25 @@ def main() -> None:
             print(_format_table_status(table_name, row))
 
         if args.details:
+            for row in connection.execute(
+                text(
+                    """
+                    SELECT
+                        report_type,
+                        COUNT(*) AS row_count,
+                        COUNT(DISTINCT ticker) AS ticker_count,
+                        MIN(report_date) AS min_report_date,
+                        MAX(report_date) AS max_report_date,
+                        MIN(imported_at) AS min_imported_at,
+                        MAX(imported_at) AS max_imported_at
+                    FROM financial_reports
+                    GROUP BY report_type
+                    ORDER BY report_type
+                    """
+                )
+            ).mappings():
+                print(_format_financial_report_status(row))
+
             active_tickers = connection.execute(
                 text("SELECT COUNT(*) FROM tickers WHERE is_active = 1")
             ).scalar_one()
@@ -113,6 +132,21 @@ def _format_benchmark_status(ticker: str, row: dict[str, Any]) -> str:
         parts.append(f"from={row['min_date']}")
     if row.get("max_date") is not None:
         parts.append(f"to={row['max_date']}")
+    return " ".join(parts)
+
+
+def _format_financial_report_status(row: dict[str, Any]) -> str:
+    parts = [
+        f"financial_reports.{row['report_type']}",
+        f"rows={row['row_count']}",
+        f"tickers={row['ticker_count']}",
+    ]
+    if row.get("min_report_date") is not None and row.get("max_report_date") is not None:
+        parts.append(f"report_dates={row['min_report_date']}..{row['max_report_date']}")
+    if row.get("min_imported_at") is not None and row.get("max_imported_at") is not None:
+        parts.append(
+            f"imported={row['min_imported_at']}..{row['max_imported_at']}"
+        )
     return " ".join(parts)
 
 
