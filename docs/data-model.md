@@ -1,6 +1,6 @@
 # Datenmodell-Plan
 
-Stand: AP7 abgeschlossen.
+Stand: AP8 abgeschlossen.
 
 Dieses Dokument beschreibt den Zielzustand des neuen modularen Quant-Frameworks. Es ist noch keine Migration des produktiven Legacy-Schemas. `init.sql` bleibt vorerst kompatibel zum eingefrorenen Legacy-System. Die bereinigte Framework-Fixture liegt in `fixtures/raw_market_data.sql`.
 
@@ -229,6 +229,8 @@ Status: abgeschlossen.
 - `strategy_runs`, `strategy_run_metrics`, `strategy_run_equity_curve` und `strategy_run_trades` in SQL anlegen.
 - Run-Konfiguration einfrieren.
 - CLI fuer einen reproduzierbaren Backtest bereitstellen.
+- AP8 legt die Evaluationstabellen additiv ueber `cli.backtest_status --persist`
+  an, damit `init.sql` weiter legacy-kompatibel bleiben kann.
 
 ### AP9: Live-Migration
 

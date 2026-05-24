@@ -114,15 +114,19 @@ AP2 und die standardisierten Modul-Contracts aus AP3 sind implementiert:
 - `cli/`
 - `shared/`
 
-AP7 ist abgeschlossen: Der neue modulare Datenzugriff kann die bestehenden
+AP8 ist abgeschlossen: Der neue modulare Datenzugriff kann die bestehenden
 Rohdatentabellen read-only lesen, austauschbare Bausteine haben klare
 Python-Contracts, und Universen sowie Benchmarks koennen per Konfigurationskey
 ausgewaehlt werden. Erste Indikatoren fuer Momentum, relative Staerke, Value
 und Quality werden modular berechnet. Die erste Value/Quality/Momentum-Strategie
 erzeugt daraus eine reproduzierbare Rangliste und ein erstes Model Portfolio.
+Die Strategie kann jetzt ueber einen einfachen periodischen Backtest gegen den
+Benchmark evaluiert werden; Equity Curve, Trades, Metriken und eingefrorene
+Run-Konfiguration koennen in AP8-Tabellen gespeichert werden.
 Der Datenmodell-Entwurf und Schema-Plan ist in
 [docs/data-model.md](docs/data-model.md) dokumentiert. `init.sql` bleibt
-vorerst Legacy-kompatibel; es wurde noch keine Schema-Migration ausgefuehrt.
+vorerst Legacy-kompatibel; die AP8-Evaluationstabellen werden additiv durch
+`cli.backtest_status --persist` angelegt.
 Die bereinigte Testdatenbasis fuer das neue Framework liegt in
 `fixtures/raw_market_data.sql`.
 
@@ -133,8 +137,8 @@ Schritt, weil AP3 unter Windows mit WSL Toolchain-Probleme gezeigt hat:
 2. Universen und Benchmarks als Konfiguration konkretisieren. Erledigt in AP5.
 3. Indikator-Engine fuer Momentum, relative Staerke, Value und Quality bauen. Erledigt in AP6.
 4. Erste Value/Quality/Momentum-Strategie als Model-Portfolio-Ranking bauen. Erledigt in AP7.
-5. Erste Strategie gegen Benchmark evaluieren.
-6. Live-Funktionen anschließend wieder anbinden.
+5. Erste Strategie gegen Benchmark evaluieren. Erledigt in AP8.
+6. Live-Funktionen anschliessend wieder anbinden.
 
 Der Arbeitsplan steht in [plan.md](plan.md).
 
@@ -167,6 +171,7 @@ docker compose run --rm app python -m cli.framework_status --universe sp500_acti
 docker compose run --rm app python -m cli.framework_status --list-configs
 docker compose run --rm app python -m cli.indicator_status --limit 10
 docker compose run --rm app python -m cli.strategy_status --limit 10
+docker compose run --rm app python -m cli.backtest_status --start-date 2026-01-02 --end-date 2026-05-22 --equity-limit 5 --trade-limit 10
 ```
 
 Bereinigte Rohdaten-Fixture-Daten aus `fixtures/raw_market_data.sql` koennen
@@ -180,19 +185,20 @@ docker compose run --rm app python -m cli.data_status --details
 docker compose run --rm app python -m cli.framework_status --universe sp500_active --benchmark spy
 docker compose run --rm app python -m cli.indicator_status --limit 10
 docker compose run --rm app python -m cli.strategy_status --limit 10
+docker compose run --rm app python -m cli.backtest_status --start-date 2026-01-02 --end-date 2026-05-22 --persist --equity-limit 5 --trade-limit 10
 ```
 
 Die Fixture enthaelt nur `tickers`, `daily_candles`, `financial_reports` und
 `market_cap_snapshots`. Legacy-/Live-Daten wie Trades, Cash Ledger,
 Portfolio-Positionen und Performance-Snapshots sind bewusst nicht enthalten.
 
-Programmatisch kann der AP7-Zugriff so verwendet werden:
+Programmatisch kann der AP7/AP8-Zugriff so verwendet werden:
 
 ```python
 from datetime import date, timedelta
 
 from data import FixtureDataProvider
-from evaluation import create_benchmark
+from evaluation import BacktestConfig, create_benchmark, run_backtest
 from indicators import compute_indicators, create_indicators
 from strategies import StrategyContext, create_default_strategy
 from universes import create_universe
@@ -230,6 +236,23 @@ result = strategy.run(
         benchmark_prices=benchmark_prices,
         indicators={"default": indicator_values},
     )
+)
+backtest = run_backtest(
+    strategy=strategy,
+    config=BacktestConfig(
+        start_date=date(2026, 1, 2),
+        end_date=as_of_date,
+        initial_capital=10000,
+    ),
+    universe=members,
+    prices=provider.load_prices(
+        members,
+        start_date=date(2025, 4, 19),
+        end_date=as_of_date,
+    ),
+    fundamentals=fundamentals,
+    market_caps=market_caps,
+    benchmark_prices=benchmark_prices,
 )
 ```
 

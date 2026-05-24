@@ -134,5 +134,18 @@ AP7 is complete. Current AP7 findings:
 - Default AP7 status: 503 `sp500_active` rows as of 2026-05-22, 500 eligible
   scored rows, and 7 equal-weight model positions.
 
-Next planned step: AP8, add evaluation/backtest persistence and benchmark
-comparison around strategy runs.
+AP8 is complete. Current AP8 findings:
+
+- `evaluation.backtest` contains a reproducible equal-weight Top-N backtest for
+  the AP7 strategy output, including periodic rebalancing, a basis-point cost
+  model, equity curve, benchmark curve, trades, and summary metrics.
+- `evaluation.repository` adds SQL persistence for `strategy_runs`,
+  `strategy_run_metrics`, `strategy_run_equity_curve`, and
+  `strategy_run_trades`. The schema is created additively by the AP8 CLI when
+  `--persist` is supplied.
+- `cli.backtest_status` runs the AP8 smoke path against fixture-backed raw
+  data. Without `--persist` it prints a report only; with `--persist` it stores
+  the run and prints `stored_run_id` plus `run_key`.
+
+Next planned step: AP9, migrate or reconnect the live Model/Shadow/Real
+portfolio workflows and execution gap handling.

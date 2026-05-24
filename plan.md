@@ -2,9 +2,35 @@
 
 ## Umsetzungsstand
 
-Stand: AP7 ist abgeschlossen. Naechster Schritt ist AP8.
+Stand: AP8 ist abgeschlossen. Naechster Schritt ist AP9.
 
 Erledigt:
+
+AP8:
+
+- Reproduzierbaren Backtest fuer die AP7-Strategie eingefuehrt:
+  - `BacktestConfig`
+  - `run_backtest`
+  - periodisches Rebalancing
+  - einfaches Basiskostenmodell
+  - Equity Curve und normalisierte Benchmark Curve
+- AP8-Metriken berechnet:
+  - Rendite
+  - Benchmark-Rendite
+  - Outperformance
+  - Volatilitaet
+  - Max Drawdown
+- Persistenz fuer Evaluation angelegt:
+  - `strategy_runs`
+  - `strategy_run_metrics`
+  - `strategy_run_equity_curve`
+  - `strategy_run_trades`
+- `cli.backtest_status` als AP8-Smoke-CLI angelegt.
+- Lokale Checks erfolgreich ausgefuehrt:
+  - `.venv/bin/python -m compileall data universes indicators strategies simulation evaluation live cli shared tests`
+  - `.venv/bin/python -m unittest tests.test_indicators tests.test_value_quality_momentum tests.test_backtest`
+  - `.venv/bin/python -m cli.backtest_status --start-date 2026-01-02 --end-date 2026-05-22 --equity-limit 3 --trade-limit 5`
+  - `.venv/bin/python -m cli.backtest_status --start-date 2026-01-02 --end-date 2026-05-22 --persist --equity-limit 0 --trade-limit 0`
 
 AP7:
 
