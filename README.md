@@ -101,8 +101,8 @@ Das bisherige operative Quant-Portfolio-System ist als Referenz unter `legacy/cu
 - `legacy/current_system/research/`
 - `legacy/current_system/shared/`
 
-Die neue modulare Paketstruktur ist angelegt. Der erste fachliche Baustein,
-der read-only Rohdatenzugriff aus AP2, ist implementiert:
+Die neue modulare Paketstruktur ist angelegt. Der read-only Rohdatenzugriff aus
+AP2 und die standardisierten Modul-Contracts aus AP3 sind implementiert:
 
 - `data/`
 - `universes/`
@@ -114,17 +114,20 @@ der read-only Rohdatenzugriff aus AP2, ist implementiert:
 - `cli/`
 - `shared/`
 
-AP2 ist abgeschlossen: Der neue modulare Datenzugriff kann die bestehenden
-Rohdatentabellen read-only lesen. Der Datenmodell-Entwurf und Schema-Plan ist
-in [docs/data-model.md](docs/data-model.md) dokumentiert. `init.sql` und
+AP3 ist abgeschlossen: Der neue modulare Datenzugriff kann die bestehenden
+Rohdatentabellen read-only lesen, und austauschbare Bausteine haben klare
+Python-Contracts fuer Provider, Universen, Benchmarks, Indikatoren und
+Strategien. Der Datenmodell-Entwurf und Schema-Plan ist in
+[docs/data-model.md](docs/data-model.md) dokumentiert. `init.sql` und
 `stocks_db.sql` bleiben vorerst Legacy-kompatibel; es wurde noch keine
 Schema-Migration ausgefuehrt.
 
 Der Umbau erfolgt ab hier schrittweise:
 
-1. S&P-500-Universum und Benchmark laden.
-2. Erste Strategie gegen Benchmark evaluieren.
-3. Live-Funktionen anschließend wieder anbinden.
+1. Linux-Umgebung stabilisieren: venv, `requirements.txt`, Docker/Compose, MySQL und Fixture-Daten.
+2. Universen und Benchmarks als Konfiguration konkretisieren.
+3. Erste Strategie gegen Benchmark evaluieren.
+4. Live-Funktionen anschließend wieder anbinden.
 
 Der Arbeitsplan steht in [plan.md](plan.md).
 
@@ -153,6 +156,7 @@ Neuer modularer Datenzugriff:
 
 ```bash
 docker compose run --rm app python -m cli.data_status --details
+docker compose run --rm app python -m cli.framework_status --benchmark-ticker SPY
 ```
 
 Fixture-/Demo-Daten aus `stocks_db.sql` koennen ohne API-Zugriff in eine lokale
@@ -163,18 +167,27 @@ cp .env.example .env
 docker compose up -d db
 docker compose exec -T db sh -lc 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE"' < stocks_db.sql
 docker compose run --rm app python -m cli.data_status --details
+docker compose run --rm app python -m cli.framework_status --benchmark-ticker SPY
 ```
 
-Programmatisch kann der AP2-Zugriff so verwendet werden:
+Programmatisch kann der AP3-Zugriff so verwendet werden:
 
 ```python
-from data import RawDataRepository
+from data import FixtureDataProvider
+from evaluation import BenchmarkSpec, ProviderBenchmark
+from universes import ActiveTickerUniverse
 
-repo = RawDataRepository()
-active_tickers = repo.list_tickers(active_only=True)
-prices = repo.load_daily_candles(["AAPL", "MSFT"])
-latest_reports = repo.latest_financial_reports(report_type="ttm")
-benchmark_prices = repo.load_daily_candles(["SPY"])
+provider = FixtureDataProvider()
+universe = ActiveTickerUniverse(provider)
+benchmark = ProviderBenchmark(
+    BenchmarkSpec(key="spy", ticker="SPY", name="SPY benchmark"),
+    provider,
+)
+
+members = universe.load_members()
+prices = provider.load_prices(["AAPL", "MSFT"])
+fundamentals = provider.load_fundamentals(report_type="ttm")
+benchmark_prices = benchmark.load_prices()
 ```
 
 Die Default-Strategie nutzt:

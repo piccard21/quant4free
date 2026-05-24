@@ -2,9 +2,28 @@
 
 ## Umsetzungsstand
 
-Stand: AP2 ist abgeschlossen.
+Stand: AP3 ist abgeschlossen.
 
 Erledigt:
+
+AP3:
+
+- Standardisierte Python-Contracts fuer austauschbare Framework-Bausteine eingefuehrt:
+  - `data.provider.DataProvider`
+  - `universes.base.UniverseLoader`
+  - `indicators.base.Indicator`
+  - `strategies.base.Strategy`
+  - `evaluation.benchmarks.Benchmark`
+- Gemeinsame Kontext-/Resultattypen angelegt:
+  - `indicators.base.IndicatorResult`
+  - `strategies.base.StrategyContext`
+  - `strategies.base.StrategyResult`
+  - `evaluation.benchmarks.BenchmarkSpec`
+- Ersten Fixture-/MySQL-Provider `FixtureDataProvider` auf Basis von `RawDataRepository` implementiert.
+- Erstes Universum `ActiveTickerUniverse` auf Basis von `tickers.is_active = 1` implementiert.
+- Benchmark-Zugriff `ProviderBenchmark` ueber den Provider-Contract implementiert.
+- Smoke-Test-CLI `cli.framework_status` fuer Provider, Universum und Benchmark angelegt.
+- Keine Schema-Migration und keine Aenderung an `legacy/current_system/`.
 
 AP2:
 
@@ -67,7 +86,8 @@ docker compose run --rm -e PYTHONPATH=/app/legacy/current_system app python -m c
 
 Naechster Schritt:
 
-- AP3: Universum und Benchmark auf Basis des neuen Datenzugriffs laden.
+- AP4: Linux-Umzug und lokale Toolchain stabilisieren: Linux-venv, `requirements.txt`, Docker/Compose und Fixture-DB zuerst sauber lauffaehig machen.
+- Danach AP5: Universen und Benchmarks als austauschbare Konfiguration konkretisieren.
 
 ## Zielbild
 
@@ -145,7 +165,18 @@ cli/
   Runs, Status, Experimente, Reports
 ```
 
-Objektorientierung wird nur fuer austauschbare Konzepte eingesetzt: `Strategy`, `Indicator`, `DataProvider`, `Benchmark`, `PortfolioSimulator`, `CostModel`, `TaxModel`, `ExperimentRunner`. Massendaten bleiben in SQL/DataFrames.
+Objektorientierung wird nur fuer austauschbare Konzepte eingesetzt: `Strategy`, `Indicator`, `DataProvider`, `UniverseLoader`, `Benchmark`, `PortfolioSimulator`, `CostModel`, `TaxModel`, `ExperimentRunner`. Massendaten bleiben in SQL/DataFrames.
+
+Die austauschbaren Konzepte bekommen klare Python-Schnittstellen, bevorzugt als `typing.Protocol` oder, falls gemeinsame Basislogik noetig ist, als abstrakte Basisklassen. Neue Module sollen dadurch nicht nur in passenden Ordnern liegen, sondern einen expliziten Vertrag erfuellen:
+
+- `DataProvider`: liefert Rohdaten wie Preise, Fundamentals, Ticker und Benchmark-Zeitreihen.
+- `UniverseLoader`: liefert die Mitglieder eines Anlageuniversums fuer einen Stichtag.
+- `Indicator`: berechnet aus definierten Eingabedaten reproduzierbare Kennzahlen.
+- `Strategy`: erzeugt aus Kontext, Universum, Daten und Indikatoren Rankings, Signale oder Model-Portfolios.
+- `Benchmark`: beschreibt und laedt die Vergleichsreihe fuer Evaluation und Reporting.
+- `PortfolioSimulator`, `CostModel`, `TaxModel`: simulieren Umsetzung, Kosten und Steuereffekte.
+
+Jede Schnittstelle dokumentiert Eingaben, Rueckgabeformat, Fehlerverhalten und minimale Validierung. Fuer tabellarische Massendaten bleiben `pandas.DataFrame` und SQL-nahe Datenzugaenge erlaubt; der Vertrag legt aber Spalten, Datentypen und Semantik fest.
 
 ## Umgang Mit Dem Altsystem
 
@@ -357,26 +388,64 @@ Tests/Akzeptanz:
 - Health-Check meldet Anzahl Ticker, Preisreihen, Fundamentals und Benchmark-Verfuegbarkeit.
 - Keine externen API-Calls fuer diesen Testpfad.
 
-### AP3: Data-Provider-Schicht
+### AP3: Modul-Contracts Und Data-Provider-Schicht
 
 Ziel:
 
+- Die neue Modularitaet ueber klare Schnittstellen standardisieren.
 - Rohdatenzugriff von Strategie- und Evaluationslogik trennen.
+- Sicherstellen, dass neue Strategien, Indikatoren, Universen und Provider einen bekannten Vertrag erfuellen.
 
 Umfang:
 
-- `DataProvider`-Interface definieren.
+- `Protocol`- oder ABC-basierte Basis-Schnittstellen definieren:
+  - `DataProvider`
+  - `UniverseLoader`
+  - `Indicator`
+  - `Strategy`
+  - `Benchmark`
 - Ersten Provider fuer bestehende MySQL-/Fixture-Daten bauen.
 - Spaeteren yfinance-Provider nur vorbereiten, nicht als Voraussetzung fuer Tests machen.
 - Gemeinsame Rueckgabeformate fuer Preise, Fundamentals, Ticker und Benchmarks festlegen.
+- Gemeinsame Kontext-/Resultattypen skizzieren, z. B. `StrategyContext`, `StrategyResult`, `IndicatorResult`.
+- Schnittstellen mit kurzen Docstrings dokumentieren: erwartete Eingaben, Rueckgaben, Fehlerfaelle.
 
 Tests/Akzeptanz:
 
+- Neue Contract-Module sind importierbar und mit `compileall` geprueft.
+- Ein Beispiel-Provider und ein Beispiel-Universe-Loader erfuellen die definierten Schnittstellen.
 - Provider liefert Preisreihen fuer ein Ticker-Set und einen Zeitraum.
 - Provider liefert Benchmark-Reihe fuer z. B. `SPY`.
 - Unit-Tests oder CLI-Smoke-Test laufen gegen Fixture-Daten.
 
-### AP4: Universen Und Benchmarks
+### AP4: Linux-Umzug Und Lokale Toolchain
+
+Ziel:
+
+- Die Entwicklungsumgebung vollstaendig auf Linux ausrichten, bevor weitere Fachlogik gebaut wird.
+- Eine reproduzierbare lokale Basis fuer venv, Requirements, Docker, MySQL und Fixture-Daten herstellen.
+
+Umfang:
+
+- Windows-venv nicht weiter als Projektstandard verwenden.
+- Linux-venv `.venv-linux` oder eine neue `.venv` unter Linux als Standard festlegen.
+- `requirements.txt` in der Linux-venv installieren und mit `pip check` pruefen.
+- Docker-/Compose-Zugriff auf der Linux-Umgebung stabilisieren.
+- `.env.example`, `.env` und `docker-compose.yml` so abgleichen, dass `MYSQL_ROOT_PASSWORD`, `DB_NAME`, `DB_USER` und `DB_PASSWORD` sicher gesetzt sind.
+- DB-Container mit frischem Volume neu erstellen.
+- Fixture-/Demo-Daten laden oder den init-Pfad eindeutig dokumentieren.
+- AP3-Smoke-Commands lokal gegen die Linux-venv und gegen Docker ausfuehren.
+
+Tests/Akzeptanz:
+
+- `.venv-linux/bin/python -m pip install -r requirements.txt` laeuft erfolgreich.
+- `.venv-linux/bin/python -m pip check` meldet keine kaputten Abhaengigkeiten.
+- `.venv-linux/bin/python -m compileall data universes indicators strategies simulation evaluation live cli shared` laeuft erfolgreich.
+- `docker compose up -d db` startet MySQL healthy.
+- `docker compose run --rm app python -m cli.data_status --details` laeuft gegen die lokale DB.
+- `docker compose run --rm app python -m cli.framework_status --benchmark-ticker SPY` laeuft gegen die lokale DB.
+
+### AP5: Universen Und Benchmarks
 
 Ziel:
 
@@ -385,8 +454,8 @@ Ziel:
 Umfang:
 
 - Tabellen/Modelle fuer `universes`, `universe_members`, `benchmarks` konkretisieren.
-- Loader fuer ein erstes Universum bauen, z. B. S&P 500 aus bestehender DB.
-- Benchmark-Resolver bauen.
+- Loader fuer ein erstes Universum bauen, z. B. S&P 500 aus bestehender DB, gemaess `UniverseLoader`-Contract.
+- Benchmark-Resolver bauen, gemaess `Benchmark`-/`DataProvider`-Contract.
 
 Tests/Akzeptanz:
 
@@ -394,7 +463,7 @@ Tests/Akzeptanz:
 - Benchmark kann pro Run eindeutig geladen werden.
 - Fehlerfall wird sauber gemeldet, wenn Benchmark-Daten fehlen.
 
-### AP5: Indikator-Engine
+### AP6: Indikator-Engine
 
 Ziel:
 
@@ -402,7 +471,7 @@ Ziel:
 
 Umfang:
 
-- `Indicator`-Interface definieren.
+- `Indicator`-Contract aus AP3 verwenden und bei Bedarf konkretisieren.
 - Erste Indikatoren aus der bestehenden Strategie extrahieren:
   - Momentum/Return
   - Relative Staerke
@@ -415,7 +484,7 @@ Tests/Akzeptanz:
 - Fehlende Daten erzeugen definierte `NULL`/NaN-Behandlung statt stiller Fehlbewertung.
 - Mindestens ein kleiner Test mit Fixture-Daten.
 
-### AP6: Erste Strategie Value/Quality/Momentum
+### AP7: Erste Strategie Value/Quality/Momentum
 
 Ziel:
 
@@ -423,7 +492,7 @@ Ziel:
 
 Umfang:
 
-- `Strategy`-Interface definieren.
+- `Strategy`-Contract aus AP3 verwenden und bei Bedarf konkretisieren.
 - Value/Quality/Momentum-Strategie mit konfigurierbaren Gewichten bauen.
 - Ranking und Buy-/Sell-relevante Scores erzeugen.
 - Ergebnis zunaechst nur als Model Portfolio ausgeben.
@@ -434,7 +503,7 @@ Tests/Akzeptanz:
 - Gewichte werden validiert und muessen zusammen 1.0 ergeben.
 - Vergleich gegen Legacy-Ergebnis fuer einen bekannten Stichtag, soweit Daten vorhanden sind.
 
-### AP7: Evaluation Und Backtest
+### AP8: Evaluation Und Backtest
 
 Ziel:
 
@@ -453,7 +522,7 @@ Tests/Akzeptanz:
 - Equity Curve und Benchmark Curve haben konsistente Datumsachsen.
 - Backtest laeuft komplett gegen Fixture-Daten.
 
-### AP8: Live-System Wieder Anbinden
+### AP9: Live-System Wieder Anbinden
 
 Ziel:
 
@@ -476,7 +545,7 @@ Tests/Akzeptanz:
 - Manuelle Trade-Ausfuehrung veraendert Cash und Positionen nachvollziehbar.
 - Legacy-Verhalten wird fuer einen Beispielmonat plausibilisiert.
 
-### AP9: CLI Und Operator-Workflows
+### AP10: CLI Und Operator-Workflows
 
 Ziel:
 
@@ -494,7 +563,7 @@ Tests/Akzeptanz:
 - Smoke-Test: Fixture laden -> Strategie-Run -> Benchmark-Report.
 - Status-CLI zeigt verwertbare Ausgabe ohne Weboberflaeche.
 
-### AP10: Weboberflaeche Erst Nach Stabiler Kernlogik
+### AP11: Weboberflaeche Erst Nach Stabiler Kernlogik
 
 Ziel:
 
@@ -515,14 +584,16 @@ Tests/Akzeptanz:
 
 1. Datenmodell und Modulstruktur entwerfen.
 2. `stocks_db.sql` als Demo-/Fixture-Datenbasis nutzbar machen.
-3. Provider-Schicht fuer bestehende DB/Fixture-Daten und yfinance einfuehren.
-4. Indikator-Engine bauen.
-5. Erste Strategie Value/Quality/Momentum modularisieren.
-6. Evaluation-System mit Backtests, Parameter-Sweeps und Benchmark-Vergleich bauen.
-7. Live-System mit Model, Shadow, Real, Execution Gap und manuellen Trades anbinden.
-8. Konfiguration versionieren und pro Portfolio steuerbar machen.
-9. CLI/Reports stabilisieren.
-10. Weboberflaeche erst am Schluss bauen.
+3. Standardisierte Modul-Contracts fuer Provider, Universen, Benchmarks, Indikatoren und Strategien einfuehren.
+4. Linux-Umzug und lokale Toolchain stabilisieren: venv, Requirements, Docker, MySQL und Fixture-Daten.
+5. Provider-/Universums-/Benchmark-Schicht auf stabiler Linux-Basis weiter konkretisieren.
+6. Indikator-Engine bauen.
+7. Erste Strategie Value/Quality/Momentum modularisieren.
+8. Evaluation-System mit Backtests, Parameter-Sweeps und Benchmark-Vergleich bauen.
+9. Live-System mit Model, Shadow, Real, Execution Gap und manuellen Trades anbinden.
+10. Konfiguration versionieren und pro Portfolio steuerbar machen.
+11. CLI/Reports stabilisieren.
+12. Weboberflaeche erst am Schluss bauen.
 
 ## Testing Und Akzeptanz
 

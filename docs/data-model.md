@@ -1,6 +1,6 @@
 # Datenmodell-Plan
 
-Stand: AP2 abgeschlossen.
+Stand: AP3 abgeschlossen.
 
 Dieses Dokument beschreibt den Zielzustand des neuen modularen Quant-Frameworks. Es ist noch keine Migration des produktiven Legacy-Schemas. `init.sql` und `stocks_db.sql` bleiben vorerst kompatibel zum eingefrorenen Legacy-System.
 
@@ -185,25 +185,42 @@ Status: abgeschlossen.
 - Read-only Loader fuer Ticker, Kerzen, Fundamentaldaten und Market-Caps implementiert.
 - Smoke-Test-CLI `cli.data_status` fuer Rohdatenverfuegbarkeit angelegt.
 
-### AP3: Universum und Benchmark
+### AP3: Modul-Contracts und Data-Provider-Schicht
+
+Status: abgeschlossen.
+
+- Standardisierte Python-Contracts fuer `DataProvider`, `UniverseLoader`, `Indicator`, `Strategy` und `Benchmark` eingefuehrt.
+- `FixtureDataProvider` fuer bestehende MySQL-/Fixture-Daten implementiert.
+- `ActiveTickerUniverse` fuer `tickers.is_active = 1` implementiert.
+- `ProviderBenchmark` fuer Benchmark-Preisreihen ueber den Provider-Contract implementiert.
+- Smoke-Test-CLI `cli.framework_status` angelegt.
+
+### AP4: Linux-Umzug und lokale Toolchain
+
+- Entwicklungsumgebung vollstaendig auf Linux ausrichten.
+- Linux-venv als Standard verwenden und `requirements.txt` installieren.
+- Docker/Compose, MySQL-Container, `.env` und Fixture-Daten stabil lauffaehig machen.
+- AP3-Smoke-Commands gegen Linux-venv und Docker pruefen.
+
+### AP5: Universum und Benchmark
 
 - `universes` und `benchmarks` als Code- oder DB-Katalog einfuehren.
 - S&P-500-Universum zunaechst aus `tickers.is_active = 1` laden.
 - Benchmark `SPY` aus `daily_candles` lesen.
 
-### AP4: Strategie-Run
+### AP6: Strategie-Run
 
 - Erste `strategy_instances`-Default-Konfiguration definieren.
 - Value/Quality/Momentum-Strategie auf Fixture-Daten ausfuehren.
 - Ergebnis gegen Benchmark ausgeben.
 
-### AP5: Persistenz fuer Evaluation
+### AP7: Persistenz fuer Evaluation
 
 - `strategy_runs`, `strategy_run_metrics`, `strategy_run_equity_curve` und `strategy_run_trades` in SQL anlegen.
 - Run-Konfiguration einfrieren.
 - CLI fuer einen reproduzierbaren Backtest bereitstellen.
 
-### AP6: Live-Migration
+### AP8: Live-Migration
 
 - Legacy-Live-Tabellen portfolio-faehig machen oder in neue Live-Tabellen migrieren.
 - Execution Gap zwischen Shadow und Real Portfolio wieder anbinden.

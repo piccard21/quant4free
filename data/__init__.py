@@ -1,4 +1,5 @@
 from .models import DailyCandle, FinancialReport, MarketCapSnapshot, Ticker
+from .provider import DataProvider, FixtureDataProvider
 from .repository import (
     RawDataRepository,
     latest_daily_candles,
@@ -12,7 +13,9 @@ from .repository import (
 
 __all__ = [
     "DailyCandle",
+    "DataProvider",
     "FinancialReport",
+    "FixtureDataProvider",
     "MarketCapSnapshot",
     "RawDataRepository",
     "Ticker",
