@@ -47,3 +47,38 @@ class ProviderBenchmark:
             start_date,
             end_date,
         )
+
+
+BENCHMARK_SPECS: dict[str, BenchmarkSpec] = {
+    "spy": BenchmarkSpec(
+        key="spy",
+        ticker="SPY",
+        name="SPDR S&P 500 ETF Trust",
+    ),
+    "qqq": BenchmarkSpec(
+        key="qqq",
+        ticker="QQQ",
+        name="Invesco QQQ Trust",
+    ),
+    "iwm": BenchmarkSpec(
+        key="iwm",
+        ticker="IWM",
+        name="iShares Russell 2000 ETF",
+    ),
+}
+
+
+def list_benchmark_specs() -> list[BenchmarkSpec]:
+    return list(BENCHMARK_SPECS.values())
+
+
+def get_benchmark_spec(key: str) -> BenchmarkSpec:
+    try:
+        return BENCHMARK_SPECS[key]
+    except KeyError as exc:
+        available = ", ".join(sorted(BENCHMARK_SPECS))
+        raise ValueError(f"unknown benchmark '{key}'; available: {available}") from exc
+
+
+def create_benchmark(key: str, provider: "DataProvider") -> Benchmark:
+    return ProviderBenchmark(get_benchmark_spec(key), provider)

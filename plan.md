@@ -2,9 +2,38 @@
 
 ## Umsetzungsstand
 
-Stand: AP4 ist abgeschlossen. Naechster Schritt ist AP5.
+Stand: AP5 ist abgeschlossen. Naechster Schritt ist AP6.
 
 Erledigt:
+
+AP5:
+
+- Universen als konfigurierte Definitionen konkretisiert:
+  - `sp500_active`
+  - `active_tickers`
+  - `all_tickers`
+- Universe-Registry und Factory eingefuehrt:
+  - `UNIVERSE_DEFINITIONS`
+  - `list_universe_definitions`
+  - `get_universe_definition`
+  - `create_universe`
+- Benchmarks als konfigurierte Spezifikationen konkretisiert:
+  - `spy`
+  - `qqq`
+  - `iwm`
+- Benchmark-Registry und Factory eingefuehrt:
+  - `BENCHMARK_SPECS`
+  - `list_benchmark_specs`
+  - `get_benchmark_spec`
+  - `create_benchmark`
+- `cli.framework_status` erweitert:
+  - `--universe` waehlt ein konfiguriertes Universum.
+  - `--benchmark` waehlt einen konfigurierten Benchmark.
+  - `--list-configs` zeigt verfuegbare Universen und Benchmarks.
+  - `--benchmark-ticker` bleibt als kompatibler Ad-hoc-Override erhalten.
+- Lokale Smoke-Checks fuer Default-Konfiguration, `all_tickers`, alte
+  `--benchmark-ticker`-Nutzung und `--list-configs` erfolgreich ausgefuehrt.
+- Keine Schema-Migration und keine Aenderung an `legacy/current_system/`.
 
 AP4:
 
@@ -100,7 +129,7 @@ docker compose run --rm -e PYTHONPATH=/app/legacy/current_system app python -m c
 
 Naechster Schritt:
 
-- AP5: Universen und Benchmarks als austauschbare Konfiguration konkretisieren.
+- AP6: Erste Value/Quality/Momentum-Strategie gegen Benchmark evaluieren.
 
 ## Zielbild
 

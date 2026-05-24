@@ -81,5 +81,22 @@ AP4 is complete. Current Linux/AP4 findings:
   Legacy-/Live-Snapshot-, Cash-, Trade-, and Portfolio tables are intentionally
   absent.
 
-Next planned step: AP5, make universes and benchmarks configurable instead of
-hard-coding `tickers.is_active = 1` and ad-hoc `SPY` benchmark selection.
+AP5 is complete. Current AP5 findings:
+
+- Universes are now selectable by configuration key:
+  `sp500_active`, `active_tickers`, and `all_tickers`.
+- Benchmarks are now selectable by configuration key: `spy`, `qqq`, and `iwm`.
+- `cli.framework_status` now supports `--universe`, `--benchmark`, and
+  `--list-configs`.
+- The old `--benchmark-ticker SPY` path still works as an ad-hoc compatibility
+  override.
+- Local smoke checks succeeded:
+  `.venv/bin/python -m cli.framework_status --list-configs`
+  `.venv/bin/python -m cli.framework_status`
+  `.venv/bin/python -m cli.framework_status --universe all_tickers --benchmark spy`
+  `.venv/bin/python -m cli.framework_status --benchmark-ticker SPY`
+- Default AP5 status: 503 `sp500_active` members and 524 SPY benchmark rows
+  from 2024-04-22 to 2026-05-22.
+
+Next planned step: AP6, implement the first Value/Quality/Momentum strategy
+evaluation against a configured benchmark.

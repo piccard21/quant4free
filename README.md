@@ -114,10 +114,10 @@ AP2 und die standardisierten Modul-Contracts aus AP3 sind implementiert:
 - `cli/`
 - `shared/`
 
-AP3 ist abgeschlossen: Der neue modulare Datenzugriff kann die bestehenden
-Rohdatentabellen read-only lesen, und austauschbare Bausteine haben klare
-Python-Contracts fuer Provider, Universen, Benchmarks, Indikatoren und
-Strategien. Der Datenmodell-Entwurf und Schema-Plan ist in
+AP5 ist abgeschlossen: Der neue modulare Datenzugriff kann die bestehenden
+Rohdatentabellen read-only lesen, austauschbare Bausteine haben klare
+Python-Contracts, und Universen sowie Benchmarks koennen per Konfigurationskey
+ausgewaehlt werden. Der Datenmodell-Entwurf und Schema-Plan ist in
 [docs/data-model.md](docs/data-model.md) dokumentiert. `init.sql` bleibt
 vorerst Legacy-kompatibel; es wurde noch keine Schema-Migration ausgefuehrt.
 Die bereinigte Testdatenbasis fuer das neue Framework liegt in
@@ -126,8 +126,8 @@ Die bereinigte Testdatenbasis fuer das neue Framework liegt in
 Der Umbau erfolgt ab hier schrittweise. AP4 ist bewusst ein Infrastruktur-
 Schritt, weil AP3 unter Windows mit WSL Toolchain-Probleme gezeigt hat:
 
-1. Auf eine stabile Linux-Entwicklungsumgebung umziehen und dort venv, `requirements.txt`, Docker/Compose, MySQL und Fixture-Daten stabilisieren.
-2. Universen und Benchmarks als Konfiguration konkretisieren.
+1. Auf eine stabile Linux-Entwicklungsumgebung umziehen und dort venv, `requirements.txt`, Docker/Compose, MySQL und Fixture-Daten stabilisieren. Erledigt in AP4.
+2. Universen und Benchmarks als Konfiguration konkretisieren. Erledigt in AP5.
 3. Erste Strategie gegen Benchmark evaluieren.
 4. Live-Funktionen anschließend wieder anbinden.
 
@@ -158,7 +158,8 @@ Neuer modularer Datenzugriff:
 
 ```bash
 docker compose run --rm app python -m cli.data_status --details
-docker compose run --rm app python -m cli.framework_status --benchmark-ticker SPY
+docker compose run --rm app python -m cli.framework_status --universe sp500_active --benchmark spy
+docker compose run --rm app python -m cli.framework_status --list-configs
 ```
 
 Bereinigte Rohdaten-Fixture-Daten aus `fixtures/raw_market_data.sql` koennen
@@ -169,26 +170,23 @@ cp .env.example .env
 docker compose up -d db
 docker compose exec -T db sh -lc 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE"' < fixtures/raw_market_data.sql
 docker compose run --rm app python -m cli.data_status --details
-docker compose run --rm app python -m cli.framework_status --benchmark-ticker SPY
+docker compose run --rm app python -m cli.framework_status --universe sp500_active --benchmark spy
 ```
 
 Die Fixture enthaelt nur `tickers`, `daily_candles`, `financial_reports` und
 `market_cap_snapshots`. Legacy-/Live-Daten wie Trades, Cash Ledger,
 Portfolio-Positionen und Performance-Snapshots sind bewusst nicht enthalten.
 
-Programmatisch kann der AP3-Zugriff so verwendet werden:
+Programmatisch kann der AP5-Zugriff so verwendet werden:
 
 ```python
 from data import FixtureDataProvider
-from evaluation import BenchmarkSpec, ProviderBenchmark
-from universes import ActiveTickerUniverse
+from evaluation import create_benchmark
+from universes import create_universe
 
 provider = FixtureDataProvider()
-universe = ActiveTickerUniverse(provider)
-benchmark = ProviderBenchmark(
-    BenchmarkSpec(key="spy", ticker="SPY", name="SPY benchmark"),
-    provider,
-)
+universe = create_universe("sp500_active", provider)
+benchmark = create_benchmark("spy", provider)
 
 members = universe.load_members()
 prices = provider.load_prices(["AAPL", "MSFT"])
