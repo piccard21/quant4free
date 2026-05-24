@@ -20,7 +20,7 @@ This repository is being migrated from an operational quantitative portfolio sys
 - `shared/`: new shared helpers for the modular framework.
 - `docs/`: operator, strategy, architecture, and troubleshooting documentation.
 - `init.sql`: canonical schema initialization.
-- `stocks_db.sql`: database export useful as demo/test fixture data.
+- `fixtures/raw_market_data.sql`: sanitized raw-data fixture for modular framework smoke checks.
 - `simfin/`: bundled SimFin ZIP data assets.
 
 There is currently no dedicated `tests/` directory.
@@ -31,12 +31,13 @@ AP0 is complete: the previous operational modules were moved under
 `legacy/current_system/`, and the new top-level package skeleton was created.
 
 AP1 is complete: the data-model and schema plan are documented in
-`docs/data-model.md`. `init.sql` and `stocks_db.sql` intentionally remain
-legacy-compatible for now; no schema migration has been applied yet.
+`docs/data-model.md`. `init.sql` intentionally remains legacy-compatible for
+now; no schema migration has been applied yet.
 
-The next planned implementation step is AP2: minimal data access for the new
-modular framework, preferably against existing fixture/demo data before using
-external APIs.
+AP2, AP3, and AP4 are complete. The new modular framework can read raw fixture
+data from MySQL through the new data-provider layer. The canonical fixture is
+`fixtures/raw_market_data.sql`, which contains only `tickers`, `daily_candles`,
+`financial_reports`, and `market_cap_snapshots`.
 
 Legacy CLI modules still use imports such as `core.*` and `shared.*`, so legacy
 commands must be run with `PYTHONPATH=/app/legacy/current_system`.
@@ -96,7 +97,7 @@ recompute.
 
 ## Testing Guidelines
 
-No formal test framework is configured yet. For changes, at minimum run `compileall` and a relevant pipeline/status command against a local Docker database. Prefer using `stocks_db.sql` as a fixture to avoid unnecessary API calls during regression checks.
+No formal test framework is configured yet. For changes, at minimum run `compileall` and a relevant pipeline/status command against a local Docker database. Prefer using `fixtures/raw_market_data.sql` as the fixture to avoid unnecessary API calls and to keep trades, cash balances, and portfolio history out of regression data.
 
 Future tests should use `pytest`, live under `tests/`, and name files `test_<module>.py`.
 
@@ -113,4 +114,4 @@ Pull requests should describe the behavioral change, list commands run, mention 
 
 ## Security & Configuration Tips
 
-Keep secrets and infrastructure access in `.env`; do not commit real credentials. Treat exported SQL dumps as potentially sensitive because they may contain real trades, cash balances, and portfolio history.
+Keep secrets and infrastructure access in `.env`; do not commit real credentials. Do not reintroduce full SQL dumps containing real trades, cash balances, or portfolio history unless explicitly required and reviewed.

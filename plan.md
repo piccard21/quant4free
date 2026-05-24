@@ -40,10 +40,10 @@ AP2:
 AP1:
 
 - Datenmodell-Entwurf und Schema-Plan in `docs/data-model.md` dokumentiert.
-- Bestehende Tabellen aus `init.sql` und `stocks_db.sql` in Rohdaten, Legacy-Settings, Legacy-Snapshots, Live-Betrieb und Research eingeordnet.
+- Bestehende Tabellen aus `init.sql` und dem ehemaligen Full-Dump `stocks_db.sql` in Rohdaten, Legacy-Settings, Legacy-Snapshots, Live-Betrieb und Research eingeordnet.
 - Zieltabellen fuer Mandanten, Portfolios, Universen, Benchmarks, Strategieinstanzen, Evaluation-Runs und Live-Betrieb festgelegt.
 - Migrationsreihenfolge AP2 bis AP6 definiert.
-- Entscheidung festgehalten: `init.sql` und `stocks_db.sql` bleiben vorerst Legacy-kompatibel; AP1 fuehrt noch keine Schema-Migration aus.
+- Entscheidung festgehalten: `init.sql` bleibt vorerst Legacy-kompatibel; AP1 fuehrt noch keine Schema-Migration aus.
 
 AP0:
 
@@ -86,7 +86,7 @@ docker compose run --rm -e PYTHONPATH=/app/legacy/current_system app python -m c
 
 Naechster Schritt:
 
-- AP4: Linux-Umzug und lokale Toolchain stabilisieren: Linux-venv, `requirements.txt`, Docker/Compose und Fixture-DB zuerst sauber lauffaehig machen.
+- AP4: Wegen der Windows-/WSL-Probleme aus AP3 auf eine stabile Linux-Entwicklungsumgebung umziehen und dort die lokale Toolchain stabilisieren: Linux-venv, `requirements.txt`, Docker/Compose und Fixture-DB zuerst sauber lauffaehig machen.
 - Danach AP5: Universen und Benchmarks als austauschbare Konfiguration konkretisieren.
 
 ## Zielbild
@@ -106,7 +106,7 @@ Das System bleibt bewusst nach Occams Rasiermesser gebaut: Rohdaten sauber speic
 - Strategien gegeneinander evaluieren: Backtests, Parameter-Sweeps, Equity Curves, Benchmark-Vergleich.
 - Live-Betrieb unterstuetzen: Model Portfolio, Shadow Portfolio, Real Portfolio, Execution Gap, manuelle Trades, Cash-Ledger.
 - Pro Client/Portfolio/Run vollstaendig tracken, welche Konfiguration verwendet wurde.
-- Tests und Experimente ohne API-Zugriff mit `stocks_db.sql` ermoeglichen.
+- Tests und Experimente ohne API-Zugriff mit `fixtures/raw_market_data.sql` ermoeglichen.
 - Weboberflaeche erst ganz am Schluss bauen, wenn Kern, Datenmodell und Workflows stabil sind.
 
 ## Behalten, Aendern, Weglassen
@@ -118,7 +118,7 @@ Das System bleibt bewusst nach Occams Rasiermesser gebaut: Rohdaten sauber speic
 - Manuelle Trade-Erfassung.
 - Cash-/Trade-Historie.
 - Performance-Vergleich gegen Benchmark.
-- `stocks_db.sql` als Test- und Demo-Datenbasis.
+- Bereinigte Rohdaten-Fixture `fixtures/raw_market_data.sql` als Test- und Demo-Datenbasis.
 
 ### Aendern
 
@@ -198,7 +198,7 @@ Nicht blind verschoben werden zunaechst:
 
 ```text
 init.sql
-stocks_db.sql
+fixtures/raw_market_data.sql
 docker-compose.yml
 Dockerfile
 setup.sh
@@ -374,11 +374,11 @@ Tests/Akzeptanz:
 Ziel:
 
 - Entwicklung und Tests ohne API-Zugriff ermoeglichen.
-- `stocks_db.sql` als reproduzierbare Datenbasis nutzbar machen.
+- `fixtures/raw_market_data.sql` als reproduzierbare Rohdatenbasis nutzbar machen.
 
 Umfang:
 
-- Dokumentieren, wie `stocks_db.sql` lokal in MySQL geladen wird.
+- Dokumentieren, wie `fixtures/raw_market_data.sql` lokal in MySQL geladen wird.
 - Kleinen Health-Check fuer vorhandene Kerzen, Ticker, Fundamentals und Benchmark-Daten bauen.
 - Minimalen Test-Datensatz definieren, falls der Dump zu gross oder sensibel ist.
 
@@ -420,6 +420,11 @@ Tests/Akzeptanz:
 
 ### AP4: Linux-Umzug Und Lokale Toolchain
 
+Ausloeser:
+
+- In AP3 gab es Entwicklungs- und Toolchain-Probleme unter Windows mit WSL.
+- Bevor weitere Fachlogik gebaut wird, zieht die Entwicklung auf eine stabile Linux-Umgebung um.
+
 Ziel:
 
 - Die Entwicklungsumgebung vollstaendig auf Linux ausrichten, bevor weitere Fachlogik gebaut wird.
@@ -428,7 +433,7 @@ Ziel:
 Umfang:
 
 - Windows-venv nicht weiter als Projektstandard verwenden.
-- Linux-venv `.venv-linux` oder eine neue `.venv` unter Linux als Standard festlegen.
+- Linux-venv `.venv` als Standard festlegen.
 - `requirements.txt` in der Linux-venv installieren und mit `pip check` pruefen.
 - Docker-/Compose-Zugriff auf der Linux-Umgebung stabilisieren.
 - `.env.example`, `.env` und `docker-compose.yml` so abgleichen, dass `MYSQL_ROOT_PASSWORD`, `DB_NAME`, `DB_USER` und `DB_PASSWORD` sicher gesetzt sind.
@@ -438,12 +443,32 @@ Umfang:
 
 Tests/Akzeptanz:
 
-- `.venv-linux/bin/python -m pip install -r requirements.txt` laeuft erfolgreich.
-- `.venv-linux/bin/python -m pip check` meldet keine kaputten Abhaengigkeiten.
-- `.venv-linux/bin/python -m compileall data universes indicators strategies simulation evaluation live cli shared` laeuft erfolgreich.
+- `.venv/bin/python -m pip install -r requirements.txt` laeuft erfolgreich.
+- `.venv/bin/python -m pip check` meldet keine kaputten Abhaengigkeiten.
+- `.venv/bin/python -m compileall data universes indicators strategies simulation evaluation live cli shared` laeuft erfolgreich.
 - `docker compose up -d db` startet MySQL healthy.
 - `docker compose run --rm app python -m cli.data_status --details` laeuft gegen die lokale DB.
 - `docker compose run --rm app python -m cli.framework_status --benchmark-ticker SPY` laeuft gegen die lokale DB.
+
+Aktueller Linux-Befund:
+
+- `.venv-linux` wurde entfernt; der Linux-Standard ist jetzt `.venv`.
+- `.venv` ist angelegt und hat funktionierendes pip mit installierten Requirements.
+- `.venv/bin/python -m pip check` meldet keine kaputten Abhaengigkeiten.
+- Lokale und Container-Compilechecks fuer Legacy und neue Paketstruktur laufen erfolgreich.
+- Docker/Compose funktioniert ausserhalb der Sandbox; `sp500_db` ist healthy,
+  `sp500_worker` und `sp500_pma` laufen.
+- `fixtures/raw_market_data.sql` ist in die lokale `stocks_db` geladen.
+- Die lokale `stocks_db` enthaelt nach AP4 bewusst nur noch die vier Rohdatentabellen
+  `tickers`, `daily_candles`, `financial_reports` und `market_cap_snapshots`.
+- Der vollstaendige Legacy-Dump `stocks_db.sql` wurde nach erfolgreicher
+  Fixture-Erzeugung und Smoke-Pruefung geloescht, um Trade-, Cash- und
+  Portfolio-Historie nicht als Standard-Fixture zu behalten.
+- Lokale und Container-Smoke-Checks fuer `cli.data_status --details` und
+  `cli.framework_status --benchmark-ticker SPY` laufen erfolgreich.
+- Legacy-Health lief vor der Bereinigung mit dem Full-Dump. Nach Umstellung auf
+  die Rohdaten-Fixture ist Legacy-Health nicht mehr der AP4-Standardcheck, weil
+  Legacy-/Live-Snapshot-, Cash- und Portfolio-Tabellen bewusst fehlen.
 
 ### AP5: Universen Und Benchmarks
 
@@ -583,7 +608,7 @@ Tests/Akzeptanz:
 ## Roadmap
 
 1. Datenmodell und Modulstruktur entwerfen.
-2. `stocks_db.sql` als Demo-/Fixture-Datenbasis nutzbar machen.
+2. `fixtures/raw_market_data.sql` als bereinigte Demo-/Fixture-Datenbasis nutzbar machen.
 3. Standardisierte Modul-Contracts fuer Provider, Universen, Benchmarks, Indikatoren und Strategien einfuehren.
 4. Linux-Umzug und lokale Toolchain stabilisieren: venv, Requirements, Docker, MySQL und Fixture-Daten.
 5. Provider-/Universums-/Benchmark-Schicht auf stabiler Linux-Basis weiter konkretisieren.
@@ -597,7 +622,7 @@ Tests/Akzeptanz:
 
 ## Testing Und Akzeptanz
 
-- `stocks_db.sql` wird als Demo-/Fixture-Datenbank genutzt, damit Ticker, Kerzen und Fundamentals ohne API-Aufrufe verfuegbar sind.
+- `fixtures/raw_market_data.sql` wird als Demo-/Fixture-Datenbank genutzt, damit Ticker, Kerzen und Fundamentals ohne API-Aufrufe verfuegbar sind.
 - Erste Akzeptanz: dieselben Rohdaten koennen fuer mehrere Strategien, Universen und Benchmarks genutzt werden.
 - Backtest-Akzeptanz: ein Run erzeugt reproduzierbar Metriken, Equity Curve und simulierte Trades.
 - Live-Akzeptanz: aktives Portfolio zeigt Model, Shadow, Real und Execution Gap.
@@ -608,7 +633,7 @@ Tests/Akzeptanz:
 
 - Start mit `portfolio_id`; echte Mandantenfaehigkeit mit `tenant_id` wird vorbereitet, aber nicht als erster Zwang umgesetzt.
 - MySQL bleibt zunaechst bestehen.
-- `stocks_db.sql` wird nicht als neues `init.sql` verwendet, sondern als Test-/Demo-Dump.
+- `fixtures/raw_market_data.sql` wird nicht als neues `init.sql` verwendet, sondern als bereinigte Test-/Demo-Fixture.
 - Erste Provider sind bestehende DB/Fixture-Daten und yfinance; weitere APIs kommen ueber Adapter.
 - Erste Strategie bleibt Value/Quality/Momentum, wird aber in die neue modulare Strategieform ueberfuehrt.
 - Weboberflaeche kommt zuletzt, bevorzugt schlank ueber FastAPI plus einfache UI, sobald Kern und Workflows stabil sind.

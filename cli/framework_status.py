@@ -2,10 +2,6 @@ import argparse
 from datetime import date
 from typing import Optional
 
-from data import FixtureDataProvider
-from evaluation import BenchmarkSpec, ProviderBenchmark
-from universes import ActiveTickerUniverse
-
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
@@ -33,6 +29,16 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
+    try:
+        from data import FixtureDataProvider
+        from evaluation import BenchmarkSpec, ProviderBenchmark
+        from universes import ActiveTickerUniverse
+    except ModuleNotFoundError as exc:
+        raise SystemExit(
+            f"missing Python dependency: {exc.name}; "
+            "install requirements with .venv/bin/python -m pip install -r requirements.txt"
+        ) from exc
+
     provider = FixtureDataProvider()
     universe = ActiveTickerUniverse(provider)
     benchmark = ProviderBenchmark(

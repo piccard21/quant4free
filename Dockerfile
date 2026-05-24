@@ -10,4 +10,4 @@ RUN apt-get update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 COPY . .
-CMD ["python", "main.py"]
+CMD ["python", "-m", "cli.framework_status"]

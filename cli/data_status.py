@@ -1,10 +1,6 @@
 import argparse
 from typing import Any
 
-from sqlalchemy import text
-
-from shared.db import get_engine, load_database_config, ping_database
-
 
 RAW_TABLES = {
     "tickers": None,
@@ -33,6 +29,16 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
+
+    try:
+        from sqlalchemy import text
+        from shared.db import get_engine, load_database_config, ping_database
+    except ModuleNotFoundError as exc:
+        raise SystemExit(
+            f"missing Python dependency: {exc.name}; "
+            "install requirements with .venv/bin/python -m pip install -r requirements.txt"
+        ) from exc
+
     config = load_database_config()
 
     print(f"database={config.database} host={config.host} user={config.user}")

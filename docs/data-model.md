@@ -2,7 +2,7 @@
 
 Stand: AP3 abgeschlossen.
 
-Dieses Dokument beschreibt den Zielzustand des neuen modularen Quant-Frameworks. Es ist noch keine Migration des produktiven Legacy-Schemas. `init.sql` und `stocks_db.sql` bleiben vorerst kompatibel zum eingefrorenen Legacy-System.
+Dieses Dokument beschreibt den Zielzustand des neuen modularen Quant-Frameworks. Es ist noch keine Migration des produktiven Legacy-Schemas. `init.sql` bleibt vorerst kompatibel zum eingefrorenen Legacy-System. Die bereinigte Framework-Fixture liegt in `fixtures/raw_market_data.sql`.
 
 ## Leitlinien
 
@@ -15,7 +15,9 @@ Dieses Dokument beschreibt den Zielzustand des neuen modularen Quant-Frameworks.
 
 ## Aktueller Legacy-Bestand
 
-`init.sql` und `stocks_db.sql` enthalten aktuell dieselben 18 Tabellen:
+`init.sql` beschreibt den legacy-kompatiblen Gesamtbestand. Der entfernte
+Full-Dump `stocks_db.sql` enthielt dieselben 18 Tabellen und wurde durch die
+bereinigte Rohdaten-Fixture `fixtures/raw_market_data.sql` ersetzt:
 
 | Bereich | Tabellen | Bewertung |
 |---|---|---|
@@ -39,7 +41,7 @@ financial_reports
 market_cap_snapshots
 ```
 
-Diese Tabellen bleiben die erste Datenbasis. Sie werden spaeter nur vorsichtig erweitert, z. B. um Provider-Metadaten, ohne die Fixture-Nutzbarkeit von `stocks_db.sql` zu brechen.
+Diese Tabellen bleiben die erste Datenbasis. Sie werden spaeter nur vorsichtig erweitert, z. B. um Provider-Metadaten, ohne die Fixture-Nutzbarkeit von `fixtures/raw_market_data.sql` zu brechen.
 
 Offene Entscheidung fuer spaeter:
 
@@ -181,7 +183,7 @@ tickers
 Status: abgeschlossen.
 
 - Neue `shared`-/`data`-DB-Verbindung fuer das modulare System angelegt.
-- Fixture-Lesepfad fuer `stocks_db.sql` kompatible Tabellen geschaffen.
+- Fixture-Lesepfad fuer die Rohdatentabellen aus `fixtures/raw_market_data.sql` geschaffen.
 - Read-only Loader fuer Ticker, Kerzen, Fundamentaldaten und Market-Caps implementiert.
 - Smoke-Test-CLI `cli.data_status` fuer Rohdatenverfuegbarkeit angelegt.
 
@@ -197,6 +199,7 @@ Status: abgeschlossen.
 
 ### AP4: Linux-Umzug und lokale Toolchain
 
+- Anlass: AP3 hatte Entwicklungs- und Toolchain-Probleme unter Windows mit WSL.
 - Entwicklungsumgebung vollstaendig auf Linux ausrichten.
 - Linux-venv als Standard verwenden und `requirements.txt` installieren.
 - Docker/Compose, MySQL-Container, `.env` und Fixture-Daten stabil lauffaehig machen.
@@ -310,4 +313,4 @@ CREATE TABLE strategy_runs (
 - MySQL-Version pruefen, bevor JSON-Indizes oder Check-Constraints genutzt werden.
 - Entscheiden, ob `data_providers`/`provider_configs` in AP2 schon als Tabellen noetig sind oder vorerst Code-Konfiguration bleiben.
 - Entscheiden, ob `factor_metrics`/`factor_scores` fuer Performance als Run-bezogene Tabellen wieder eingefuehrt werden.
-- Vor jeder echten Migration Backup- und Restore-Pfad fuer `stocks_db.sql` testen.
+- Vor jeder echten Migration Backup- und Restore-Pfad fuer `init.sql` und die aktuelle Fixture testen.

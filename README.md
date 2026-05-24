@@ -118,13 +118,15 @@ AP3 ist abgeschlossen: Der neue modulare Datenzugriff kann die bestehenden
 Rohdatentabellen read-only lesen, und austauschbare Bausteine haben klare
 Python-Contracts fuer Provider, Universen, Benchmarks, Indikatoren und
 Strategien. Der Datenmodell-Entwurf und Schema-Plan ist in
-[docs/data-model.md](docs/data-model.md) dokumentiert. `init.sql` und
-`stocks_db.sql` bleiben vorerst Legacy-kompatibel; es wurde noch keine
-Schema-Migration ausgefuehrt.
+[docs/data-model.md](docs/data-model.md) dokumentiert. `init.sql` bleibt
+vorerst Legacy-kompatibel; es wurde noch keine Schema-Migration ausgefuehrt.
+Die bereinigte Testdatenbasis fuer das neue Framework liegt in
+`fixtures/raw_market_data.sql`.
 
-Der Umbau erfolgt ab hier schrittweise:
+Der Umbau erfolgt ab hier schrittweise. AP4 ist bewusst ein Infrastruktur-
+Schritt, weil AP3 unter Windows mit WSL Toolchain-Probleme gezeigt hat:
 
-1. Linux-Umgebung stabilisieren: venv, `requirements.txt`, Docker/Compose, MySQL und Fixture-Daten.
+1. Auf eine stabile Linux-Entwicklungsumgebung umziehen und dort venv, `requirements.txt`, Docker/Compose, MySQL und Fixture-Daten stabilisieren.
 2. Universen und Benchmarks als Konfiguration konkretisieren.
 3. Erste Strategie gegen Benchmark evaluieren.
 4. Live-Funktionen anschließend wieder anbinden.
@@ -159,16 +161,20 @@ docker compose run --rm app python -m cli.data_status --details
 docker compose run --rm app python -m cli.framework_status --benchmark-ticker SPY
 ```
 
-Fixture-/Demo-Daten aus `stocks_db.sql` koennen ohne API-Zugriff in eine lokale
-Docker-Datenbank geladen werden:
+Bereinigte Rohdaten-Fixture-Daten aus `fixtures/raw_market_data.sql` koennen
+ohne API-Zugriff in eine lokale Docker-Datenbank geladen werden:
 
 ```bash
 cp .env.example .env
 docker compose up -d db
-docker compose exec -T db sh -lc 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE"' < stocks_db.sql
+docker compose exec -T db sh -lc 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE"' < fixtures/raw_market_data.sql
 docker compose run --rm app python -m cli.data_status --details
 docker compose run --rm app python -m cli.framework_status --benchmark-ticker SPY
 ```
+
+Die Fixture enthaelt nur `tickers`, `daily_candles`, `financial_reports` und
+`market_cap_snapshots`. Legacy-/Live-Daten wie Trades, Cash Ledger,
+Portfolio-Positionen und Performance-Snapshots sind bewusst nicht enthalten.
 
 Programmatisch kann der AP3-Zugriff so verwendet werden:
 
@@ -394,10 +400,12 @@ Benötigt:
 - Git
 - Docker Engine
 - Docker Compose Plugin
+- Python 3 mit venv/pip fuer lokale AP4-Smoke-Checks
 
-Python muss nicht lokal installiert werden.
-
-Alle Python-Abhängigkeiten werden automatisch im Docker-Container installiert.
+Die produktiven Kommandos laufen weiterhin im Docker-Container. Fuer AP4 wird
+zusaetzlich eine lokale Linux-venv verwendet, damit Provider-, Universe- und
+Benchmark-Contracts auch ohne Windows-/WSL-Sonderfaelle geprueft werden
+koennen.
 
 ---
 
@@ -407,7 +415,7 @@ Alle Python-Abhängigkeiten werden automatisch im Docker-Container installiert.
 
 ```bash
 sudo apt update
-sudo apt install -y ca-certificates curl gnupg
+sudo apt install -y ca-certificates curl gnupg python3-venv python3-pip
 ```
 
 ## 2. Docker GPG-Key hinzufügen
@@ -471,8 +479,21 @@ docker compose build
 Dabei werden automatisch installiert:
 
 - Python
-- requirements.txt
+- `requirements.txt`
 - alle Dependencies
+
+## Lokale Linux-venv fuer AP4
+
+```bash
+python3 -m venv .venv
+.venv/bin/python -m pip install --upgrade pip
+.venv/bin/python -m pip install -r requirements.txt
+.venv/bin/python -m pip check
+.venv/bin/python -m compileall data universes indicators strategies simulation evaluation live cli shared
+```
+
+Die lokale venv nutzt standardmaessig `DB_HOST=localhost`, waehrend Docker
+Compose den App-Container explizit mit `DB_HOST=db` startet.
 
 ## Datenbank starten
 

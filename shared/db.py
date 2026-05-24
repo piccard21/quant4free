@@ -30,11 +30,11 @@ class DatabaseConfig:
 
 def load_database_config() -> DatabaseConfig:
     return DatabaseConfig(
-        host=os.getenv("DB_HOST", "db"),
+        host=os.getenv("DB_HOST", "localhost"),
         user=os.getenv("DB_USER", "root"),
         password=os.getenv(
             "DB_PASSWORD",
-            os.getenv("MYSQL_ROOT_PASSWORD", "password123"),
+            os.getenv("MYSQL_ROOT_PASSWORD", "mypassword"),
         ),
         database=os.getenv("DB_NAME", "stocks_db"),
     )
