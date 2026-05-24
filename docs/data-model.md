@@ -1,6 +1,6 @@
 # Datenmodell-Plan
 
-Stand: AP3 abgeschlossen.
+Stand: AP6 abgeschlossen.
 
 Dieses Dokument beschreibt den Zielzustand des neuen modularen Quant-Frameworks. Es ist noch keine Migration des produktiven Legacy-Schemas. `init.sql` bleibt vorerst kompatibel zum eingefrorenen Legacy-System. Die bereinigte Framework-Fixture liegt in `fixtures/raw_market_data.sql`.
 
@@ -211,19 +211,26 @@ Status: abgeschlossen.
 - S&P-500-Universum zunaechst aus `tickers.is_active = 1` laden.
 - Benchmark `SPY` aus `daily_candles` lesen.
 
-### AP6: Strategie-Run
+### AP6: Indikator-Engine
+
+- `Indicator`-Contract fuer modulare Berechnungen verwenden.
+- Momentum/Return, relative Staerke sowie einfache Value-/Quality-Kennzahlen
+  auf Fixture-Daten berechnen.
+- Fehlende Daten explizit als NaN/NULL behandeln.
+
+### AP7: Erste Strategie Value/Quality/Momentum
 
 - Erste `strategy_instances`-Default-Konfiguration definieren.
 - Value/Quality/Momentum-Strategie auf Fixture-Daten ausfuehren.
-- Ergebnis gegen Benchmark ausgeben.
+- Ranking und erste Model-Portfolio-Ausgabe erzeugen.
 
-### AP7: Persistenz fuer Evaluation
+### AP8: Persistenz fuer Evaluation
 
 - `strategy_runs`, `strategy_run_metrics`, `strategy_run_equity_curve` und `strategy_run_trades` in SQL anlegen.
 - Run-Konfiguration einfrieren.
 - CLI fuer einen reproduzierbaren Backtest bereitstellen.
 
-### AP8: Live-Migration
+### AP9: Live-Migration
 
 - Legacy-Live-Tabellen portfolio-faehig machen oder in neue Live-Tabellen migrieren.
 - Execution Gap zwischen Shadow und Real Portfolio wieder anbinden.

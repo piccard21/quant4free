@@ -98,5 +98,23 @@ AP5 is complete. Current AP5 findings:
 - Default AP5 status: 503 `sp500_active` members and 524 SPY benchmark rows
   from 2024-04-22 to 2026-05-22.
 
-Next planned step: AP6, implement the first Value/Quality/Momentum strategy
-evaluation against a configured benchmark.
+AP6 is complete. Current AP6 findings:
+
+- `indicators.core` contains modular indicators for momentum return, relative
+  strength, earnings yield, free-cash-flow yield, return on equity, and
+  debt/equity.
+- `indicators.engine` provides a default registry and a `compute_indicators`
+  helper that merges indicator outputs by ticker.
+- Missing lookback, fundamental, or market-cap inputs remain explicit NaN
+  values instead of becoming default scores.
+- `cli.indicator_status` runs the AP6 smoke path against the configured
+  universe and fixture-backed raw data.
+- Local smoke checks succeeded:
+  `.venv/bin/python -m compileall data universes indicators strategies simulation evaluation live cli shared tests`
+  `.venv/bin/python -m unittest tests.test_indicators`
+  `.venv/bin/python -m cli.indicator_status --limit 3`
+- Default AP6 status: 503 `sp500_active` rows as of 2026-05-22 with all six
+  default indicators calculated.
+
+Next planned step: AP7, implement the first Value/Quality/Momentum strategy
+using the AP6 indicator engine.

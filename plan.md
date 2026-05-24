@@ -2,9 +2,33 @@
 
 ## Umsetzungsstand
 
-Stand: AP5 ist abgeschlossen. Naechster Schritt ist AP6.
+Stand: AP6 ist abgeschlossen. Naechster Schritt ist AP7.
 
 Erledigt:
+
+AP6:
+
+- Indikator-Engine eingefuehrt:
+  - `compute_indicators`
+  - `create_indicators`
+  - `get_indicator`
+  - `list_indicator_keys`
+  - `merge_indicator_results`
+- Erste konkrete Indikatoren implementiert:
+  - `momentum_return`
+  - `relative_strength`
+  - `earnings_yield`
+  - `free_cash_flow_yield`
+  - `return_on_equity`
+  - `debt_to_equity`
+- Fehlende Lookback-, Fundamental- oder Market-Cap-Daten bleiben explizit als
+  NaN erhalten.
+- `cli.indicator_status` als AP6-Smoke-CLI angelegt.
+- Kleiner unittest-Satz unter `tests/test_indicators.py` angelegt.
+- Lokale Checks erfolgreich ausgefuehrt:
+  - `.venv/bin/python -m compileall data universes indicators strategies simulation evaluation live cli shared tests`
+  - `.venv/bin/python -m unittest tests.test_indicators`
+  - `.venv/bin/python -m cli.indicator_status --limit 3`
 
 AP5:
 
@@ -129,7 +153,7 @@ docker compose run --rm -e PYTHONPATH=/app/legacy/current_system app python -m c
 
 Naechster Schritt:
 
-- AP6: Erste Value/Quality/Momentum-Strategie gegen Benchmark evaluieren.
+- AP7: Erste Value/Quality/Momentum-Strategie mit AP6-Indikatoren bauen.
 
 ## Zielbild
 
