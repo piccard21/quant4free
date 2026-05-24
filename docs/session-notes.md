@@ -116,5 +116,23 @@ AP6 is complete. Current AP6 findings:
 - Default AP6 status: 503 `sp500_active` rows as of 2026-05-22 with all six
   default indicators calculated.
 
-Next planned step: AP7, implement the first Value/Quality/Momentum strategy
-using the AP6 indicator engine.
+AP7 is complete. Current AP7 findings:
+
+- `strategies.value_quality_momentum` contains the first modular
+  Value/Quality/Momentum strategy.
+- Factor weights are configurable and validated. The default weights are
+  Value 0.35, Quality 0.30, and Momentum 0.35.
+- The strategy consumes AP6 indicator frames through `StrategyContext`, creates
+  value, quality, momentum, and composite scores, ranks eligible tickers, and
+  assigns equal `model_weight` to the top model-portfolio rows.
+- `cli.strategy_status` runs the AP7 smoke path against the configured
+  universe, benchmark, and fixture-backed raw data.
+- Local smoke checks succeeded:
+  `.venv/bin/python -m compileall data universes indicators strategies simulation evaluation live cli shared tests`
+  `.venv/bin/python -m unittest tests.test_value_quality_momentum tests.test_indicators`
+  `.venv/bin/python -m cli.strategy_status --limit 3`
+- Default AP7 status: 503 `sp500_active` rows as of 2026-05-22, 500 eligible
+  scored rows, and 7 equal-weight model positions.
+
+Next planned step: AP8, add evaluation/backtest persistence and benchmark
+comparison around strategy runs.

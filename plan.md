@@ -2,9 +2,27 @@
 
 ## Umsetzungsstand
 
-Stand: AP6 ist abgeschlossen. Naechster Schritt ist AP7.
+Stand: AP7 ist abgeschlossen. Naechster Schritt ist AP8.
 
 Erledigt:
+
+AP7:
+
+- Erste modulare Value/Quality/Momentum-Strategie eingefuehrt:
+  - `ValueQualityMomentumStrategy`
+  - `create_default_strategy`
+  - validierte Faktor-Gewichte fuer Value, Quality und Momentum
+- Ranking- und Model-Portfolio-Ausgabe erzeugt:
+  - `composite_score`
+  - Faktor-Subscores
+  - `rank`
+  - equal-weight `model_weight` fuer die Top-Positionen
+- `cli.strategy_status` als AP7-Smoke-CLI angelegt.
+- Kleiner unittest-Satz unter `tests/test_value_quality_momentum.py` angelegt.
+- Lokale Checks erfolgreich ausgefuehrt:
+  - `.venv/bin/python -m compileall data universes indicators strategies simulation evaluation live cli shared tests`
+  - `.venv/bin/python -m unittest tests.test_value_quality_momentum tests.test_indicators`
+  - `.venv/bin/python -m cli.strategy_status --limit 3`
 
 AP6:
 

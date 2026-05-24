@@ -1,6 +1,6 @@
 # Datenmodell-Plan
 
-Stand: AP6 abgeschlossen.
+Stand: AP7 abgeschlossen.
 
 Dieses Dokument beschreibt den Zielzustand des neuen modularen Quant-Frameworks. Es ist noch keine Migration des produktiven Legacy-Schemas. `init.sql` bleibt vorerst kompatibel zum eingefrorenen Legacy-System. Die bereinigte Framework-Fixture liegt in `fixtures/raw_market_data.sql`.
 
