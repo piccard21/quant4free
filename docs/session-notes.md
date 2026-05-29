@@ -268,5 +268,30 @@ AP14 is complete:
 - Verification:
   - `.venv/bin/python -m pytest tests/test_data_sync.py tests/test_live_operations.py tests/test_live_execution.py tests/test_live_status.py tests/test_cli_errors.py`
 
-Next step: AP15, document and test host-crontab operation for daily and monthly
-runs on the canonical AP14 path.
+AP15 is complete:
+
+- Added host scripts:
+  - `scripts/cron_daily.sh`
+  - `scripts/cron_monthly.sh`
+  - `scripts/client_smoke.sh`
+- `docs/operations.md` now documents host crontab entries, `flock` locks,
+  fixed log paths, manual log checks, and lock-conflict testing.
+- The cron path uses only modular CLIs: `cli.daily_run` and
+  `cli.monthly_run --persist`.
+- Fresh isolated client smoke was run against `ap15_client_smoke`:
+  - loaded `fixtures/raw_market_data.sql`
+  - applied `init.sql`
+  - set start capital to 10000 and AP15 strategy overrides
+  - ran `cli.operator_smoke`
+  - ran `cli.monthly_run --persist`
+  - validated `cli.live_status`, `cli.live_trade --dry-run`, and
+    `cli.live_cash --dry-run`
+  - executed seven smoke BUYs in the isolated DB
+  - verified seven executions, seven open positions, and matching cash and
+    latest ledger balances at 660.940000
+- Cron verification:
+  - `flock` lock-conflict test returned `lock_test=ok`
+  - `DB_NAME=ap15_client_smoke flock -n var/lock/daily_run.lock scripts/cron_daily.sh --dry-run-sync --model-limit 1 >> var/log/daily_run.log 2>&1`
+  - `DB_NAME=ap15_client_smoke flock -n var/lock/monthly_run.lock scripts/cron_monthly.sh --as-of-date 2026-05-21 >> var/log/monthly_run.log 2>&1`
+
+Next step: AP16, keep the web UI behind the now-tested modular operator path.

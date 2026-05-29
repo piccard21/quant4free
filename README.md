@@ -170,9 +170,15 @@ Live-/Operations-Artefakte laufen ueber `portfolio_target_items`,
 Repositories, CLIs und fokussierte Regressionstests wurden auf dieses Schema
 umgestellt.
 
+AP15 ist abgeschlossen: Der Host-Crontab-Betrieb ist dokumentiert und ueber
+`scripts/cron_daily.sh`, `scripts/cron_monthly.sh` und feste `flock`-/Logpfade
+ausfuehrbar. `scripts/client_smoke.sh` prueft einen frischen isolierten Client
+mit Fixture, AP14-Schema, Startkapital, Monthly-Persistenz, Trade-Plan,
+Live-Status, Cash-Dry-Run und optionaler Smoke-Trade-Buchung.
+
 Die UI wird bewusst nach hinten geschoben. Als naechste technische APs werden
-zuerst die verbleibenden Legacy-Abhaengigkeiten aus Datenmodell und operativem
-Live-Pfad entfernt.
+zuerst die Kernlogik und Operatorablaeufe stabil gehalten; die Weboberflaeche
+bleibt danach geplant.
 
 Der Umbau erfolgt ab hier schrittweise. AP4 ist bewusst ein Infrastruktur-
 Schritt, weil AP3 unter Windows mit WSL Toolchain-Probleme gezeigt hat:
@@ -188,8 +194,8 @@ Schritt, weil AP3 unter Windows mit WSL Toolchain-Probleme gezeigt hat:
 9. Daily-/Monthly-Orchestrierung aus Legacy herausziehen. Erledigt in AP12.
 10. Model-/Shadow-/Trade-Plan-Persistenz migrieren. Erledigt in AP13.
 11. Legacy-unabhaengiges kanonisches Schema und operativen Cutover bauen. Erledigt in AP14.
-12. Crontab-Betrieb fuer Daily und Monthly dokumentieren. Naechster Schritt AP15.
-13. Weboberflaeche erst danach bauen. Geplant AP16.
+12. Crontab-Betrieb fuer Daily und Monthly dokumentieren und testen. Erledigt in AP15.
+13. Weboberflaeche erst danach bauen. Naechster Schritt AP16.
 
 Der Arbeitsplan steht in [plan.md](plan.md).
 
@@ -721,6 +727,25 @@ Funding-Sells:
 ```bash
 docker compose run --rm app python -m cli.live_status --all --limit 10
 ```
+
+## AP15 Client-Smoke Und Cron
+
+Frischen isolierten Client-End-to-End-Smoke ausfuehren:
+
+```bash
+scripts/client_smoke.sh --db-name ap15_client_smoke --mysql-root-password mypassword
+```
+
+Host-Cronpfad manuell mit Lock und Log testen:
+
+```bash
+mkdir -p var/log var/lock
+flock -n var/lock/daily_run.lock scripts/cron_daily.sh >> var/log/daily_run.log 2>&1
+flock -n var/lock/monthly_run.lock scripts/cron_monthly.sh >> var/log/monthly_run.log 2>&1
+```
+
+Die vollstaendige Crontab-Dokumentation steht in
+[docs/operations.md](docs/operations.md).
 
 ---
 

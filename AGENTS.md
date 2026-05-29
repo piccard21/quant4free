@@ -91,8 +91,15 @@ of legacy-compatible tables. Raw data uses `assets`, `asset_price_bars`,
 `live_rebalance_items`, `live_decision_items`, `live_trade_plans`,
 `live_trade_plan_items`, `live_trade_executions`, `live_cash_ledger`,
 `live_cash_balances`, and `live_positions`. `init.sql`, setup, fixture,
-repositories, CLIs, and focused regression tests have been migrated. AP15 is
-next: document and test host-crontab operation for daily and monthly runs.
+repositories, CLIs, and focused regression tests have been migrated.
+
+AP15 is complete: host-crontab operation for daily and monthly runs is
+documented and backed by `scripts/cron_daily.sh`, `scripts/cron_monthly.sh`,
+fixed `flock` locks, fixed log paths, and `scripts/client_smoke.sh` for a fresh
+isolated client smoke covering initialization, start capital, monthly
+persistence, trade-plan validation, live status, cash dry-run, and optional
+smoke trade execution. AP16 is next: build a web UI only after the core
+operator path remains stable.
 
 ## Build, Test, and Development Commands
 

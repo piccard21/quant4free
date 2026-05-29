@@ -2,12 +2,12 @@
 
 ## Umsetzungsstand
 
-Stand: AP14 ist abgeschlossen. Das kanonische Schema ersetzt die
-legacy-kompatiblen Tabellen im regulaeren modularen Betrieb. `init.sql`,
-`fixtures/raw_market_data.sql`, Setup, Rohdaten-Repositories, Live-Repositories,
-Execution, Operations-CLIs und fokussierte Regressionstests laufen auf den
-neuen Tabellen. Der naechste Schritt ist AP15: Crontab-Betrieb fuer Daily und
-Monthly dokumentieren und testen.
+Stand: AP15 ist abgeschlossen. Das kanonische AP14-Schema ist der regulaere
+modulare Betriebspfad, und AP15 dokumentiert den Host-Crontab-Betrieb fuer
+Daily und Monthly mit festen `flock`-Locks, Logdateien und Host-Skripten. Ein
+frischer isolierter Client-Smoke prueft Initialisierung, Startkapital,
+Monthly-Persistenz, Trade-Plan, Live-Status, Cash-Dry-Run und Smoke-Trades.
+Der naechste Schritt ist AP16: Weboberflaeche erst nach stabiler Kernlogik.
 
 Strategische Anpassung:
 
@@ -18,6 +18,38 @@ Strategische Anpassung:
   `cli.monthly_run --persist` auf dem kanonischen AP14-Pfad bereit.
 
 Erledigt:
+
+AP15:
+
+- Host-Skripte angelegt:
+  - `scripts/cron_daily.sh`
+  - `scripts/cron_monthly.sh`
+  - `scripts/client_smoke.sh`
+- Crontab-Betrieb in `docs/operations.md` dokumentiert:
+  - Daily-Run per Host-Crontab nach Marktschluss
+  - Monthly-Run per Host-Crontab am definierten Monatstag
+  - `flock`-Locks unter `var/lock/`
+  - Logs unter `var/log/`
+  - manuelles Testen, Logpruefung und parallele Lock-Pruefung
+- Der Cronpfad nutzt nur modulare CLIs:
+  - `cli.daily_run`
+  - `cli.monthly_run --persist`
+- Frischer Client-Smoke gegen isolierte DB `ap15_client_smoke` erfolgreich
+  getestet:
+  - Fixture und AP14-Schema geladen
+  - Startkapital gesetzt
+  - `cli.operator_smoke` ausgefuehrt
+  - `cli.monthly_run --persist` ausgefuehrt
+  - `cli.live_status` vor und nach Smoke-Trades ausgefuehrt
+  - Cash- und Trade-Dry-Runs validiert
+  - sieben geplante BUYs in der isolierten Smoke-DB gebucht
+  - Cash-Saldo und letzter Ledger-Saldo stimmten ueberein
+- Cron-Skripte manuell mit `flock` getestet:
+  - Lock-Konflikt bricht parallele Ausfuehrung ab
+  - `scripts/cron_daily.sh --dry-run-sync --model-limit 1` schrieb Start/Ende
+    in `var/log/daily_run.log`
+  - `scripts/cron_monthly.sh --as-of-date 2026-05-21` schrieb Start/Ende in
+    `var/log/monthly_run.log` und persistierte gegen die isolierte Smoke-DB
 
 AP14:
 
@@ -1035,6 +1067,8 @@ Tests/Akzeptanz:
 
 ### AP15: Crontab-Betrieb Fuer Daily Und Monthly
 
+Status: abgeschlossen.
+
 Ziel:
 
 - Den operativen Lauf zunaechst einfach per Host-Crontab automatisieren.
@@ -1104,7 +1138,7 @@ Tests/Akzeptanz:
 - Konfigurations-Akzeptanz: Strategieaenderungen gelten nur ab neuem `valid_from` und zerstoeren keine historischen Ergebnisse.
 - Legacy-Cutover entfernt als AP14 die verbleibenden Abhaengigkeiten von
   legacy-kompatiblen Tabellen im regulaeren Betrieb.
-- Crontab startet erst als AP15 auf dem modularen operativen Pfad nach AP14.
+- Crontab startet seit AP15 auf dem modularen operativen Pfad nach AP14.
 - Spaetere Weboberflaeche ist nur Client; Fachlogik bleibt im Backend/Kern.
 
 ## Annahmen Und Defaults

@@ -1,4 +1,6 @@
 *.log
+var/lock/
+var/log/
 .env
 .idea/
 .venv/
