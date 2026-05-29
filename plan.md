@@ -2,9 +2,40 @@
 
 ## Umsetzungsstand
 
-Stand: AP10 ist abgeschlossen. Naechster Schritt ist AP11.
+Stand: AP11 ist abgeschlossen. Naechster Schritt ist AP12.
+
+Strategische Anpassung:
+
+- Die Weboberflaeche wird nach hinten geschoben.
+- Vorher wird der operative Legacy-Pfad fuer Datenfetch, Daily-/Monthly-Run und
+  Scheduling in neue, modulare APs zerlegt.
+- Bis diese APs abgeschlossen sind, bleiben produktive `daily`/`monthly`-Runs
+  auf dem Legacy-Pfad mit `PYTHONPATH=/app/legacy/current_system`.
 
 Erledigt:
+
+AP11:
+
+- Modularen Data-Sync im neuen `data/`-Paket angelegt:
+  - `PriceSyncService` fuer S&P-500-Ticker, Benchmark und daily Candles
+  - `FundamentalSyncService` fuer Annual/TTM-Fundamentals und Market Caps
+  - inkrementelle Preis-Startdaten ueber `MAX(date)` je Ticker
+  - Benchmark `SPY` wird wie ein normaler Candle-Ticker geplant und geladen
+- Provider-Adapter von DB-Zugriff getrennt:
+  - `WikipediaSP500TickerSource`
+  - `YFinancePriceSource`
+  - `YFinanceFundamentalSource`
+- Write-Methoden im `RawDataRepository` ergaenzt:
+  - Ticker-Upsert und Deaktivierung entfernter aktiver Ticker
+  - Candle-, Financial-Report- und Market-Cap-Upserts
+  - Auswahl und Markierung von Fundamental-Refreshes
+- Neue Operator-CLIs:
+  - `cli.sync_prices`
+  - `cli.sync_fundamentals`
+  - `cli.sync_data`
+  - jeweils mit `--dry-run` fuer Fixture-Smoke ohne externe API-Calls
+- Tests:
+  - `tests/test_data_sync.py`
 
 AP10:
 
@@ -781,7 +812,135 @@ Status:
   - `.venv/bin/python -m cli.operator_smoke --ranking-limit 0 --trade-limit 0`
   - `.venv/bin/python -m cli.live_status --limit 3`
 
-### AP11: Weboberflaeche Erst Nach Stabiler Kernlogik
+### AP11: Modularer Data-Sync Als Legacy-Ersatz
+
+Ziel:
+
+- Preis-, Benchmark-, Ticker- und Fundamental-Daten ohne Legacy-Imports im
+  neuen `data/`-Paket aktualisieren koennen.
+
+Umfang:
+
+- Bestehendes Legacy-Verhalten aus `core.sync_prices` und
+  `core.sync_fundamentals` fachlich uebernehmen.
+- Provider-Adapter fuer yfinance klar vom Repository trennen.
+- Inkrementelle Candle-Updates ueber `MAX(date)` je Ticker abbilden.
+- Benchmark `SPY` analog zu normalen Candles aktualisieren.
+- S&P-500-Tickerliste aktualisieren und in `tickers` upserten.
+- Fundamentals und Market-Cap-Snapshots aktualisieren.
+- Neue CLIs bereitstellen:
+  - `cli.sync_prices`
+  - `cli.sync_fundamentals`
+  - optional `cli.sync_data`
+- Legacy-Code bleibt Referenz, wird aber nicht mehr vom neuen Pfad importiert.
+
+Tests/Akzeptanz:
+
+- Unit-Tests fuer Normalisierung, Startdatum-Logik und Upsert-Verhalten.
+- Dry-/Smoke-Run gegen Fixture-DB ohne externe API-Abhaengigkeit.
+- Echter manueller Run kann fehlende Candles bis zum aktuellen Stand nachziehen.
+- Neue CLIs laufen ohne `PYTHONPATH=/app/legacy/current_system`.
+
+Status:
+
+- Abgeschlossen.
+- Implementiert:
+  - `data.sync`
+  - `data.yahoo`
+  - write-seitige AP11-Methoden in `data.repository`
+  - `cli.sync_prices`
+  - `cli.sync_fundamentals`
+  - `cli.sync_data`
+- Verifikation:
+  - `.venv/bin/python -m pytest tests`
+  - `.venv/bin/python -m compileall data universes indicators strategies simulation evaluation live cli shared tests`
+  - `.venv/bin/python -m compileall legacy/current_system`
+  - `.venv/bin/python -m cli.sync_prices --dry-run --plan-limit 3`
+  - `.venv/bin/python -m cli.sync_fundamentals --dry-run --plan-limit 3`
+
+### AP12: Neue Daily-/Monthly-Orchestrierung
+
+Ziel:
+
+- `daily` und `monthly` als neue modulare Operator-CLIs bereitstellen, ohne
+  `legacy/current_system/cli/core_main.py`.
+
+Umfang:
+
+- `cli.daily_run` orchestriert:
+  - modularen Data-Sync
+  - Indikator-/Strategie-Run
+  - optional Performance-/Status-Ausgabe
+- `cli.monthly_run` orchestriert:
+  - Strategie-Run zum letzten Handelstag
+  - Model-Portfolio-Erzeugung
+  - Shadow-/Rebalance-/Trade-Plan-Schritte, soweit in AP13 persistierbar
+- Einheitliche Fehlerausgaben ueber `cli.errors`.
+- Bestehende `cli.operator_smoke` bleibt schneller Health-Check, ersetzt aber
+  nicht den echten Daily-/Monthly-Run.
+
+Tests/Akzeptanz:
+
+- Daily-CLI laeuft gegen Fixture-Daten reproduzierbar durch.
+- Monthly-CLI erzeugt denselben fachlichen Stichtag wie die Legacy-Pipeline.
+- Fehler bei fehlenden Rohdaten, leerem Universum oder fehlendem Benchmark sind
+  operator-verstaendlich.
+- Legacy-Daily kann parallel als Rueckfallpfad bestehen bleiben.
+
+### AP13: Operative Persistenz Fuer Model, Shadow Und Trade Plan
+
+Ziel:
+
+- Die neue Monthly-Pipeline schreibt die operativen Artefakte, die bisher aus
+  Legacy kommen.
+
+Umfang:
+
+- Model Portfolio Snapshot aus Strategie-Ranking persistieren.
+- Tradable Shadow Portfolio erzeugen und persistieren.
+- Rebalance-Vorschlaege und Decision Log erzeugen.
+- Trade Plan und Trade Plan Summary schreiben.
+- Settings-Snapshot zum Stichtag einfrieren.
+- Idempotenzregeln definieren: existierende Snapshots nicht unabsichtlich
+  ueberschreiben.
+- Legacy-kompatible Tabellen duerfen weiterverwendet werden, solange die
+  Migration noch nicht abgeschlossen ist.
+
+Tests/Akzeptanz:
+
+- Monthly-Run erzeugt nachvollziehbare Snapshots fuer einen Stichtag.
+- Wiederholter Run erkennt bestehende Snapshots und bricht kontrolliert ab oder
+  nutzt explizite `--force`/`--replace`-Semantik.
+- `cli.live_status` kann die neu erzeugten Model-/Shadow-Snapshots lesen.
+- Trade-Plan-Daten koennen mit `cli.live_trade --trade-plan-action ...`
+  validiert werden.
+
+### AP14: Crontab-Betrieb Fuer Daily Und Monthly
+
+Ziel:
+
+- Den operativen Lauf zunaechst einfach per Host-Crontab automatisieren.
+
+Umfang:
+
+- Dokumentierte Crontab-Eintraege fuer:
+  - Daily-Run an Handelstagen bzw. Werktagen nach Marktschluss
+  - Monthly-Run am Monatsanfang oder bewusst definierten Monatstag
+- `flock` gegen parallele Runs verwenden.
+- Logs nach festen Dateien schreiben.
+- Vorlaeufig koennen die Cron-Eintraege noch den Legacy-Pfad nutzen; nach AP12
+  werden sie auf neue modulare CLIs umgestellt.
+- Operator-Dokumentation fuer manuelles Testen, Logpruefung und Fehlerfall.
+
+Tests/Akzeptanz:
+
+- Dokumentierter Cron-Befehl kann manuell erfolgreich ausgefuehrt werden.
+- Parallelausfuehrung wird durch Lock verhindert.
+- Logs enthalten Start, Ende und Fehlerdetails.
+- Dokumentation trennt klar zwischen Legacy-Cron-Befehl und spaeterem modularen
+  Cron-Befehl.
+
+### AP15: Weboberflaeche Erst Nach Stabiler Kernlogik
 
 Ziel:
 
@@ -811,7 +970,11 @@ Tests/Akzeptanz:
 9. Live-System mit Model, Shadow, Real, Execution Gap und manuellen Trades anbinden.
 10. Konfiguration versionieren und pro Portfolio steuerbar machen.
 11. CLI/Reports stabilisieren.
-12. Weboberflaeche erst am Schluss bauen.
+12. Modularen Data-Sync als Legacy-Ersatz bauen.
+13. Neue Daily-/Monthly-Orchestrierung ohne Legacy-Imports bereitstellen.
+14. Operative Persistenz fuer Model, Shadow und Trade Plan migrieren.
+15. Crontab-Betrieb fuer Daily und Monthly dokumentieren und testen.
+16. Weboberflaeche erst am Schluss bauen.
 
 ## Testing Und Akzeptanz
 
@@ -820,6 +983,8 @@ Tests/Akzeptanz:
 - Backtest-Akzeptanz: ein Run erzeugt reproduzierbar Metriken, Equity Curve und simulierte Trades.
 - Live-Akzeptanz: aktives Portfolio zeigt Model, Shadow, Real und Execution Gap.
 - Konfigurations-Akzeptanz: Strategieaenderungen gelten nur ab neuem `valid_from` und zerstoeren keine historischen Ergebnisse.
+- Crontab startet zunaechst bewusst den stabilen Legacy-Pfad, bis AP11-AP13 den
+  operativen Pfad vollstaendig ersetzt haben.
 - Spaetere Weboberflaeche ist nur Client; Fachlogik bleibt im Backend/Kern.
 
 ## Annahmen Und Defaults

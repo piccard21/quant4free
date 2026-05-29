@@ -180,4 +180,31 @@ AP10 is complete. Current AP10 findings:
 - Local smoke output ended with `operator_smoke=ok` against the current fixture
   database.
 
-Next step: AP11 web interface after the core CLI workflows stay stable.
+Planning update after AP10:
+
+- The web UI is deferred.
+- AP11 is now modular data sync as the replacement for legacy
+  `core.sync_prices` and `core.sync_fundamentals`.
+- AP12 is new modular daily/monthly orchestration.
+- AP13 is operational persistence for model portfolio, shadow portfolio,
+  rebalance output, decision log, and trade plan.
+- AP14 is the simple host-crontab operating path for daily and monthly runs.
+- AP15 is the deferred web interface.
+
+AP11 is complete. Current AP11 findings:
+
+- `data.sync.PriceSyncService` handles S&P 500 ticker refresh, benchmark
+  planning, incremental candle start dates, yfinance downloads, and candle
+  upserts without legacy imports.
+- `data.sync.FundamentalSyncService` handles refresh selection, Annual/TTM
+  normalization, market-cap snapshots, upserts, and
+  `last_fundamental_update`.
+- `data.yahoo` now contains the Wikipedia/yfinance provider adapters and pure
+  normalization helpers.
+- New CLIs:
+  - `cli.sync_prices`
+  - `cli.sync_fundamentals`
+  - `cli.sync_data`
+- Focused AP11 tests live in `tests/test_data_sync.py`.
+
+Next step: AP12 modular daily/monthly orchestration.

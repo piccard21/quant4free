@@ -154,6 +154,43 @@ hint=load init.sql or run the legacy setup path to create live tables; fixtures/
 
 ---
 
+# Modular Data Sync
+
+AP11 stellt den neuen Data-Sync ohne Legacy-Imports bereit. Dry-Runs planen den
+Lauf gegen die lokale DB, ohne Wikipedia oder yfinance aufzurufen:
+
+```bash
+docker compose run --rm app python -m cli.sync_prices --dry-run --plan-limit 5
+docker compose run --rm app python -m cli.sync_fundamentals --dry-run --plan-limit 5
+docker compose run --rm app python -m cli.sync_data --dry-run
+```
+
+Gezielter Test fuer einzelne Ticker:
+
+```bash
+docker compose run --rm app python -m cli.sync_prices --ticker AAPL --dry-run
+docker compose run --rm app python -m cli.sync_fundamentals --ticker AAPL --dry-run
+```
+
+Ein echter Preis-Lauf aktualisiert zuerst die S&P-500-Mitglieder aus Wikipedia,
+legt den Benchmark `SPY` als inaktiven Benchmark-Ticker an und zieht Candles
+inkrementell ab dem letzten vorhandenen `daily_candles.date` nach:
+
+```bash
+docker compose run --rm app python -m cli.sync_prices --mode daily
+```
+
+Fundamentals werden im Daily-Modus ueber `last_fundamental_update` begrenzt:
+
+```bash
+docker compose run --rm app python -m cli.sync_fundamentals --mode daily --limit 25 --refresh-hours 24
+```
+
+Bis AP12/AP13 abgeschlossen sind, bleiben produktive Daily-/Monthly-Runs auf
+dem Legacy-Pfad; AP11 ersetzt zunaechst den Datenfetch.
+
+---
+
 # Trade Execution
 
 AP9 stellt die Trade-Erfassung im neuen modularen System bereit:
@@ -481,6 +518,9 @@ alias qs-brief='docker compose run --rm app python -m cli.show_status --brief'
 alias qs-health='docker compose run --rm app python -m cli.show_status --health'
 alias qs-now='date && qs'
 alias qsmoke='docker compose run --rm app python -m cli.operator_smoke --ranking-limit 5 --trade-limit 5'
+alias qsync-dry='docker compose run --rm app python -m cli.sync_data --dry-run'
+alias qsync-prices='docker compose run --rm app python -m cli.sync_prices --mode daily'
+alias qsync-fund='docker compose run --rm app python -m cli.sync_fundamentals --mode daily'
 
 # Pipeline
 alias qd='docker compose run --rm app python -m cli.core_main daily'

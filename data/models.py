@@ -49,3 +49,17 @@ class MarketCapSnapshot:
     date: date
     market_cap: Optional[int]
     imported_at: Optional[datetime]
+
+
+@dataclass(frozen=True)
+class TickerUpsert:
+    ticker: str
+    name: str
+    sector: Optional[str]
+    is_active: bool = True
+
+
+@dataclass(frozen=True)
+class FinancialSyncPayload:
+    reports: tuple[FinancialReport, ...]
+    market_cap: Optional[MarketCapSnapshot] = None

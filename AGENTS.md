@@ -63,6 +63,11 @@ AP10 is complete: modular operator CLIs share `cli.errors` for concise
 operator-facing failures, and `cli.operator_smoke` runs the fixture-health,
 strategy-run, and benchmark-backtest smoke path without requiring a web UI.
 
+AP11 is complete: modular data sync replaces the legacy data-fetch path for
+raw tickers, daily candles, fundamentals, and market-cap snapshots. The new
+entry points are `cli.sync_prices`, `cli.sync_fundamentals`, and
+`cli.sync_data`; dry-runs do not require external API calls.
+
 Legacy CLI modules still use imports such as `core.*` and `shared.*`, so legacy
 commands must be run with `PYTHONPATH=/app/legacy/current_system`.
 
@@ -125,6 +130,9 @@ python -m cli.live_status
 python -m cli.live_cash --help
 python -m cli.live_trade --help
 python -m cli.operator_smoke
+python -m cli.sync_prices --dry-run
+python -m cli.sync_fundamentals --dry-run
+python -m cli.sync_data --dry-run
 ```
 
 ## Coding Style & Naming Conventions

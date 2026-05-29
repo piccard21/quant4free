@@ -1,0 +1,275 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+from datetime import date, datetime, timedelta
+from typing import Optional, Protocol, Sequence
+
+from .models import FinancialSyncPayload, TickerUpsert
+from .repository import RawDataRepository
+from .yahoo import (
+    WikipediaSP500TickerSource,
+    YFinanceFundamentalSource,
+    YFinancePriceSource,
+    normalize_yfinance_prices,
+)
+
+
+BENCHMARK_TICKER = "SPY"
+INIT_HISTORY_DAYS = 548
+DAILY_LOOKBACK_DAYS = 3
+NEW_TICKER_FALLBACK_DAYS = 180
+
+
+class TickerSource(Protocol):
+    def list_tickers(self) -> list[TickerUpsert]:
+        ...
+
+
+class PriceSource(Protocol):
+    def download_prices(
+        self,
+        ticker: str,
+        start_date: date,
+        end_date: date,
+    ):
+        ...
+
+
+class FundamentalSource(Protocol):
+    def load_fundamentals(
+        self,
+        ticker: str,
+        imported_at: Optional[datetime] = None,
+    ) -> FinancialSyncPayload:
+        ...
+
+
+@dataclass(frozen=True)
+class PlannedPriceSync:
+    ticker: str
+    start_date: date
+    end_date: date
+
+
+@dataclass(frozen=True)
+class PriceSyncResult:
+    mode: str
+    dry_run: bool
+    ticker_upserts: int
+    deactivated_tickers: int
+    planned: tuple[PlannedPriceSync, ...]
+    downloaded_tickers: int
+    upserted_candles: int
+
+
+@dataclass(frozen=True)
+class FundamentalSyncResult:
+    mode: str
+    dry_run: bool
+    planned_tickers: tuple[str, ...]
+    updated_tickers: int
+    upserted_reports: int
+    upserted_market_caps: int
+
+
+def calculate_price_start_date(
+    mode: str,
+    latest_date: Optional[date],
+    today: date,
+    init_history_days: int = INIT_HISTORY_DAYS,
+    daily_lookback_days: int = DAILY_LOOKBACK_DAYS,
+    new_ticker_fallback_days: int = NEW_TICKER_FALLBACK_DAYS,
+) -> date:
+    if mode == "init":
+        return today - timedelta(days=init_history_days)
+    if latest_date is not None:
+        return latest_date - timedelta(days=daily_lookback_days)
+    return today - timedelta(days=new_ticker_fallback_days)
+
+
+class PriceSyncService:
+    def __init__(
+        self,
+        repository: Optional[RawDataRepository] = None,
+        ticker_source: Optional[TickerSource] = None,
+        price_source: Optional[PriceSource] = None,
+    ) -> None:
+        self.repository = repository or RawDataRepository()
+        self.ticker_source = ticker_source or WikipediaSP500TickerSource()
+        self.price_source = price_source or YFinancePriceSource()
+
+    def run(
+        self,
+        mode: str = "daily",
+        tickers: Optional[Sequence[str]] = None,
+        benchmark_ticker: str = BENCHMARK_TICKER,
+        sync_tickers: bool = True,
+        dry_run: bool = False,
+        today: Optional[date] = None,
+        now: Optional[datetime] = None,
+    ) -> PriceSyncResult:
+        if mode not in {"init", "daily"}:
+            raise ValueError("mode must be 'init' or 'daily'")
+
+        now = now or datetime.now()
+        today = today or now.date()
+        ticker_upserts = 0
+        deactivated_tickers = 0
+
+        selected_tickers = _normalize_ticker_list(tickers)
+        if selected_tickers is None:
+            if sync_tickers and not dry_run:
+                ticker_rows = self.ticker_source.list_tickers()
+                current_tickers = [row.ticker for row in ticker_rows]
+                deactivated_tickers = self.repository.deactivate_missing_active_tickers(
+                    current_tickers,
+                    sync_time=now,
+                )
+                ticker_upserts = self.repository.upsert_tickers(
+                    ticker_rows,
+                    sync_time=now,
+                )
+                selected_tickers = current_tickers
+            else:
+                selected_tickers = [
+                    ticker.ticker
+                    for ticker in self.repository.list_tickers(active_only=True)
+                ]
+
+        if not dry_run:
+            self.repository.ensure_ticker(
+                benchmark_ticker,
+                name="SPDR S&P 500 ETF Trust",
+                sector="Benchmark",
+                is_active=False,
+                sync_time=now,
+            )
+        symbols = _append_benchmark(selected_tickers, benchmark_ticker)
+        planned = tuple(
+            PlannedPriceSync(
+                ticker=symbol,
+                start_date=calculate_price_start_date(
+                    mode,
+                    self.repository.latest_candle_date(symbol),
+                    today,
+                ),
+                end_date=today,
+            )
+            for symbol in symbols
+        )
+
+        if dry_run:
+            return PriceSyncResult(
+                mode=mode,
+                dry_run=True,
+                ticker_upserts=ticker_upserts,
+                deactivated_tickers=deactivated_tickers,
+                planned=planned,
+                downloaded_tickers=0,
+                upserted_candles=0,
+            )
+
+        downloaded_tickers = 0
+        upserted_candles = 0
+        for item in planned:
+            raw_prices = self.price_source.download_prices(
+                item.ticker,
+                item.start_date,
+                item.end_date,
+            )
+            candles = normalize_yfinance_prices(raw_prices, item.ticker)
+            if candles:
+                downloaded_tickers += 1
+                upserted_candles += self.repository.upsert_daily_candles(candles)
+
+        return PriceSyncResult(
+            mode=mode,
+            dry_run=False,
+            ticker_upserts=ticker_upserts,
+            deactivated_tickers=deactivated_tickers,
+            planned=planned,
+            downloaded_tickers=downloaded_tickers,
+            upserted_candles=upserted_candles,
+        )
+
+
+class FundamentalSyncService:
+    def __init__(
+        self,
+        repository: Optional[RawDataRepository] = None,
+        fundamental_source: Optional[FundamentalSource] = None,
+    ) -> None:
+        self.repository = repository or RawDataRepository()
+        self.fundamental_source = fundamental_source or YFinanceFundamentalSource()
+
+    def run(
+        self,
+        mode: str = "daily",
+        tickers: Optional[Sequence[str]] = None,
+        refresh_hours: int = 24,
+        limit: int = 25,
+        dry_run: bool = False,
+        now: Optional[datetime] = None,
+    ) -> FundamentalSyncResult:
+        if mode not in {"init", "daily"}:
+            raise ValueError("mode must be 'init' or 'daily'")
+
+        now = now or datetime.now()
+        planned = _normalize_ticker_list(tickers)
+        if planned is None:
+            planned = self.repository.select_tickers_for_fundamental_sync(
+                mode=mode,
+                refresh_hours=refresh_hours,
+                limit=limit,
+                now=now,
+            )
+
+        if dry_run:
+            return FundamentalSyncResult(
+                mode=mode,
+                dry_run=True,
+                planned_tickers=tuple(planned),
+                updated_tickers=0,
+                upserted_reports=0,
+                upserted_market_caps=0,
+            )
+
+        updated_tickers = 0
+        upserted_reports = 0
+        upserted_market_caps = 0
+        for ticker in planned:
+            payload = self.fundamental_source.load_fundamentals(
+                ticker,
+                imported_at=now,
+            )
+            reports = list(payload.reports)
+            market_caps = [payload.market_cap] if payload.market_cap is not None else []
+            if reports:
+                upserted_reports += self.repository.upsert_financial_reports(reports)
+            if market_caps:
+                upserted_market_caps += self.repository.upsert_market_caps(market_caps)
+            if reports or market_caps:
+                self.repository.mark_fundamental_updated(ticker, updated_at=now)
+                updated_tickers += 1
+
+        return FundamentalSyncResult(
+            mode=mode,
+            dry_run=False,
+            planned_tickers=tuple(planned),
+            updated_tickers=updated_tickers,
+            upserted_reports=upserted_reports,
+            upserted_market_caps=upserted_market_caps,
+        )
+
+
+def _normalize_ticker_list(tickers: Optional[Sequence[str]]) -> Optional[list[str]]:
+    if tickers is None:
+        return None
+    return [ticker.strip().upper() for ticker in tickers if ticker.strip()]
+
+
+def _append_benchmark(tickers: Sequence[str], benchmark_ticker: str) -> list[str]:
+    symbols = list(dict.fromkeys(tickers))
+    if benchmark_ticker and benchmark_ticker not in symbols:
+        symbols.append(benchmark_ticker)
+    return symbols

@@ -1,11 +1,15 @@
 __all__ = [
     "DailyCandle",
     "DataProvider",
+    "FinancialSyncPayload",
     "FinancialReport",
     "FixtureDataProvider",
     "MarketCapSnapshot",
+    "PriceSyncService",
     "RawDataRepository",
     "Ticker",
+    "TickerUpsert",
+    "FundamentalSyncService",
     "latest_daily_candles",
     "latest_financial_reports",
     "latest_market_caps",
@@ -19,13 +23,20 @@ __all__ = [
 def __getattr__(name: str):
     if name in {
         "DailyCandle",
+        "FinancialSyncPayload",
         "FinancialReport",
         "MarketCapSnapshot",
         "Ticker",
+        "TickerUpsert",
     }:
         from . import models
 
         return getattr(models, name)
+
+    if name in {"FundamentalSyncService", "PriceSyncService"}:
+        from . import sync
+
+        return getattr(sync, name)
 
     if name in {"DataProvider", "FixtureDataProvider"}:
         from . import provider

@@ -1,0 +1,257 @@
+from datetime import date, datetime
+from decimal import Decimal
+import unittest
+
+import pandas as pd
+from sqlalchemy import create_engine, text
+
+from data.models import DailyCandle, FinancialReport, MarketCapSnapshot, TickerUpsert
+from data.repository import RawDataRepository
+from data.sync import calculate_price_start_date
+from data.yahoo import normalize_yfinance_prices, ttm_report_from_yfinance
+
+
+class DataSyncTests(unittest.TestCase):
+    def test_price_start_date_uses_init_incremental_and_new_ticker_rules(self):
+        today = date(2026, 5, 29)
+
+        self.assertEqual(
+            calculate_price_start_date("init", date(2026, 5, 20), today),
+            date(2024, 11, 27),
+        )
+        self.assertEqual(
+            calculate_price_start_date("daily", date(2026, 5, 22), today),
+            date(2026, 5, 19),
+        )
+        self.assertEqual(
+            calculate_price_start_date("daily", None, today),
+            date(2025, 11, 30),
+        )
+
+    def test_normalize_yfinance_prices_handles_multiindex_and_drops_adj_close(self):
+        frame = pd.DataFrame(
+            {
+                ("AAA", "Open"): [10.0],
+                ("AAA", "High"): [12.0],
+                ("AAA", "Low"): [9.5],
+                ("AAA", "Close"): [11.0],
+                ("AAA", "Adj Close"): [10.8],
+                ("AAA", "Volume"): [1000],
+            },
+            index=pd.DatetimeIndex(["2026-05-22"], name="Date"),
+        )
+
+        candles = normalize_yfinance_prices(frame, "AAA")
+
+        self.assertEqual(len(candles), 1)
+        self.assertEqual(candles[0].ticker, "AAA")
+        self.assertEqual(candles[0].date, date(2026, 5, 22))
+        self.assertEqual(candles[0].close, Decimal("11.0"))
+        self.assertEqual(candles[0].volume, 1000)
+
+    def test_ttm_report_sums_quarters_and_uses_balance_sheet_latest_value(self):
+        imported_at = datetime(2026, 5, 29, 12, 0)
+        quarter_dates = pd.to_datetime(
+            ["2026-03-31", "2025-12-31", "2025-09-30", "2025-06-30"]
+        )
+        income = pd.DataFrame(
+            [[10, 20, 30, 40], [1, 2, 3, 4]],
+            index=["Total Revenue", "Net Income"],
+            columns=quarter_dates,
+        )
+        balance = pd.DataFrame(
+            [[50], [70]],
+            index=["Total Debt", "Stockholders Equity"],
+            columns=[quarter_dates[0]],
+        )
+        cashflow = pd.DataFrame(
+            [[5, 6, 7, 8]],
+            index=["Free Cash Flow"],
+            columns=quarter_dates,
+        )
+
+        report = ttm_report_from_yfinance(
+            "AAA",
+            quarterly_income=income,
+            quarterly_balance=balance,
+            quarterly_cashflow=cashflow,
+            imported_at=imported_at,
+        )
+
+        self.assertIsNotNone(report)
+        assert report is not None
+        self.assertEqual(report.report_date, date(2026, 3, 31))
+        self.assertEqual(report.revenue, 100)
+        self.assertEqual(report.net_income, 10)
+        self.assertEqual(report.free_cash_flow, 26)
+        self.assertEqual(report.total_debt, 50)
+        self.assertEqual(report.total_equity, 70)
+
+    def test_repository_upserts_raw_sync_tables(self):
+        engine = create_engine("sqlite+pysqlite:///:memory:", future=True)
+        _create_raw_tables(engine)
+        repository = RawDataRepository(engine)
+        sync_time = datetime(2026, 5, 29, 12, 0)
+
+        self.assertEqual(
+            repository.upsert_tickers(
+                [TickerUpsert("AAA", "Old Name", "Tech")],
+                sync_time=sync_time,
+            ),
+            1,
+        )
+        repository.upsert_tickers(
+            [TickerUpsert("AAA", "New Name", "Industrials")],
+            sync_time=sync_time,
+        )
+        repository.upsert_daily_candles(
+            [
+                DailyCandle(
+                    "AAA",
+                    date(2026, 5, 22),
+                    Decimal("10"),
+                    Decimal("12"),
+                    Decimal("9"),
+                    Decimal("11"),
+                    100,
+                )
+            ]
+        )
+        repository.upsert_daily_candles(
+            [
+                DailyCandle(
+                    "AAA",
+                    date(2026, 5, 22),
+                    Decimal("10"),
+                    Decimal("12"),
+                    Decimal("9"),
+                    Decimal("13"),
+                    200,
+                )
+            ]
+        )
+        repository.upsert_financial_reports(
+            [
+                FinancialReport(
+                    ticker="AAA",
+                    report_date=date(2026, 3, 31),
+                    report_type="ttm",
+                    revenue=100,
+                    net_income=10,
+                    ebit=9,
+                    free_cash_flow=8,
+                    total_debt=7,
+                    total_equity=6,
+                    cash_and_equivalents=5,
+                    source="test",
+                    imported_at=sync_time,
+                )
+            ]
+        )
+        repository.upsert_market_caps(
+            [
+                MarketCapSnapshot(
+                    ticker="AAA",
+                    date=date(2026, 5, 29),
+                    market_cap=123,
+                    imported_at=sync_time,
+                )
+            ]
+        )
+        repository.mark_fundamental_updated("AAA", updated_at=sync_time)
+
+        with engine.connect() as connection:
+            ticker = connection.execute(
+                text("SELECT name, sector, last_fundamental_update FROM tickers")
+            ).mappings().one()
+            candle = connection.execute(
+                text("SELECT close, volume FROM daily_candles")
+            ).mappings().one()
+            report_count = connection.execute(
+                text("SELECT COUNT(*) FROM financial_reports")
+            ).scalar_one()
+            market_cap = connection.execute(
+                text("SELECT market_cap FROM market_cap_snapshots")
+            ).scalar_one()
+
+        self.assertEqual(ticker["name"], "New Name")
+        self.assertEqual(ticker["sector"], "Industrials")
+        self.assertIsNotNone(ticker["last_fundamental_update"])
+        self.assertEqual(float(candle["close"]), 13.0)
+        self.assertEqual(candle["volume"], 200)
+        self.assertEqual(report_count, 1)
+        self.assertEqual(market_cap, 123)
+
+
+def _create_raw_tables(engine) -> None:
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                """
+                CREATE TABLE tickers (
+                    ticker VARCHAR(10) PRIMARY KEY,
+                    name VARCHAR(255) NOT NULL,
+                    sector VARCHAR(255),
+                    is_active INTEGER NOT NULL DEFAULT 1,
+                    first_seen DATETIME,
+                    last_seen DATETIME,
+                    removed_at DATETIME,
+                    last_fundamental_update DATETIME
+                )
+                """
+            )
+        )
+        connection.execute(
+            text(
+                """
+                CREATE TABLE daily_candles (
+                    ticker VARCHAR(10) NOT NULL,
+                    date DATE NOT NULL,
+                    open NUMERIC,
+                    high NUMERIC,
+                    low NUMERIC,
+                    close NUMERIC,
+                    volume INTEGER,
+                    PRIMARY KEY (ticker, date)
+                )
+                """
+            )
+        )
+        connection.execute(
+            text(
+                """
+                CREATE TABLE financial_reports (
+                    ticker VARCHAR(10) NOT NULL,
+                    report_date DATE NOT NULL,
+                    report_type VARCHAR(20) NOT NULL,
+                    revenue INTEGER,
+                    net_income INTEGER,
+                    ebit INTEGER,
+                    free_cash_flow INTEGER,
+                    total_debt INTEGER,
+                    total_equity INTEGER,
+                    cash_and_equivalents INTEGER,
+                    source VARCHAR(50),
+                    imported_at DATETIME,
+                    PRIMARY KEY (ticker, report_date, report_type)
+                )
+                """
+            )
+        )
+        connection.execute(
+            text(
+                """
+                CREATE TABLE market_cap_snapshots (
+                    ticker VARCHAR(10) NOT NULL,
+                    date DATE NOT NULL,
+                    market_cap INTEGER,
+                    imported_at DATETIME,
+                    PRIMARY KEY (ticker, date)
+                )
+                """
+            )
+        )
+
+
+if __name__ == "__main__":
+    unittest.main()

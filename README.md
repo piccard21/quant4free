@@ -142,6 +142,18 @@ DB-Verbindungsproblemen, fehlenden Abhaengigkeiten und erwarteten leeren
 Ergebnissen. `cli.operator_smoke` fuehrt den kompakten End-to-End-Check
 Fixture-Health -> Strategie-Run -> Benchmark-Backtest aus.
 
+AP11 ist abgeschlossen: Der neue modulare Data-Sync kann S&P-500-Ticker,
+taegliche Candles inklusive Benchmark `SPY`, Fundamentaldaten und
+Market-Cap-Snapshots ohne Legacy-Imports aktualisieren. yfinance/Wikipedia
+liegen als Provider-Adapter unter `data/`, die Datenbank-Upserts im
+`RawDataRepository`, und die Operator-Einstiege sind `cli.sync_prices`,
+`cli.sync_fundamentals` und `cli.sync_data`.
+
+Die UI wird bewusst nach hinten geschoben. Als naechste technische APs werden
+zuerst die weiteren operativen Legacy-Pfade migriert: neue
+Daily-/Monthly-Orchestrierung, operative Persistenz fuer Model/Shadow/Trade Plan
+und danach der einfache Crontab-Betrieb.
+
 Der Umbau erfolgt ab hier schrittweise. AP4 ist bewusst ein Infrastruktur-
 Schritt, weil AP3 unter Windows mit WSL Toolchain-Probleme gezeigt hat:
 
@@ -152,6 +164,11 @@ Schritt, weil AP3 unter Windows mit WSL Toolchain-Probleme gezeigt hat:
 5. Erste Strategie gegen Benchmark evaluieren. Erledigt in AP8.
 6. Live-Funktionen wieder anbinden. Erledigt in AP9.
 7. CLI- und Operator-Workflows stabilisieren. Erledigt in AP10.
+8. Modularen Data-Sync als Legacy-Ersatz bauen. Erledigt in AP11.
+9. Daily-/Monthly-Orchestrierung aus Legacy herausziehen. Naechster Schritt AP12.
+10. Model-/Shadow-/Trade-Plan-Persistenz migrieren. Geplant AP13.
+11. Crontab-Betrieb fuer Daily und Monthly dokumentieren. Geplant AP14.
+12. Weboberflaeche erst danach bauen. Geplant AP15.
 
 Der Arbeitsplan steht in [plan.md](plan.md).
 
@@ -186,6 +203,9 @@ docker compose run --rm app python -m cli.indicator_status --limit 10
 docker compose run --rm app python -m cli.strategy_status --limit 10
 docker compose run --rm app python -m cli.backtest_status --start-date 2026-01-02 --end-date 2026-05-22 --equity-limit 5 --trade-limit 10
 docker compose run --rm app python -m cli.operator_smoke --ranking-limit 5 --trade-limit 5
+docker compose run --rm app python -m cli.sync_prices --dry-run --plan-limit 5
+docker compose run --rm app python -m cli.sync_fundamentals --dry-run --plan-limit 5
+docker compose run --rm app python -m cli.sync_data --dry-run
 ```
 
 Bereinigte Rohdaten-Fixture-Daten aus `fixtures/raw_market_data.sql` koennen
