@@ -147,5 +147,25 @@ AP8 is complete. Current AP8 findings:
   data. Without `--persist` it prints a report only; with `--persist` it stores
   the run and prints `stored_run_id` plus `run_key`.
 
-Next planned step: AP9, migrate or reconnect the live Model/Shadow/Real
-portfolio workflows and execution gap handling.
+AP9 is complete. Current AP9 findings:
+
+- `live.status` computes a read-only live status from Model targets, Shadow
+  targets, real positions, and cash.
+- The first Execution Gap states are `model_not_shadow`, `missing_in_real`,
+  `extra_in_real`, `underweight_real`, `overweight_real`, and `aligned`.
+- `live.repository` reads the existing legacy-compatible live tables
+  (`portfolio_snapshots`, `portfolio_positions`, and `portfolio_cash`) without
+  changing schema.
+- `cli.live_status` prints the AP9 status and actionable gaps.
+- `live.execution.LiveExecutionService` reconnects write-side live behavior for
+  manual cash movements and manual BUY/SELL execution.
+- Cash movements write `cash_ledger` and `portfolio_cash`.
+- Trade executions write `trade_executions`, `cash_ledger`, `portfolio_cash`,
+  and `portfolio_positions`.
+- Write-side validation covers cash/ledger consistency, settings snapshots,
+  ticker existence, dry-runs, duplicate execution detection, trade-plan matching,
+  available cash, open shares, and SELL tax bookings.
+- `cli.live_cash` and `cli.live_trade` expose the write-side AP9 workflows
+  without the legacy `PYTHONPATH`.
+
+Next step: AP10 CLI and operator workflow consolidation.

@@ -234,9 +234,14 @@ Status: abgeschlossen.
 
 ### AP9: Live-Migration
 
-- Legacy-Live-Tabellen portfolio-faehig machen oder in neue Live-Tabellen migrieren.
-- Execution Gap zwischen Shadow und Real Portfolio wieder anbinden.
-- Manuelle Trade- und Cash-Erfassung erhalten.
+- AP9 ist abgeschlossen und verwendet vorerst die bestehenden
+  legacy-kompatiblen Live-Tabellen weiter.
+- Execution Gap zwischen Shadow und Real Portfolio ist im neuen `live/`-Paket
+  angebunden.
+- Manuelle Trade- und Cash-Erfassung ist ueber `LiveExecutionService`,
+  `cli.live_trade` und `cli.live_cash` wieder angebunden.
+- Eine portfolio-/tenant-faehige Live-Schema-Migration bleibt ein spaeterer,
+  separater Schritt.
 
 ## Initialer Schema-Sketch
 

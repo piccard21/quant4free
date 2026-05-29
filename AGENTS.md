@@ -18,12 +18,11 @@ This repository is being migrated from an operational quantitative portfolio sys
 - `live/`: new model/shadow/real portfolio and execution-gap workflows.
 - `cli/`: new command-line entry points for runs, status, experiments, and reports.
 - `shared/`: new shared helpers for the modular framework.
+- `tests/`: pytest regression tests for indicators, strategy ranking, backtest behavior, and live workflows.
 - `docs/`: operator, strategy, architecture, and troubleshooting documentation.
 - `init.sql`: canonical schema initialization.
 - `fixtures/raw_market_data.sql`: sanitized raw-data fixture for modular framework smoke checks.
 - `simfin/`: bundled SimFin ZIP data assets.
-
-There is currently no dedicated `tests/` directory.
 
 ## Current Migration State
 
@@ -38,6 +37,27 @@ AP2, AP3, and AP4 are complete. The new modular framework can read raw fixture
 data from MySQL through the new data-provider layer. The canonical fixture is
 `fixtures/raw_market_data.sql`, which contains only `tickers`, `daily_candles`,
 `financial_reports`, and `market_cap_snapshots`.
+
+AP5 is complete: selectable universes and benchmarks are implemented through
+configuration keys.
+
+AP6 is complete: the modular indicator engine calculates momentum, relative
+strength, value, and quality indicators.
+
+AP7 is complete: the first Value/Quality/Momentum strategy consumes AP6
+indicator frames and produces a reproducible ranking plus model portfolio.
+
+AP8 is complete: the first periodic strategy backtest can evaluate the AP7
+strategy against a benchmark, including rebalancing, trading costs, equity
+curve, benchmark curve, trades, summary metrics, and optional SQL persistence
+through additive AP8 evaluation tables.
+
+AP9 is complete: the new `live` package computes Model/Shadow/Real portfolio
+status and execution gaps from legacy-compatible live tables. `cli.live_status`
+exposes this status. Write-side live workflows are reconnected through
+`LiveExecutionService`, `cli.live_cash`, and `cli.live_trade`, covering cash
+ledger movements, manual BUY/SELL execution, position updates, cash updates,
+trade history, dry-runs, and core consistency checks.
 
 Legacy CLI modules still use imports such as `core.*` and `shared.*`, so legacy
 commands must be run with `PYTHONPATH=/app/legacy/current_system`.
@@ -85,6 +105,23 @@ docker compose run --rm app python -m compileall legacy/current_system
 docker compose run --rm app python -m compileall data universes indicators strategies simulation evaluation live cli shared
 ```
 
+Run regression tests:
+
+```bash
+python -m pytest tests
+```
+
+Run current modular smoke CLIs:
+
+```bash
+python -m cli.indicator_status
+python -m cli.strategy_status
+python -m cli.backtest_status
+python -m cli.live_status
+python -m cli.live_cash --help
+python -m cli.live_trade --help
+```
+
 ## Coding Style & Naming Conventions
 
 Use Python 3.10-compatible code, 4-space indentation, descriptive function names, and explicit CLI arguments. Prefer small functions around one pipeline step or query. Treat `legacy/current_system/` as reference code first; do not reshape it unless a task explicitly targets legacy behavior. Keep new framework helpers in the new top-level packages.
@@ -97,9 +134,12 @@ recompute.
 
 ## Testing Guidelines
 
-No formal test framework is configured yet. For changes, at minimum run `compileall` and a relevant pipeline/status command against a local Docker database. Prefer using `fixtures/raw_market_data.sql` as the fixture to avoid unnecessary API calls and to keep trades, cash balances, and portfolio history out of regression data.
-
-Future tests should use `pytest`, live under `tests/`, and name files `test_<module>.py`.
+Pytest regression tests now live under `tests/` and should be named
+`test_<module>.py`. For changes, at minimum run `python -m pytest tests`,
+`compileall`, and a relevant pipeline/status command against a local Docker
+database when the change touches database-backed behavior. Prefer using
+`fixtures/raw_market_data.sql` as the fixture to avoid unnecessary API calls and
+to keep trades, cash balances, and portfolio history out of regression data.
 
 ## Commit & Pull Request Guidelines
 

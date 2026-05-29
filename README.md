@@ -130,6 +130,12 @@ vorerst Legacy-kompatibel; die AP8-Evaluationstabellen werden additiv durch
 Die bereinigte Testdatenbasis fuer das neue Framework liegt in
 `fixtures/raw_market_data.sql`.
 
+AP9 ist abgeschlossen: Der Live-Schnitt bildet Model, Shadow, Real und
+Execution Gap im neuen `live/`-Paket ab. `cli.live_status` liest die
+legacy-kompatiblen Live-Tabellen und zeigt Abweichungen zwischen Shadow-Ziel und
+realem Portfolio. `cli.live_cash` und `cli.live_trade` buchen Cash-Bewegungen
+und manuelle Trade-Ausfuehrungen in die bestehenden Live-Tabellen.
+
 Der Umbau erfolgt ab hier schrittweise. AP4 ist bewusst ein Infrastruktur-
 Schritt, weil AP3 unter Windows mit WSL Toolchain-Probleme gezeigt hat:
 
@@ -138,7 +144,7 @@ Schritt, weil AP3 unter Windows mit WSL Toolchain-Probleme gezeigt hat:
 3. Indikator-Engine fuer Momentum, relative Staerke, Value und Quality bauen. Erledigt in AP6.
 4. Erste Value/Quality/Momentum-Strategie als Model-Portfolio-Ranking bauen. Erledigt in AP7.
 5. Erste Strategie gegen Benchmark evaluieren. Erledigt in AP8.
-6. Live-Funktionen anschliessend wieder anbinden.
+6. Live-Funktionen wieder anbinden. Erledigt in AP9.
 
 Der Arbeitsplan steht in [plan.md](plan.md).
 
@@ -191,6 +197,15 @@ docker compose run --rm app python -m cli.backtest_status --start-date 2026-01-0
 Die Fixture enthaelt nur `tickers`, `daily_candles`, `financial_reports` und
 `market_cap_snapshots`. Legacy-/Live-Daten wie Trades, Cash Ledger,
 Portfolio-Positionen und Performance-Snapshots sind bewusst nicht enthalten.
+
+AP9-Live-Status und Write-CLIs laufen gegen eine Datenbank mit den
+legacy-kompatiblen Live-Tabellen aus `init.sql`:
+
+```bash
+docker compose run --rm app python -m cli.live_status
+docker compose run --rm app python -m cli.live_cash --type deposit --amount 1000 --as-of-date 2026-04-30 --dry-run
+docker compose run --rm app python -m cli.live_trade --as-of-date 2026-04-30 --ticker AAPL --execution-type BUY --shares 1 --price 100 --fee 1 --dry-run
+```
 
 Programmatisch kann der AP7/AP8-Zugriff so verwendet werden:
 

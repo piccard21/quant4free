@@ -6,6 +6,7 @@
 - [Monthly Operations](#monthly-operations)
 - [Status-System](#status-system)
 - [Trade Execution](#trade-execution)
+- [Cash Movements](#cash-movements)
 - [Performance](#performance)
 - [Operator Shortcuts](#operator-shortcuts)
 - [Best Practices](#best-practices)
@@ -119,6 +120,28 @@ qs-brief
 
 # Trade Execution
 
+AP9 stellt die Trade-Erfassung im neuen modularen System bereit:
+
+```bash
+docker compose run --rm app python -m cli.live_trade \
+  --as-of-date 2026-04-30 \
+  --ticker INCY \
+  --execution-type SELL \
+  --shares 20 \
+  --price 98.21 \
+  --fee 1.00 \
+  --executed-at "2026-04-30 16:00:00" \
+  --broker "Test" \
+  --notes "SELL INCY laut Ausführung" \
+  --dry-run
+```
+
+Für echte Buchung denselben Befehl ohne `--dry-run` ausführen.
+
+Die alte Legacy-Variante `python -m core.apply_trade_execution` bleibt nur
+Referenz fuer Altdokumentation und sollte fuer AP9 nicht mehr der Standardpfad
+sein.
+
 ## Grundregel
 
 Vor jeder echten Buchung zuerst einen Dry-Run machen.
@@ -161,7 +184,7 @@ Beispiel:
 ## SELL als Dry-Run testen
 
 ```bash
-docker compose run --rm app python -m core.apply_trade_execution \
+docker compose run --rm app python -m cli.live_trade \
   --as-of-date 2026-04-30 \
   --ticker INCY \
   --execution-type SELL \
@@ -196,7 +219,7 @@ qt --as-of-date 2026-04-30 \
 Nach erfolgreichem Dry-Run und tatsächlicher Broker-Ausführung:
 
 ```bash
-docker compose run --rm app python -m core.apply_trade_execution \
+docker compose run --rm app python -m cli.live_trade \
   --as-of-date 2026-04-30 \
   --ticker INCY \
   --execution-type SELL \
@@ -227,7 +250,7 @@ qt --as-of-date 2026-04-30 \
 ## BUY als Dry-Run testen
 
 ```bash
-docker compose run --rm app python -m core.apply_trade_execution \
+docker compose run --rm app python -m cli.live_trade \
   --as-of-date 2026-04-30 \
   --ticker DVN \
   --execution-type BUY \
@@ -262,7 +285,7 @@ qt --as-of-date 2026-04-30 \
 Nach erfolgreichem Dry-Run und tatsächlicher Broker-Ausführung:
 
 ```bash
-docker compose run --rm app python -m core.apply_trade_execution \
+docker compose run --rm app python -m cli.live_trade \
   --as-of-date 2026-04-30 \
   --ticker DVN \
   --execution-type BUY \
@@ -314,6 +337,49 @@ qt --as-of-date 2026-04-30 \
    --notes "Off-Plan Test SELL INCY" \
    --dry-run
 ```
+
+---
+
+# Cash Movements
+
+Cash-Bewegungen laufen ab AP9 ueber `cli.live_cash`.
+
+## Einzahlung als Dry-Run testen
+
+```bash
+docker compose run --rm app python -m cli.live_cash \
+  --type deposit \
+  --amount 1000 \
+  --as-of-date 2026-04-30 \
+  --booked-at "2026-04-30 16:00:00" \
+  --notes "Einzahlung" \
+  --dry-run
+```
+
+## Einzahlung buchen
+
+```bash
+docker compose run --rm app python -m cli.live_cash \
+  --type deposit \
+  --amount 1000 \
+  --as-of-date 2026-04-30 \
+  --booked-at "2026-04-30 16:00:00" \
+  --notes "Einzahlung"
+```
+
+## Auszahlung buchen
+
+```bash
+docker compose run --rm app python -m cli.live_cash \
+  --type withdrawal \
+  --amount 250 \
+  --as-of-date 2026-04-30 \
+  --booked-at "2026-04-30 16:00:00" \
+  --notes "Auszahlung"
+```
+
+`cli.live_cash` validiert, dass der aktuelle `portfolio_cash`-Saldo zum letzten
+`cash_ledger.balance_after` passt. Bei Abweichungen wird nicht gebucht.
 
 ---
 
@@ -388,7 +454,8 @@ alias qp='docker compose run --rm app python -m cli.research_main performance'
 alias qp-backfill='qp --backfill'
 
 # Trade Execution
-alias qt='docker compose run --rm app python -m core.apply_trade_execution'
+alias qt='docker compose run --rm app python -m cli.live_trade'
+alias qc='docker compose run --rm app python -m cli.live_cash'
 
 # Dry-Run-Hilfe mit executed-at
 alias qt-dry='echo "Beispiel: qt --as-of-date YYYY-MM-DD --ticker XXX --execution-type BUY --shares N --price X --fee 1 --executed-at \\"YYYY-MM-DD HH:MM:SS\\" --broker \\"Scalable\\" --notes \\"Trade Plan Ausführung\\" --dry-run"'

@@ -2,9 +2,34 @@
 
 ## Umsetzungsstand
 
-Stand: AP8 ist abgeschlossen. Naechster Schritt ist AP9.
+Stand: AP9 ist abgeschlossen. Naechster Schritt ist AP10.
 
 Erledigt:
+
+AP9:
+
+- Read-only Live-Status im neuen `live/`-Paket angelegt:
+  - Model-, Shadow- und Real-Portfolio werden aus legacy-kompatiblen Tabellen gelesen.
+  - Execution-Gap-Zustaende werden berechnet:
+    `model_not_shadow`, `missing_in_real`, `extra_in_real`,
+    `underweight_real`, `overweight_real`, `aligned`.
+  - `cli.live_status` zeigt Model/Shadow/Real-Anzahlen, Cash, investierten Wert
+    und actionable Gaps.
+- Write-side Live-Ausfuehrung wieder angebunden:
+  - `LiveExecutionService`
+  - `CashMovementRequest` / `CashMovementResult`
+  - `TradeExecutionRequest` / `TradeExecutionResult`
+  - Buchung von Einzahlungen und Auszahlungen in `cash_ledger` und `portfolio_cash`
+  - Buchung manueller BUY/SELL-Ausfuehrungen in `trade_executions`,
+    `cash_ledger`, `portfolio_cash` und `portfolio_positions`
+  - Cash-/Ledger-Konsistenzpruefung, Dry-Run, Duplikatpruefung,
+    Trade-Plan-Abgleich und Steuerbuchung bei realisiertem SELL-Gewinn
+- Neue Operator-CLIs:
+  - `cli.live_cash`
+  - `cli.live_trade`
+- Tests:
+  - `tests/test_live_status.py`
+  - `tests/test_live_execution.py`
 
 AP8:
 
@@ -681,11 +706,24 @@ Umfang:
 - Live-Tabellen von Evaluation-Tabellen trennen.
 - Auditierbare Snapshots nur dort speichern, wo sie fuer Live-Entscheidungen noetig sind.
 
+Umsetzung:
+
+- Read-only Live-Status im neuen `live/`-Paket angelegt.
+- Execution Gap zwischen Shadow-Ziel und realem Portfolio berechnet.
+- Legacy-kompatible Tabellen `portfolio_snapshots`, `portfolio_positions` und
+  `portfolio_cash` werden gelesen.
+- `cli.live_status` zeigt Model/Shadow/Real-Anzahlen, Cash, investierten Wert
+  und actionable Gaps.
+- `LiveExecutionService` schreibt Cash-Bewegungen und manuelle Trades in die
+  bestehenden Legacy-kompatiblen Live-Tabellen.
+- `cli.live_cash` und `cli.live_trade` stellen die Write-Seite ohne
+  Legacy-`PYTHONPATH` bereit.
+
 Tests/Akzeptanz:
 
 - Aktives Portfolio zeigt Model, Shadow, Real und Execution Gap.
 - Manuelle Trade-Ausfuehrung veraendert Cash und Positionen nachvollziehbar.
-- Legacy-Verhalten wird fuer einen Beispielmonat plausibilisiert.
+- Cash-Bewegungen veraendern Ledger und aktuellen Cash-Saldo nachvollziehbar.
 
 ### AP10: CLI Und Operator-Workflows
 
