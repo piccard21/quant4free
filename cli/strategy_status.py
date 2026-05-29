@@ -143,4 +143,6 @@ def _latest_price_date(provider, members: list[str]) -> date:
 
 
 if __name__ == "__main__":
-    main()
+    from cli.errors import run_cli
+
+    run_cli(main)

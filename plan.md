@@ -2,9 +2,37 @@
 
 ## Umsetzungsstand
 
-Stand: AP9 ist abgeschlossen. Naechster Schritt ist AP10.
+Stand: AP10 ist abgeschlossen. Naechster Schritt ist AP11.
 
 Erledigt:
+
+AP10:
+
+- Gemeinsamer Operator-Fehlerlayer fuer modulare CLIs angelegt:
+  - `cli.errors.run_cli`
+  - klare Meldungen fuer fehlende Datenbanktabellen, Verbindungsfehler,
+    fehlende Python-Abhaengigkeiten und erwartete leere Ergebnisse
+  - fehlende Raw-Tabellen verweisen auf `fixtures/raw_market_data.sql`
+  - fehlende Live-Tabellen verweisen auf `init.sql` bzw. Legacy-Setup, da die
+    Raw-Fixture bewusst keine Live-Daten enthaelt
+- Bestehende modulare Operator-CLIs an den Fehlerlayer angebunden:
+  - `cli.data_status`
+  - `cli.framework_status`
+  - `cli.indicator_status`
+  - `cli.strategy_status`
+  - `cli.backtest_status`
+  - `cli.live_status`
+  - `cli.live_cash`
+  - `cli.live_trade`
+- Zusammenhaengende AP10-Smoke-CLI angelegt:
+  - `cli.operator_smoke`
+  - prueft Datenbank-Ping und Raw-Fixture-Health
+  - laedt Universum und Benchmark
+  - fuehrt Value/Quality/Momentum-Strategie aus
+  - fuehrt Benchmark-Backtest ohne Persistenz aus
+  - meldet Kennzahlen und `operator_smoke=ok`
+- Tests:
+  - `tests/test_cli_errors.py`
 
 AP9:
 
@@ -742,6 +770,16 @@ Tests/Akzeptanz:
 - `compileall` fuer alle neuen und Legacy-Pakete.
 - Smoke-Test: Fixture laden -> Strategie-Run -> Benchmark-Report.
 - Status-CLI zeigt verwertbare Ausgabe ohne Weboberflaeche.
+
+Status:
+
+- Abgeschlossen.
+- Verifikation:
+  - `.venv/bin/python -m pytest tests`
+  - `.venv/bin/python -m compileall data universes indicators strategies simulation evaluation live cli shared tests`
+  - `.venv/bin/python -m compileall legacy/current_system`
+  - `.venv/bin/python -m cli.operator_smoke --ranking-limit 0 --trade-limit 0`
+  - `.venv/bin/python -m cli.live_status --limit 3`
 
 ### AP11: Weboberflaeche Erst Nach Stabiler Kernlogik
 

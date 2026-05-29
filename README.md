@@ -136,6 +136,12 @@ legacy-kompatiblen Live-Tabellen und zeigt Abweichungen zwischen Shadow-Ziel und
 realem Portfolio. `cli.live_cash` und `cli.live_trade` buchen Cash-Bewegungen
 und manuelle Trade-Ausfuehrungen in die bestehenden Live-Tabellen.
 
+AP10 ist abgeschlossen: Die modularen Operator-CLIs verwenden einen
+gemeinsamen Fehlerlayer fuer verwertbare Meldungen bei fehlenden Tabellen,
+DB-Verbindungsproblemen, fehlenden Abhaengigkeiten und erwarteten leeren
+Ergebnissen. `cli.operator_smoke` fuehrt den kompakten End-to-End-Check
+Fixture-Health -> Strategie-Run -> Benchmark-Backtest aus.
+
 Der Umbau erfolgt ab hier schrittweise. AP4 ist bewusst ein Infrastruktur-
 Schritt, weil AP3 unter Windows mit WSL Toolchain-Probleme gezeigt hat:
 
@@ -145,6 +151,7 @@ Schritt, weil AP3 unter Windows mit WSL Toolchain-Probleme gezeigt hat:
 4. Erste Value/Quality/Momentum-Strategie als Model-Portfolio-Ranking bauen. Erledigt in AP7.
 5. Erste Strategie gegen Benchmark evaluieren. Erledigt in AP8.
 6. Live-Funktionen wieder anbinden. Erledigt in AP9.
+7. CLI- und Operator-Workflows stabilisieren. Erledigt in AP10.
 
 Der Arbeitsplan steht in [plan.md](plan.md).
 
@@ -178,6 +185,7 @@ docker compose run --rm app python -m cli.framework_status --list-configs
 docker compose run --rm app python -m cli.indicator_status --limit 10
 docker compose run --rm app python -m cli.strategy_status --limit 10
 docker compose run --rm app python -m cli.backtest_status --start-date 2026-01-02 --end-date 2026-05-22 --equity-limit 5 --trade-limit 10
+docker compose run --rm app python -m cli.operator_smoke --ranking-limit 5 --trade-limit 5
 ```
 
 Bereinigte Rohdaten-Fixture-Daten aus `fixtures/raw_market_data.sql` koennen
@@ -192,11 +200,15 @@ docker compose run --rm app python -m cli.framework_status --universe sp500_acti
 docker compose run --rm app python -m cli.indicator_status --limit 10
 docker compose run --rm app python -m cli.strategy_status --limit 10
 docker compose run --rm app python -m cli.backtest_status --start-date 2026-01-02 --end-date 2026-05-22 --persist --equity-limit 5 --trade-limit 10
+docker compose run --rm app python -m cli.operator_smoke --ranking-limit 5 --trade-limit 5
 ```
 
 Die Fixture enthaelt nur `tickers`, `daily_candles`, `financial_reports` und
 `market_cap_snapshots`. Legacy-/Live-Daten wie Trades, Cash Ledger,
 Portfolio-Positionen und Performance-Snapshots sind bewusst nicht enthalten.
+Wenn ein Live-CLI gegen eine reine Raw-Fixture-DB laeuft, meldet der
+AP10-Fehlerlayer deshalb z.B. `database_error=missing_table` mit Hinweis auf
+`init.sql` bzw. den Legacy-Setup-Pfad.
 
 AP9-Live-Status und Write-CLIs laufen gegen eine Datenbank mit den
 legacy-kompatiblen Live-Tabellen aus `init.sql`:

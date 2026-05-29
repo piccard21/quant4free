@@ -113,4 +113,6 @@ def _create_benchmark(args, provider, create_benchmark):
 
 
 if __name__ == "__main__":
-    main()
+    from cli.errors import run_cli
+
+    run_cli(main)

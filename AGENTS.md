@@ -59,6 +59,10 @@ exposes this status. Write-side live workflows are reconnected through
 ledger movements, manual BUY/SELL execution, position updates, cash updates,
 trade history, dry-runs, and core consistency checks.
 
+AP10 is complete: modular operator CLIs share `cli.errors` for concise
+operator-facing failures, and `cli.operator_smoke` runs the fixture-health,
+strategy-run, and benchmark-backtest smoke path without requiring a web UI.
+
 Legacy CLI modules still use imports such as `core.*` and `shared.*`, so legacy
 commands must be run with `PYTHONPATH=/app/legacy/current_system`.
 
@@ -120,6 +124,7 @@ python -m cli.backtest_status
 python -m cli.live_status
 python -m cli.live_cash --help
 python -m cli.live_trade --help
+python -m cli.operator_smoke
 ```
 
 ## Coding Style & Naming Conventions

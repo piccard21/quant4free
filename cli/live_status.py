@@ -92,4 +92,6 @@ def _parse_date(value: str) -> date:
 
 
 if __name__ == "__main__":
-    main()
+    from cli.errors import run_cli
+
+    run_cli(main)

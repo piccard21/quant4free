@@ -168,4 +168,16 @@ AP9 is complete. Current AP9 findings:
 - `cli.live_cash` and `cli.live_trade` expose the write-side AP9 workflows
   without the legacy `PYTHONPATH`.
 
-Next step: AP10 CLI and operator workflow consolidation.
+AP10 is complete. Current AP10 findings:
+
+- `cli.errors` centralizes expected operator-facing failures for modular CLIs.
+- Missing raw tables now point operators to `fixtures/raw_market_data.sql`.
+- Missing live tables now point operators to `init.sql` or the legacy setup
+  path, because the raw fixture intentionally does not include live state.
+- `cli.operator_smoke` runs fixture health, universe/benchmark loading,
+  Value/Quality/Momentum strategy execution, and a non-persistent benchmark
+  backtest in one command.
+- Local smoke output ended with `operator_smoke=ok` against the current fixture
+  database.
+
+Next step: AP11 web interface after the core CLI workflows stay stable.

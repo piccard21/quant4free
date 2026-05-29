@@ -5,6 +5,7 @@
 - [Daily Operations](#daily-operations)
 - [Monthly Operations](#monthly-operations)
 - [Status-System](#status-system)
+- [Modular Operator Smoke](#modular-operator-smoke)
 - [Trade Execution](#trade-execution)
 - [Cash Movements](#cash-movements)
 - [Performance](#performance)
@@ -114,6 +115,41 @@ Mit Alias:
 
 ```bash
 qs-brief
+```
+
+---
+
+# Modular Operator Smoke
+
+AP10 stellt einen zusammenhaengenden Smoke-Test fuer das neue modulare System
+bereit:
+
+```bash
+docker compose run --rm app python -m cli.operator_smoke --ranking-limit 5 --trade-limit 5
+```
+
+Der Lauf prueft:
+
+- Datenbank-Ping
+- Raw-Fixture-Tabellen und Datumsbereiche
+- konfiguriertes Universum
+- konfigurierten Benchmark
+- Value/Quality/Momentum-Strategie
+- Benchmark-Backtest ohne Persistenz
+
+Erfolgreiche Ausfuehrung endet mit:
+
+```text
+operator_smoke=ok
+```
+
+Typische Fehler werden ab AP10 als kurze Operator-Meldungen ausgegeben. Beispiel
+bei fehlenden Live-Tabellen in einer reinen Raw-Fixture-DB:
+
+```text
+database_error=missing_table
+table=portfolio_snapshots
+hint=load init.sql or run the legacy setup path to create live tables; fixtures/raw_market_data.sql intentionally does not contain live data
 ```
 
 ---
@@ -444,6 +480,7 @@ alias qs='docker compose run --rm app python -m cli.show_status --details'
 alias qs-brief='docker compose run --rm app python -m cli.show_status --brief'
 alias qs-health='docker compose run --rm app python -m cli.show_status --health'
 alias qs-now='date && qs'
+alias qsmoke='docker compose run --rm app python -m cli.operator_smoke --ranking-limit 5 --trade-limit 5'
 
 # Pipeline
 alias qd='docker compose run --rm app python -m cli.core_main daily'

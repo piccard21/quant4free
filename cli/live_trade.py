@@ -103,4 +103,6 @@ def _parse_datetime(value: str) -> datetime:
 
 
 if __name__ == "__main__":
-    main()
+    from cli.errors import run_cli
+
+    run_cli(main)
