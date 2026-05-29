@@ -2,20 +2,47 @@
 
 ## Umsetzungsstand
 
-Stand: AP13 ist begonnen. Die modulare Persistenz fuer Model, Shadow,
-Rebalance, Decision Log und Trade Plan ist implementiert und lokal getestet;
-der naechste Schritt ist ein Docker/MySQL-Smoke gegen `init.sql` plus
-Rohdaten-Fixture.
+Stand: AP13 ist abgeschlossen. Die modulare Persistenz fuer Model, Shadow,
+Rebalance, Decision Log und Trade Plan ist implementiert, lokal getestet und
+gegen eine Docker/MySQL-Smoke-Datenbank mit `init.sql` plus Rohdaten-Fixture
+verifiziert. Der naechste Schritt ist AP14: Crontab-Betrieb fuer Daily und
+Monthly dokumentieren und testen.
 
 Strategische Anpassung:
 
 - Die Weboberflaeche wird nach hinten geschoben.
 - Vorher wird der operative Legacy-Pfad fuer Datenfetch, Daily-/Monthly-Run,
   operative Persistenz und Scheduling in neue, modulare APs zerlegt.
-- Der produktive Monthly-Pfad fuer persistierte Artefakte kann jetzt ueber
-  `cli.monthly_run --persist` auf dem modularen AP13-Pfad getestet werden.
+- Der produktive Monthly-Pfad fuer persistierte Artefakte steht jetzt ueber
+  `cli.monthly_run --persist` auf dem modularen AP13-Pfad bereit.
 
 Erledigt:
+
+AP13:
+
+- Modulare operative Persistenz im neuen `live/operations.py` angelegt:
+  - Model Portfolio Snapshot aus AP12-Strategieartefakten
+  - Tradable Shadow Snapshot mit Carry-forward vorhandener Positionen,
+    Mindesthaltedauer-Schutz und dynamischem Trade-Limit
+  - Rebalance Suggestions und Decision Log
+  - Trade Plan Summary und Trade Plan Snapshots mit Cash, realen Positionen,
+    aktuellen Preisen, Gebuehren und limitierten Funding-Sells
+- `OperationalRepository` schreibt alle AP13-Artefakte transaktional in die
+  legacy-kompatiblen Live-Tabellen und verhindert doppelte Snapshots je
+  Stichtag.
+- `cli.monthly_run --persist` aktiviert AP13-Schreibzugriffe; ohne `--persist`
+  bleibt der Monthly-Run read-only.
+- Verifikation:
+  - `.venv/bin/python -m compileall data universes indicators strategies simulation evaluation live cli shared tests`
+  - `.venv/bin/python -m pytest tests`
+  - Docker/MySQL-Smoke gegen separate DB `ap13_smoke` mit `init.sql` plus
+    `fixtures/raw_market_data.sql`
+  - `docker compose run --rm -e DB_NAME=ap13_smoke app python -m cli.monthly_run --persist --model-limit 7`
+  - Wiederholter Persist-Run bricht kontrolliert mit bestehendem Snapshot ab.
+  - `docker compose run --rm -e DB_NAME=ap13_smoke app python -m cli.live_status --all --limit 10`
+  - Cash-Smoke gegen `ap13_smoke_cash` erzeugt ausfuehrbare BUY-Planzeilen und
+    `cli.live_trade --trade-plan-action BUY --dry-run` validiert eine
+    Trade-Plan-Zeile.
 
 AP11:
 
@@ -904,7 +931,8 @@ Status:
 - `cli.monthly_run` verwendet denselben fachlichen Stichtag wie der modulare
   Daily-/Strategiepfad: den letzten verfuegbaren Handelstag aus den
   Rohpreisen, sofern kein `--as-of-date` uebergeben wird.
-- Shadow-, Rebalance- und Trade-Plan-Persistenz bleiben bewusst AP13.
+- Shadow-, Rebalance- und Trade-Plan-Persistenz wurden anschliessend in AP13
+  umgesetzt.
 - Verifikation:
   - `.venv/bin/python -m pytest tests`
   - `.venv/bin/python -m compileall data universes indicators strategies simulation evaluation live cli shared tests`
@@ -939,6 +967,8 @@ Tests/Akzeptanz:
 - `cli.live_status` kann die neu erzeugten Model-/Shadow-Snapshots lesen.
 - Trade-Plan-Daten koennen mit `cli.live_trade --trade-plan-action ...`
   validiert werden.
+- Status: abgeschlossen und per lokaler Testsuite sowie Docker/MySQL-Smoke
+  verifiziert.
 
 ### AP14: Crontab-Betrieb Fuer Daily Und Monthly
 
@@ -1008,8 +1038,8 @@ Tests/Akzeptanz:
 - Backtest-Akzeptanz: ein Run erzeugt reproduzierbar Metriken, Equity Curve und simulierte Trades.
 - Live-Akzeptanz: aktives Portfolio zeigt Model, Shadow, Real und Execution Gap.
 - Konfigurations-Akzeptanz: Strategieaenderungen gelten nur ab neuem `valid_from` und zerstoeren keine historischen Ergebnisse.
-- Crontab startet zunaechst bewusst den stabilen Legacy-Pfad, bis AP11-AP13 den
-  operativen Pfad vollstaendig ersetzt haben.
+- Crontab startet als AP14 auf dem modularen operativen Pfad aus AP11-AP13 und
+  dokumentiert bei Bedarf einen Legacy-Fallback fuer den Fehlerfall.
 - Spaetere Weboberflaeche ist nur Client; Fachlogik bleibt im Backend/Kern.
 
 ## Annahmen Und Defaults

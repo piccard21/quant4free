@@ -217,9 +217,8 @@ AP12 is complete. Current AP12 findings:
 - `cli.monthly_run` resolves the same default stichtag as the modular strategy
   path: latest available trading day from raw prices unless `--as-of-date` is
   provided.
-- Shadow, rebalance, and trade-plan writes remain AP13.
 
-AP13 is in progress:
+AP13 is complete:
 
 - `live.operations` builds modular operational artifacts for the legacy-compatible
   live tables:
@@ -235,7 +234,16 @@ AP13 is in progress:
   monthly CLI stays read-only.
 - Tests:
   - `tests/test_live_operations.py`
+- Verification:
+  - `.venv/bin/python -m compileall data universes indicators strategies simulation evaluation live cli shared tests`
+  - `.venv/bin/python -m pytest tests`
+  - Docker/MySQL smoke against isolated `ap13_smoke` seeded with `init.sql` and
+    `fixtures/raw_market_data.sql`.
+  - Re-running `cli.monthly_run --persist` rejects duplicate artifact dates.
+  - `cli.live_status --all --limit 10` reads the new Model/Shadow snapshots.
+  - Cash-backed smoke against `ap13_smoke_cash` produced executable BUY plan
+    rows, and `cli.live_trade --trade-plan-action BUY --dry-run` validated one
+    planned trade.
 
-Next step: run AP13 against a Docker database seeded with `init.sql` plus raw
-fixture data, then decide whether the modular monthly persist path should become
-the default production path.
+Next step: AP14, document and test host-crontab operation for daily and monthly
+runs.

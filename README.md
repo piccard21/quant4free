@@ -153,12 +153,16 @@ AP12 ist abgeschlossen: `cli.daily_run` und `cli.monthly_run` stellen die neue
 modulare Daily-/Monthly-Orchestrierung bereit. Der Daily-Run verbindet AP11
 Data-Sync mit Indikator-/Strategie-Ausfuehrung und Model-Portfolio-Ausgabe.
 Der Monthly-Run erzeugt das Model-Portfolio zum letzten verfuegbaren Handelstag
-oder einem expliziten `--as-of-date`. Shadow-, Rebalance- und Trade-Plan-
-Persistenz bleiben AP13.
+oder einem expliziten `--as-of-date`.
+
+AP13 ist abgeschlossen: `cli.monthly_run --persist` schreibt die operativen
+Model-/Shadow-/Rebalance-/Decision-Log-/Trade-Plan-Artefakte in die
+legacy-kompatiblen Live-Tabellen. Ohne `--persist` bleibt der Monthly-Run
+read-only. Doppelte Snapshots je Stichtag werden kontrolliert abgelehnt.
 
 Die UI wird bewusst nach hinten geschoben. Als naechste technische APs werden
-zuerst die weiteren operativen Legacy-Pfade migriert: operative Persistenz fuer
-Model/Shadow/Trade Plan und danach der einfache Crontab-Betrieb.
+zuerst die weiteren operativen Legacy-Pfade migriert: als naechstes der
+einfache Crontab-Betrieb fuer Daily und Monthly.
 
 Der Umbau erfolgt ab hier schrittweise. AP4 ist bewusst ein Infrastruktur-
 Schritt, weil AP3 unter Windows mit WSL Toolchain-Probleme gezeigt hat:
@@ -172,8 +176,8 @@ Schritt, weil AP3 unter Windows mit WSL Toolchain-Probleme gezeigt hat:
 7. CLI- und Operator-Workflows stabilisieren. Erledigt in AP10.
 8. Modularen Data-Sync als Legacy-Ersatz bauen. Erledigt in AP11.
 9. Daily-/Monthly-Orchestrierung aus Legacy herausziehen. Erledigt in AP12.
-10. Model-/Shadow-/Trade-Plan-Persistenz migrieren. Naechster Schritt AP13.
-11. Crontab-Betrieb fuer Daily und Monthly dokumentieren. Geplant AP14.
+10. Model-/Shadow-/Trade-Plan-Persistenz migrieren. Erledigt in AP13.
+11. Crontab-Betrieb fuer Daily und Monthly dokumentieren. Naechster Schritt AP14.
 12. Weboberflaeche erst danach bauen. Geplant AP15.
 
 Der Arbeitsplan steht in [plan.md](plan.md).

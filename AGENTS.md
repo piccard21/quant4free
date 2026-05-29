@@ -29,6 +29,13 @@ This repository is being migrated from an operational quantitative portfolio sys
 AP0 is complete: the previous operational modules were moved under
 `legacy/current_system/`, and the new top-level package skeleton was created.
 
+After each AP is accepted as complete, update the repository status documents
+in the same change so future sessions can identify the current AP without
+re-auditing the implementation. `README.md` must always be updated for a
+completed AP. At minimum keep `AGENTS.md`, `plan.md`, `README.md`, and relevant
+files under `docs/` in sync with the completed AP, the verification that was
+run, and the next AP.
+
 AP1 is complete: the data-model and schema plan are documented in
 `docs/data-model.md`. `init.sql` intentionally remains legacy-compatible for
 now; no schema migration has been applied yet.
@@ -72,8 +79,15 @@ AP12 is complete: modular daily/monthly orchestration is available through
 `cli.daily_run` and `cli.monthly_run`. Daily runs can combine AP11 data sync
 with the modular indicator/strategy/model-portfolio path. Monthly runs produce
 the model portfolio for the latest available trading day or an explicit
-`--as-of-date`; AP13 will add write-side persistence for model, shadow,
-rebalance, and trade-plan artifacts.
+`--as-of-date`.
+
+AP13 is complete: `cli.monthly_run --persist` writes model, shadow, rebalance,
+decision-log, trade-plan-summary, and trade-plan-snapshot artifacts to the
+legacy-compatible live tables. The write path is transactional, rejects
+duplicate artifact dates, and has been verified with local tests plus a
+Docker/MySQL smoke database seeded with `init.sql` and
+`fixtures/raw_market_data.sql`. AP14 is next: document and test host-crontab
+operation for daily and monthly runs.
 
 Legacy CLI modules still use imports such as `core.*` and `shared.*`, so legacy
 commands must be run with `PYTHONPATH=/app/legacy/current_system`.
