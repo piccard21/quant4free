@@ -38,6 +38,7 @@ class StrategyRunArtifacts:
     benchmark_prices: "pd.DataFrame"
     indicators: "pd.DataFrame"
     strategy_result: "StrategyResult"
+    member_sectors: Mapping[str, str | None] | None = None
 
     @property
     def model_portfolio(self) -> "pd.DataFrame":
@@ -70,6 +71,10 @@ def run_strategy_snapshot(
         ) from exc
 
     members = universe.load_members(config.as_of_date)
+    member_sectors = {
+        ticker.ticker.upper(): ticker.sector
+        for ticker in provider.list_tickers(active_only=False)
+    }
     require_non_empty(
         "universe members",
         len(members),
@@ -158,6 +163,7 @@ def run_strategy_snapshot(
         benchmark_prices=benchmark_prices,
         indicators=indicators,
         strategy_result=result,
+        member_sectors=member_sectors,
     )
 
 

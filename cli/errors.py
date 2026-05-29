@@ -14,13 +14,16 @@ RAW_TABLES = {
 
 LIVE_TABLES = {
     "cash_ledger",
+    "decision_log",
     "factor_metrics",
     "portfolio_cash",
     "portfolio_positions",
     "portfolio_snapshots",
+    "rebalance_suggestions",
     "strategy_settings",
     "strategy_settings_snapshots",
     "trade_executions",
+    "trade_plan_summary",
     "trade_plan_snapshots",
 }
 

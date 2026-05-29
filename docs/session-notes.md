@@ -219,4 +219,23 @@ AP12 is complete. Current AP12 findings:
   provided.
 - Shadow, rebalance, and trade-plan writes remain AP13.
 
-Next step: AP13 operational persistence for model/shadow/rebalance/trade plan.
+AP13 is in progress:
+
+- `live.operations` builds modular operational artifacts for the legacy-compatible
+  live tables:
+  - Model portfolio snapshots from AP12 strategy artifacts.
+  - Tradable Shadow snapshots with previous-holding carry-forward,
+    minimum-holding protection, resize handling, and dynamic trade limits.
+  - Rebalance suggestions and decision log.
+  - Trade-plan summary and snapshot rows using latest raw close prices,
+    cash, real positions, fees, and limited funding sells.
+- `OperationalRepository` persists all AP13 artifacts transactionally and
+  rejects duplicate frozen artifact dates.
+- `cli.monthly_run --persist` enables AP13 writes; without `--persist`, the
+  monthly CLI stays read-only.
+- Tests:
+  - `tests/test_live_operations.py`
+
+Next step: run AP13 against a Docker database seeded with `init.sql` plus raw
+fixture data, then decide whether the modular monthly persist path should become
+the default production path.

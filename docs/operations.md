@@ -52,23 +52,27 @@ Der Daily Run aktualisiert:
 
 ## Monthly Run
 
-Der modulare AP12-Monthly-Run erzeugt das Model Portfolio zum letzten
-verfuegbaren Handelstag aus den Rohpreisen oder zu einem expliziten Stichtag:
+Der modulare Monthly-Run erzeugt das Model Portfolio zum letzten verfuegbaren
+Handelstag aus den Rohpreisen oder zu einem expliziten Stichtag:
 
 ```bash
 docker compose run --rm app python -m cli.monthly_run --model-limit 7
 docker compose run --rm app python -m cli.monthly_run --as-of-date 2026-05-22
 ```
 
-AP13 migriert danach die persistierten Artefakte fuer Shadow, Rebalance,
-Decision Log und Trade Plan. Bis AP13 abgeschlossen ist, bleibt der
-persistierende Monthly-Betrieb auf dem Legacy-Pfad:
+Ohne `--persist` bleibt der Lauf read-only und schreibt keine Live-Artefakte.
+Mit AP13 kann der modulare Monthly-Run die operativen Snapshots in die
+legacy-kompatiblen Live-Tabellen schreiben:
 
 ```bash
-docker compose run --rm app python -m cli.core_main monthly
+docker compose run --rm app python -m cli.monthly_run --persist --model-limit 7
 ```
 
 Wichtig:
+
+`--persist` bricht ab, wenn fuer den Stichtag bereits Model-, Shadow-,
+Rebalance-, Decision-Log- oder Trade-Plan-Snapshots existieren. Eingefrorene
+Snapshots werden nicht ueberschrieben.
 
 Das System verwendet jetzt ein dynamisches effektives Trade-Limit:
 
@@ -214,9 +218,8 @@ Fundamentals werden im Daily-Modus ueber `last_fundamental_update` begrenzt:
 docker compose run --rm app python -m cli.sync_fundamentals --mode daily --limit 25 --refresh-hours 24
 ```
 
-AP12 stellt die modularen Daily-/Monthly-CLIs bereit. Bis AP13 abgeschlossen
-ist, bleibt der produktive Monthly-Run fuer persistierte Model-/Shadow-/
-Trade-Plan-Artefakte auf dem Legacy-Pfad.
+AP13 stellt den modularen `cli.monthly_run --persist` fuer persistierte
+Model-/Shadow-/Rebalance-/Decision-Log-/Trade-Plan-Artefakte bereit.
 
 ---
 

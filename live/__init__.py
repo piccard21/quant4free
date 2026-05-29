@@ -9,6 +9,13 @@ from .models import (
     TradeExecutionRequest,
     TradeExecutionResult,
 )
+from .operations import (
+    OperationalArtifacts,
+    OperationalPersistenceResult,
+    OperationalPersistenceService,
+    OperationalRepository,
+    OperationalSettings,
+)
 from .repository import LivePortfolioRepository
 from .status import build_live_status
 
@@ -19,6 +26,11 @@ __all__ = [
     "LiveExecutionService",
     "LivePortfolioRepository",
     "LivePortfolioStatus",
+    "OperationalArtifacts",
+    "OperationalPersistenceResult",
+    "OperationalPersistenceService",
+    "OperationalRepository",
+    "OperationalSettings",
     "PortfolioTarget",
     "RealPosition",
     "TradeExecutionRequest",

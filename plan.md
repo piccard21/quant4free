@@ -2,16 +2,18 @@
 
 ## Umsetzungsstand
 
-Stand: AP12 ist abgeschlossen. Naechster Schritt ist AP13.
+Stand: AP13 ist begonnen. Die modulare Persistenz fuer Model, Shadow,
+Rebalance, Decision Log und Trade Plan ist implementiert und lokal getestet;
+der naechste Schritt ist ein Docker/MySQL-Smoke gegen `init.sql` plus
+Rohdaten-Fixture.
 
 Strategische Anpassung:
 
 - Die Weboberflaeche wird nach hinten geschoben.
 - Vorher wird der operative Legacy-Pfad fuer Datenfetch, Daily-/Monthly-Run,
   operative Persistenz und Scheduling in neue, modulare APs zerlegt.
-- Bis AP13 abgeschlossen ist, bleibt der produktive Monthly-Pfad fuer
-  persistierte Model-/Shadow-/Trade-Plan-Artefakte auf dem Legacy-Pfad mit
-  `PYTHONPATH=/app/legacy/current_system`.
+- Der produktive Monthly-Pfad fuer persistierte Artefakte kann jetzt ueber
+  `cli.monthly_run --persist` auf dem modularen AP13-Pfad getestet werden.
 
 Erledigt:
 
