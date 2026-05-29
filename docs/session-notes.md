@@ -185,7 +185,8 @@ Planning update after AP10:
 - The web UI is deferred.
 - AP11 is now modular data sync as the replacement for legacy
   `core.sync_prices` and `core.sync_fundamentals`.
-- AP12 is new modular daily/monthly orchestration.
+- AP12 is complete: new modular daily/monthly orchestration through
+  `cli.daily_run`, `cli.monthly_run`, and shared `cli.orchestration`.
 - AP13 is operational persistence for model portfolio, shadow portfolio,
   rebalance output, decision log, and trade plan.
 - AP14 is the simple host-crontab operating path for daily and monthly runs.
@@ -207,4 +208,15 @@ AP11 is complete. Current AP11 findings:
   - `cli.sync_data`
 - Focused AP11 tests live in `tests/test_data_sync.py`.
 
-Next step: AP12 modular daily/monthly orchestration.
+AP12 is complete. Current AP12 findings:
+
+- `cli.orchestration` centralizes the strategy/model-portfolio run for operator
+  CLIs.
+- `cli.daily_run` combines AP11 price/fundamental sync with the modular
+  strategy run; `--dry-run-sync` keeps fixture smoke runs offline and read-only.
+- `cli.monthly_run` resolves the same default stichtag as the modular strategy
+  path: latest available trading day from raw prices unless `--as-of-date` is
+  provided.
+- Shadow, rebalance, and trade-plan writes remain AP13.
+
+Next step: AP13 operational persistence for model/shadow/rebalance/trade plan.

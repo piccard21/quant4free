@@ -18,6 +18,22 @@
 
 ## Daily Run
 
+Der modulare AP12-Daily-Run ist der neue technische Einstieg fuer Data-Sync,
+Indikatoren, Strategie und Model-Portfolio-Ausgabe:
+
+```bash
+docker compose run --rm app python -m cli.daily_run
+```
+
+Fixture-/Smoke-Lauf ohne externe API-Calls oder Writes:
+
+```bash
+docker compose run --rm app python -m cli.daily_run --dry-run-sync --model-limit 5
+```
+
+Der Legacy-Pfad bleibt bis zur vollstaendigen operativen Migration als
+Rueckfallpfad verfuegbar:
+
 ```bash
 docker compose run --rm app python -m cli.core_main daily
 ```
@@ -35,6 +51,18 @@ Der Daily Run aktualisiert:
 # Monthly Operations
 
 ## Monthly Run
+
+Der modulare AP12-Monthly-Run erzeugt das Model Portfolio zum letzten
+verfuegbaren Handelstag aus den Rohpreisen oder zu einem expliziten Stichtag:
+
+```bash
+docker compose run --rm app python -m cli.monthly_run --model-limit 7
+docker compose run --rm app python -m cli.monthly_run --as-of-date 2026-05-22
+```
+
+AP13 migriert danach die persistierten Artefakte fuer Shadow, Rebalance,
+Decision Log und Trade Plan. Bis AP13 abgeschlossen ist, bleibt der
+persistierende Monthly-Betrieb auf dem Legacy-Pfad:
 
 ```bash
 docker compose run --rm app python -m cli.core_main monthly
@@ -186,8 +214,9 @@ Fundamentals werden im Daily-Modus ueber `last_fundamental_update` begrenzt:
 docker compose run --rm app python -m cli.sync_fundamentals --mode daily --limit 25 --refresh-hours 24
 ```
 
-Bis AP12/AP13 abgeschlossen sind, bleiben produktive Daily-/Monthly-Runs auf
-dem Legacy-Pfad; AP11 ersetzt zunaechst den Datenfetch.
+AP12 stellt die modularen Daily-/Monthly-CLIs bereit. Bis AP13 abgeschlossen
+ist, bleibt der produktive Monthly-Run fuer persistierte Model-/Shadow-/
+Trade-Plan-Artefakte auf dem Legacy-Pfad.
 
 ---
 

@@ -149,10 +149,16 @@ liegen als Provider-Adapter unter `data/`, die Datenbank-Upserts im
 `RawDataRepository`, und die Operator-Einstiege sind `cli.sync_prices`,
 `cli.sync_fundamentals` und `cli.sync_data`.
 
+AP12 ist abgeschlossen: `cli.daily_run` und `cli.monthly_run` stellen die neue
+modulare Daily-/Monthly-Orchestrierung bereit. Der Daily-Run verbindet AP11
+Data-Sync mit Indikator-/Strategie-Ausfuehrung und Model-Portfolio-Ausgabe.
+Der Monthly-Run erzeugt das Model-Portfolio zum letzten verfuegbaren Handelstag
+oder einem expliziten `--as-of-date`. Shadow-, Rebalance- und Trade-Plan-
+Persistenz bleiben AP13.
+
 Die UI wird bewusst nach hinten geschoben. Als naechste technische APs werden
-zuerst die weiteren operativen Legacy-Pfade migriert: neue
-Daily-/Monthly-Orchestrierung, operative Persistenz fuer Model/Shadow/Trade Plan
-und danach der einfache Crontab-Betrieb.
+zuerst die weiteren operativen Legacy-Pfade migriert: operative Persistenz fuer
+Model/Shadow/Trade Plan und danach der einfache Crontab-Betrieb.
 
 Der Umbau erfolgt ab hier schrittweise. AP4 ist bewusst ein Infrastruktur-
 Schritt, weil AP3 unter Windows mit WSL Toolchain-Probleme gezeigt hat:
@@ -165,8 +171,8 @@ Schritt, weil AP3 unter Windows mit WSL Toolchain-Probleme gezeigt hat:
 6. Live-Funktionen wieder anbinden. Erledigt in AP9.
 7. CLI- und Operator-Workflows stabilisieren. Erledigt in AP10.
 8. Modularen Data-Sync als Legacy-Ersatz bauen. Erledigt in AP11.
-9. Daily-/Monthly-Orchestrierung aus Legacy herausziehen. Naechster Schritt AP12.
-10. Model-/Shadow-/Trade-Plan-Persistenz migrieren. Geplant AP13.
+9. Daily-/Monthly-Orchestrierung aus Legacy herausziehen. Erledigt in AP12.
+10. Model-/Shadow-/Trade-Plan-Persistenz migrieren. Naechster Schritt AP13.
 11. Crontab-Betrieb fuer Daily und Monthly dokumentieren. Geplant AP14.
 12. Weboberflaeche erst danach bauen. Geplant AP15.
 
@@ -206,6 +212,8 @@ docker compose run --rm app python -m cli.operator_smoke --ranking-limit 5 --tra
 docker compose run --rm app python -m cli.sync_prices --dry-run --plan-limit 5
 docker compose run --rm app python -m cli.sync_fundamentals --dry-run --plan-limit 5
 docker compose run --rm app python -m cli.sync_data --dry-run
+docker compose run --rm app python -m cli.daily_run --dry-run-sync --model-limit 5
+docker compose run --rm app python -m cli.monthly_run --model-limit 5
 ```
 
 Bereinigte Rohdaten-Fixture-Daten aus `fixtures/raw_market_data.sql` koennen

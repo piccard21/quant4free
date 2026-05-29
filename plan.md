@@ -2,15 +2,16 @@
 
 ## Umsetzungsstand
 
-Stand: AP11 ist abgeschlossen. Naechster Schritt ist AP12.
+Stand: AP12 ist abgeschlossen. Naechster Schritt ist AP13.
 
 Strategische Anpassung:
 
 - Die Weboberflaeche wird nach hinten geschoben.
-- Vorher wird der operative Legacy-Pfad fuer Datenfetch, Daily-/Monthly-Run und
-  Scheduling in neue, modulare APs zerlegt.
-- Bis diese APs abgeschlossen sind, bleiben produktive `daily`/`monthly`-Runs
-  auf dem Legacy-Pfad mit `PYTHONPATH=/app/legacy/current_system`.
+- Vorher wird der operative Legacy-Pfad fuer Datenfetch, Daily-/Monthly-Run,
+  operative Persistenz und Scheduling in neue, modulare APs zerlegt.
+- Bis AP13 abgeschlossen ist, bleibt der produktive Monthly-Pfad fuer
+  persistierte Model-/Shadow-/Trade-Plan-Artefakte auf dem Legacy-Pfad mit
+  `PYTHONPATH=/app/legacy/current_system`.
 
 Erledigt:
 
@@ -886,6 +887,28 @@ Tests/Akzeptanz:
 - Fehler bei fehlenden Rohdaten, leerem Universum oder fehlendem Benchmark sind
   operator-verstaendlich.
 - Legacy-Daily kann parallel als Rueckfallpfad bestehen bleiben.
+
+Status:
+
+- Abgeschlossen.
+- Implementiert:
+  - `cli.orchestration`
+  - `cli.daily_run`
+  - `cli.monthly_run`
+- `cli.daily_run` orchestriert AP11-Data-Sync und den modularen
+  Strategie-/Model-Portfolio-Run. Fuer Fixture-/Smoke-Laeufe steht
+  `--dry-run-sync` bereit, damit keine externen API-Calls oder Writes
+  erforderlich sind.
+- `cli.monthly_run` verwendet denselben fachlichen Stichtag wie der modulare
+  Daily-/Strategiepfad: den letzten verfuegbaren Handelstag aus den
+  Rohpreisen, sofern kein `--as-of-date` uebergeben wird.
+- Shadow-, Rebalance- und Trade-Plan-Persistenz bleiben bewusst AP13.
+- Verifikation:
+  - `.venv/bin/python -m pytest tests`
+  - `.venv/bin/python -m compileall data universes indicators strategies simulation evaluation live cli shared tests`
+  - `.venv/bin/python -m compileall legacy/current_system`
+  - `.venv/bin/python -m cli.daily_run --dry-run-sync --model-limit 2`
+  - `.venv/bin/python -m cli.monthly_run --model-limit 2`
 
 ### AP13: Operative Persistenz Fuer Model, Shadow Und Trade Plan
 

@@ -68,6 +68,13 @@ raw tickers, daily candles, fundamentals, and market-cap snapshots. The new
 entry points are `cli.sync_prices`, `cli.sync_fundamentals`, and
 `cli.sync_data`; dry-runs do not require external API calls.
 
+AP12 is complete: modular daily/monthly orchestration is available through
+`cli.daily_run` and `cli.monthly_run`. Daily runs can combine AP11 data sync
+with the modular indicator/strategy/model-portfolio path. Monthly runs produce
+the model portfolio for the latest available trading day or an explicit
+`--as-of-date`; AP13 will add write-side persistence for model, shadow,
+rebalance, and trade-plan artifacts.
+
 Legacy CLI modules still use imports such as `core.*` and `shared.*`, so legacy
 commands must be run with `PYTHONPATH=/app/legacy/current_system`.
 
@@ -133,6 +140,8 @@ python -m cli.operator_smoke
 python -m cli.sync_prices --dry-run
 python -m cli.sync_fundamentals --dry-run
 python -m cli.sync_data --dry-run
+python -m cli.daily_run --dry-run-sync
+python -m cli.monthly_run
 ```
 
 ## Coding Style & Naming Conventions
