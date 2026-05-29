@@ -113,7 +113,7 @@ max_funding_sell_pct zu niedrig
 Anpassen:
 
 ```bash
-docker compose run --rm app python -m cli.update_settings   --max-funding-sell-pct 0.25
+./setup.sh rebuild --start-capital 10000 --max-funding-sell-pct 0.25
 ```
 
 ---

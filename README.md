@@ -160,9 +160,19 @@ Model-/Shadow-/Rebalance-/Decision-Log-/Trade-Plan-Artefakte in die
 legacy-kompatiblen Live-Tabellen. Ohne `--persist` bleibt der Monthly-Run
 read-only. Doppelte Snapshots je Stichtag werden kontrolliert abgelehnt.
 
+AP14 ist abgeschlossen: Der regulaere modulare Pfad nutzt jetzt kanonische
+Tabellen statt legacy-kompatibler Tabellen. Rohdaten laufen ueber `assets`,
+`asset_price_bars`, `asset_fundamental_reports` und `asset_market_caps`.
+Live-/Operations-Artefakte laufen ueber `portfolio_target_items`,
+`live_rebalance_items`, `live_decision_items`, `live_trade_plans`,
+`live_trade_plan_items`, `live_trade_executions`, `live_cash_ledger`,
+`live_cash_balances` und `live_positions`. `init.sql`, Setup, Fixture,
+Repositories, CLIs und fokussierte Regressionstests wurden auf dieses Schema
+umgestellt.
+
 Die UI wird bewusst nach hinten geschoben. Als naechste technische APs werden
-zuerst die weiteren operativen Legacy-Pfade migriert: als naechstes der
-einfache Crontab-Betrieb fuer Daily und Monthly.
+zuerst die verbleibenden Legacy-Abhaengigkeiten aus Datenmodell und operativem
+Live-Pfad entfernt.
 
 Der Umbau erfolgt ab hier schrittweise. AP4 ist bewusst ein Infrastruktur-
 Schritt, weil AP3 unter Windows mit WSL Toolchain-Probleme gezeigt hat:
@@ -177,8 +187,9 @@ Schritt, weil AP3 unter Windows mit WSL Toolchain-Probleme gezeigt hat:
 8. Modularen Data-Sync als Legacy-Ersatz bauen. Erledigt in AP11.
 9. Daily-/Monthly-Orchestrierung aus Legacy herausziehen. Erledigt in AP12.
 10. Model-/Shadow-/Trade-Plan-Persistenz migrieren. Erledigt in AP13.
-11. Crontab-Betrieb fuer Daily und Monthly dokumentieren. Naechster Schritt AP14.
-12. Weboberflaeche erst danach bauen. Geplant AP15.
+11. Legacy-unabhaengiges kanonisches Schema und operativen Cutover bauen. Erledigt in AP14.
+12. Crontab-Betrieb fuer Daily und Monthly dokumentieren. Naechster Schritt AP15.
+13. Weboberflaeche erst danach bauen. Geplant AP16.
 
 Der Arbeitsplan steht in [plan.md](plan.md).
 
@@ -198,10 +209,10 @@ bestehende DB/Fixture-Daten lesen
 
 Verwendete Rohdaten:
 
-- `tickers`: handelbare Wertpapiere und Stammdaten
-- `daily_candles`: tägliche OHLCV-/Kerzendaten
-- `financial_reports`: Fundamentaldaten
-- `market_cap_snapshots`: Market-Cap-Historie
+- `assets`: handelbare Wertpapiere und Stammdaten
+- `asset_price_bars`: tägliche OHLCV-/Kerzendaten
+- `asset_fundamental_reports`: Fundamentaldaten
+- `asset_market_caps`: Market-Cap-Historie
 
 Neuer modularer Datenzugriff:
 
@@ -227,6 +238,7 @@ ohne API-Zugriff in eine lokale Docker-Datenbank geladen werden:
 cp .env.example .env
 docker compose up -d db
 docker compose exec -T db sh -lc 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE"' < fixtures/raw_market_data.sql
+docker compose exec -T db sh -lc 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE"' < init.sql
 docker compose run --rm app python -m cli.data_status --details
 docker compose run --rm app python -m cli.framework_status --universe sp500_active --benchmark spy
 docker compose run --rm app python -m cli.indicator_status --limit 10
@@ -235,15 +247,12 @@ docker compose run --rm app python -m cli.backtest_status --start-date 2026-01-0
 docker compose run --rm app python -m cli.operator_smoke --ranking-limit 5 --trade-limit 5
 ```
 
-Die Fixture enthaelt nur `tickers`, `daily_candles`, `financial_reports` und
-`market_cap_snapshots`. Legacy-/Live-Daten wie Trades, Cash Ledger,
-Portfolio-Positionen und Performance-Snapshots sind bewusst nicht enthalten.
-Wenn ein Live-CLI gegen eine reine Raw-Fixture-DB laeuft, meldet der
-AP10-Fehlerlayer deshalb z.B. `database_error=missing_table` mit Hinweis auf
-`init.sql` bzw. den Legacy-Setup-Pfad.
+Die Fixture enthaelt nur `assets`, `asset_price_bars`,
+`asset_fundamental_reports` und `asset_market_caps`. Live-Daten wie Trades,
+Cash Ledger, Real-Positionen und Performance-Snapshots sind bewusst nicht
+enthalten. `init.sql` legt die kanonischen Live-/Operations-Tabellen an.
 
-AP9-Live-Status und Write-CLIs laufen gegen eine Datenbank mit den
-legacy-kompatiblen Live-Tabellen aus `init.sql`:
+AP14-Live-Status und Write-CLIs laufen gegen die kanonischen Live-Tabellen:
 
 ```bash
 docker compose run --rm app python -m cli.live_status
@@ -644,51 +653,21 @@ Damit kann die Zielgröße und Turnover-Control bereits beim ersten Setup defini
 
 # Laufende Änderung aktiver Settings
 
-Die wichtigsten Strategie-Parameter können im laufenden Betrieb geändert werden.
-
-Wichtig:
-
-- Änderungen gelten nur für zukünftige Monatsläufe
-- bestehende Snapshots bleiben unverändert
-- historische Rebalance-Stände werden niemals überschrieben
-
-## Portfolio-Größe ändern
+Aktive Strategie-Parameter liegen seit AP14 in `strategy_instances`. Fuer
+Setup-/Rebuild-Szenarien koennen die wichtigsten Werte ueber `setup.sh`
+gesetzt werden:
 
 ```bash
-docker compose run --rm app python -m cli.update_settings \
-  --portfolio-size 10
-```
-
-## Max Trades ändern
-
-```bash
-docker compose run --rm app python -m cli.update_settings \
-  --max-trades-per-month 3
-```
-
-## Funding-Sell-Limit ändern
-
-```bash
-docker compose run --rm app python -m cli.update_settings \
-  --max-funding-sell-pct 0.25
-```
-
-## Mehrere Werte gleichzeitig ändern
-
-```bash
-docker compose run --rm app python -m cli.update_settings \
+./setup.sh rebuild \
+  --start-capital 10000 \
   --portfolio-size 10 \
   --max-trades-per-month 3 \
   --max-funding-sell-pct 0.25
 ```
 
-## Dry-Run
-
-```bash
-docker compose run --rm app python -m cli.update_settings \
-  --portfolio-size 15 \
-  --dry-run
-```
+Direkte Aenderungen in `strategy_instances` gelten nur fuer zukuenftige
+Monatslaeufe; bereits eingefrorene `strategy_config_snapshots` bleiben
+unveraendert.
 
 ---
 
@@ -740,7 +719,7 @@ Funding-Sells:
 ## Status prüfen
 
 ```bash
-docker compose run --rm app python -m cli.show_status --details
+docker compose run --rm app python -m cli.live_status --all --limit 10
 ```
 
 ---

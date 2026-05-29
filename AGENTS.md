@@ -37,13 +37,13 @@ files under `docs/` in sync with the completed AP, the verification that was
 run, and the next AP.
 
 AP1 is complete: the data-model and schema plan are documented in
-`docs/data-model.md`. `init.sql` intentionally remains legacy-compatible for
-now; no schema migration has been applied yet.
+`docs/data-model.md`. AP14 later replaced the temporary legacy-compatible
+schema with the canonical modular schema.
 
 AP2, AP3, and AP4 are complete. The new modular framework can read raw fixture
 data from MySQL through the new data-provider layer. The canonical fixture is
-`fixtures/raw_market_data.sql`, which contains only `tickers`, `daily_candles`,
-`financial_reports`, and `market_cap_snapshots`.
+`fixtures/raw_market_data.sql`, which contains only `assets`,
+`asset_price_bars`, `asset_fundamental_reports`, and `asset_market_caps`.
 
 AP5 is complete: selectable universes and benchmarks are implemented through
 configuration keys.
@@ -60,8 +60,8 @@ curve, benchmark curve, trades, summary metrics, and optional SQL persistence
 through additive AP8 evaluation tables.
 
 AP9 is complete: the new `live` package computes Model/Shadow/Real portfolio
-status and execution gaps from legacy-compatible live tables. `cli.live_status`
-exposes this status. Write-side live workflows are reconnected through
+status and execution gaps. AP14 moved these workflows to canonical live tables.
+`cli.live_status` exposes this status. Write-side live workflows are reconnected through
 `LiveExecutionService`, `cli.live_cash`, and `cli.live_trade`, covering cash
 ledger movements, manual BUY/SELL execution, position updates, cash updates,
 trade history, dry-runs, and core consistency checks.
@@ -82,15 +82,17 @@ the model portfolio for the latest available trading day or an explicit
 `--as-of-date`.
 
 AP13 is complete: `cli.monthly_run --persist` writes model, shadow, rebalance,
-decision-log, trade-plan-summary, and trade-plan-snapshot artifacts to the
-legacy-compatible live tables. The write path is transactional, rejects
-duplicate artifact dates, and has been verified with local tests plus a
-Docker/MySQL smoke database seeded with `init.sql` and
-`fixtures/raw_market_data.sql`. AP14 is next: document and test host-crontab
-operation for daily and monthly runs.
+decision-log, trade-plan-summary, and trade-plan-snapshot artifacts.
 
-Legacy CLI modules still use imports such as `core.*` and `shared.*`, so legacy
-commands must be run with `PYTHONPATH=/app/legacy/current_system`.
+AP14 is complete: the regular modular path now uses canonical tables instead
+of legacy-compatible tables. Raw data uses `assets`, `asset_price_bars`,
+`asset_fundamental_reports`, and `asset_market_caps`. Live/operations uses
+`strategy_instances`, `strategy_config_snapshots`, `portfolio_target_items`,
+`live_rebalance_items`, `live_decision_items`, `live_trade_plans`,
+`live_trade_plan_items`, `live_trade_executions`, `live_cash_ledger`,
+`live_cash_balances`, and `live_positions`. `init.sql`, setup, fixture,
+repositories, CLIs, and focused regression tests have been migrated. AP15 is
+next: document and test host-crontab operation for daily and monthly runs.
 
 ## Build, Test, and Development Commands
 
@@ -112,26 +114,9 @@ Initialize a fresh system:
 ./setup.sh init --start-capital 10000 --portfolio-size 7 --max-trades-per-month 4 --max-sector-positions 3 --min-holding-months 2 --max-funding-sell-pct 0.35
 ```
 
-This setup path belongs to the legacy system and has not yet been migrated after AP0.
-
-Run legacy daily and monthly pipelines:
-
-```bash
-docker compose run --rm -e PYTHONPATH=/app/legacy/current_system app python -m cli.core_main daily
-docker compose run --rm -e PYTHONPATH=/app/legacy/current_system app python -m cli.core_main monthly
-```
-
-Show legacy system status:
-
-```bash
-docker compose run --rm -e PYTHONPATH=/app/legacy/current_system app python -m cli.show_status --details
-docker compose run --rm -e PYTHONPATH=/app/legacy/current_system app python -m cli.show_status --health
-```
-
 Basic syntax check:
 
 ```bash
-docker compose run --rm app python -m compileall legacy/current_system
 docker compose run --rm app python -m compileall data universes indicators strategies simulation evaluation live cli shared
 ```
 

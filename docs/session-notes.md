@@ -189,8 +189,9 @@ Planning update after AP10:
   `cli.daily_run`, `cli.monthly_run`, and shared `cli.orchestration`.
 - AP13 is operational persistence for model portfolio, shadow portfolio,
   rebalance output, decision log, and trade plan.
-- AP14 is the simple host-crontab operating path for daily and monthly runs.
-- AP15 is the deferred web interface.
+- AP14 is the legacy-independent canonical schema and live cutover.
+- AP15 is the simple host-crontab operating path for daily and monthly runs.
+- AP16 is the deferred web interface.
 
 AP11 is complete. Current AP11 findings:
 
@@ -245,5 +246,27 @@ AP13 is complete:
     rows, and `cli.live_trade --trade-plan-action BUY --dry-run` validated one
     planned trade.
 
-Next step: AP14, document and test host-crontab operation for daily and monthly
-runs.
+AP14 started by auditing the remaining table dependencies and documenting the
+target mapping in `docs/data-model.md`.
+
+AP14 is complete:
+
+- `init.sql` now creates the canonical AP14 schema instead of the old
+  legacy-compatible tables.
+- `fixtures/raw_market_data.sql` now loads `assets`, `asset_price_bars`,
+  `asset_fundamental_reports`, and `asset_market_caps`.
+- `data.repository`, `cli.data_status`, and `cli.operator_smoke` read/write the
+  canonical raw tables.
+- `live.repository`, `live.operations`, and `live.execution` read/write
+  `strategy_instances`, `strategy_config_snapshots`, `portfolio_target_items`,
+  `live_rebalance_items`, `live_decision_items`, `live_trade_plans`,
+  `live_trade_plan_items`, `live_trade_executions`, `live_cash_ledger`,
+  `live_cash_balances`, and `live_positions`.
+- Real-position pricing now resolves latest closes from `asset_price_bars`.
+- `setup.sh` no longer invokes legacy core modules and resets AP14 canonical
+  live state.
+- Verification:
+  - `.venv/bin/python -m pytest tests/test_data_sync.py tests/test_live_operations.py tests/test_live_execution.py tests/test_live_status.py tests/test_cli_errors.py`
+
+Next step: AP15, document and test host-crontab operation for daily and monthly
+runs on the canonical AP14 path.

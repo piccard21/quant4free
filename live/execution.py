@@ -18,7 +18,7 @@ from .models import (
 
 
 class LiveExecutionService:
-    """Write-side AP9 service for real cash and manual trade execution."""
+    """Write-side service for real cash and manual trade execution."""
 
     def __init__(self, engine: Optional[Engine] = None) -> None:
         self.engine = engine or get_engine()
@@ -256,7 +256,7 @@ def _validate_trade_plan_link(
         text(
             """
             SELECT id
-            FROM trade_executions
+            FROM live_trade_executions
             WHERE ticker = :ticker
               AND executed_at = :executed_at
               AND shares = :shares
@@ -287,7 +287,7 @@ def _validate_trade_plan_link(
                 estimated_price,
                 is_executable,
                 skip_reason
-            FROM trade_plan_snapshots
+            FROM live_trade_plan_items
             WHERE as_of_date = :as_of_date
               AND ticker = :ticker
             LIMIT 1
@@ -331,7 +331,7 @@ def _validate_trade_plan_link(
             text(
                 """
                 SELECT id
-                FROM trade_executions
+                FROM live_trade_executions
                 WHERE as_of_date = :as_of_date
                   AND ticker = :ticker
                   AND trade_plan_execution_order = :execution_order
@@ -364,7 +364,7 @@ def _assert_settings_snapshot_exists(conn: Connection, as_of_date: date) -> None
         text(
             """
             SELECT 1
-            FROM strategy_settings_snapshots
+            FROM strategy_config_snapshots
             WHERE as_of_date = :as_of_date
             LIMIT 1
             """
@@ -372,7 +372,7 @@ def _assert_settings_snapshot_exists(conn: Connection, as_of_date: date) -> None
         {"as_of_date": as_of_date},
     ).scalar()
     if exists is None:
-        raise ValueError(f"missing strategy_settings_snapshots row for {as_of_date}")
+        raise ValueError(f"missing strategy_config_snapshots row for {as_of_date}")
 
 
 def _assert_ticker_exists(conn: Connection, ticker: str) -> None:
@@ -380,7 +380,7 @@ def _assert_ticker_exists(conn: Connection, ticker: str) -> None:
         text(
             """
             SELECT 1
-            FROM tickers
+            FROM assets
             WHERE ticker = :ticker
             LIMIT 1
             """
@@ -394,7 +394,7 @@ def _assert_ticker_exists(conn: Connection, ticker: str) -> None:
 def _resolve_as_of_date(conn: Connection, requested: date | None) -> date:
     if requested is not None:
         return requested
-    value = conn.execute(text("SELECT MAX(as_of_date) FROM strategy_settings_snapshots")).scalar()
+    value = conn.execute(text("SELECT MAX(as_of_date) FROM strategy_config_snapshots")).scalar()
     if value is None:
         raise ValueError("as_of_date is required because no settings snapshot exists")
     return _date(value)
@@ -405,14 +405,14 @@ def _load_current_cash(conn: Connection) -> float:
         text(
             """
             SELECT cash_balance
-            FROM portfolio_cash
+            FROM live_cash_balances
             ORDER BY updated_at DESC, id DESC
             LIMIT 1
             """
         )
     ).scalar()
     if value is None:
-        raise ValueError("no portfolio_cash row found")
+        raise ValueError("no live_cash_balances row found")
     return _float(value)
 
 
@@ -421,7 +421,7 @@ def _load_latest_ledger_balance(conn: Connection) -> float | None:
         text(
             """
             SELECT balance_after
-            FROM cash_ledger
+            FROM live_cash_ledger
             ORDER BY booked_at DESC, id DESC
             LIMIT 1
             """
@@ -439,7 +439,7 @@ def _validate_cash_consistency(current_cash: float, ledger_cash: float | None) -
     if abs(diff) > 0.000001:
         raise ValueError(
             "cash inconsistency detected: "
-            f"portfolio_cash={current_cash:.6f}, cash_ledger={ledger_cash:.6f}, diff={diff:.6f}"
+            f"live_cash_balances={current_cash:.6f}, live_cash_ledger={ledger_cash:.6f}, diff={diff:.6f}"
         )
 
 
@@ -448,7 +448,7 @@ def _load_tax_rate(conn: Connection, as_of_date: date) -> float:
         text(
             """
             SELECT tax_rate
-            FROM strategy_settings_snapshots
+            FROM strategy_config_snapshots
             WHERE as_of_date = :as_of_date
             LIMIT 1
             """
@@ -462,7 +462,7 @@ def _load_tax_rate(conn: Connection, as_of_date: date) -> float:
         text(
             """
             SELECT tax_rate
-            FROM strategy_settings
+            FROM strategy_instances
             WHERE is_active = 1
             ORDER BY id DESC
             LIMIT 1
@@ -485,7 +485,7 @@ def _load_open_position(conn: Connection, ticker: str):
                 buy_price,
                 opened_at,
                 is_open
-            FROM portfolio_positions
+            FROM live_positions
             WHERE ticker = :ticker
               AND is_open = 1
             ORDER BY opened_at ASC, position_id ASC
@@ -509,7 +509,7 @@ def _apply_buy(
         conn.execute(
             text(
                 """
-                INSERT INTO portfolio_positions (
+                INSERT INTO live_positions (
                     ticker,
                     shares,
                     buy_price,
@@ -553,7 +553,7 @@ def _apply_buy(
     conn.execute(
         text(
             """
-            UPDATE portfolio_positions
+            UPDATE live_positions
             SET
                 shares = :shares,
                 buy_price = :buy_price,
@@ -585,7 +585,7 @@ def _apply_sell(conn: Connection, ticker: str, shares: float, executed_at: datet
         conn.execute(
             text(
                 """
-                UPDATE portfolio_positions
+                UPDATE live_positions
                 SET
                     shares = 0,
                     is_open = 0,
@@ -605,7 +605,7 @@ def _apply_sell(conn: Connection, ticker: str, shares: float, executed_at: datet
     conn.execute(
         text(
             """
-            UPDATE portfolio_positions
+            UPDATE live_positions
             SET
                 shares = :shares,
                 updated_at = :updated_at
@@ -641,7 +641,7 @@ def _insert_trade_execution(
     result = conn.execute(
         text(
             """
-            INSERT INTO trade_executions (
+            INSERT INTO live_trade_executions (
                 as_of_date,
                 ticker,
                 execution_type,
@@ -716,7 +716,7 @@ def _insert_cash_ledger_entry(
     conn.execute(
         text(
             """
-            INSERT INTO cash_ledger (
+            INSERT INTO live_cash_ledger (
                 booked_at,
                 as_of_date,
                 ticker,
@@ -757,7 +757,7 @@ def _insert_portfolio_cash(conn: Connection, cash_balance: float, updated_at: da
     conn.execute(
         text(
             """
-            INSERT INTO portfolio_cash (
+            INSERT INTO live_cash_balances (
                 cash_balance,
                 updated_at
             ) VALUES (

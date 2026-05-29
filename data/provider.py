@@ -62,7 +62,7 @@ class DataProvider(Protocol):
 
 
 class FixtureDataProvider:
-    """DataProvider backed by the legacy-compatible MySQL fixture schema."""
+    """DataProvider backed by the canonical AP14 market-data schema."""
 
     key = "mysql_fixture"
 

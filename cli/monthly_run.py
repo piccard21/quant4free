@@ -31,7 +31,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--persist",
         action="store_true",
-        help="Persist AP13 model, shadow, rebalance, decision-log, and trade-plan artifacts.",
+        help="Persist model, shadow, rebalance, decision-log, and trade-plan artifacts.",
     )
     return parser.parse_args()
 
@@ -82,7 +82,7 @@ def _strategy_config(args) -> StrategyRunConfig:
     except ValueError as exc:
         raise CliUsageError(
             str(exc),
-            hint="load init.sql or create one active strategy_settings row before using --persist",
+            hint="load init.sql or create one active strategy_instances row before using --persist",
         ) from exc
     return StrategyRunConfig(
         universe_key=args.universe,

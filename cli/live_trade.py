@@ -4,7 +4,7 @@ from datetime import date, datetime
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Book an AP9 manual live trade execution."
+        description="Book a manual live trade execution."
     )
     parser.add_argument(
         "--as-of-date",

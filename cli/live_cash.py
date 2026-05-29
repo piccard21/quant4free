@@ -4,7 +4,7 @@ from datetime import date, datetime
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Book an AP9 live cash movement into the real portfolio ledger."
+        description="Book a live cash movement into the canonical real portfolio ledger."
     )
     parser.add_argument(
         "--type",

@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 
 
 class RawDataRepository:
-    """Access to legacy-compatible raw market data tables."""
+    """Access to canonical raw market data tables."""
 
     def __init__(self, engine: Optional[Engine] = None) -> None:
         self.engine = engine or get_engine()
@@ -36,7 +36,7 @@ class RawDataRepository:
                 last_seen,
                 removed_at,
                 last_fundamental_update
-            FROM tickers
+            FROM assets
         """
         params: dict[str, Any] = {}
         if active_only:
@@ -71,7 +71,7 @@ class RawDataRepository:
                 last_seen,
                 removed_at,
                 last_fundamental_update
-            FROM tickers
+            FROM assets
             WHERE ticker = :ticker
             LIMIT 1
             """,
@@ -99,7 +99,7 @@ class RawDataRepository:
     ) -> pd.DataFrame:
         sql = """
             SELECT ticker, date, open, high, low, close, volume
-            FROM daily_candles
+            FROM asset_price_bars
             WHERE 1 = 1
         """
         params = self._date_params(start_date, end_date)
@@ -115,10 +115,10 @@ class RawDataRepository:
     ) -> list[DailyCandle]:
         sql = """
             SELECT dc.ticker, dc.date, dc.open, dc.high, dc.low, dc.close, dc.volume
-            FROM daily_candles dc
+            FROM asset_price_bars dc
             JOIN (
                 SELECT ticker, MAX(date) AS max_date
-                FROM daily_candles
+                FROM asset_price_bars
                 WHERE (:as_of_date IS NULL OR date <= :as_of_date)
         """
         params: dict[str, Any] = {"as_of_date": as_of_date}
@@ -165,7 +165,7 @@ class RawDataRepository:
                 cash_and_equivalents,
                 source,
                 imported_at
-            FROM financial_reports
+            FROM asset_fundamental_reports
             WHERE 1 = 1
         """
         params = self._date_params(start_date, end_date)
@@ -197,10 +197,10 @@ class RawDataRepository:
                 fr.cash_and_equivalents,
                 fr.source,
                 fr.imported_at
-            FROM financial_reports fr
+            FROM asset_fundamental_reports fr
             JOIN (
                 SELECT ticker, report_type, MAX(report_date) AS max_report_date
-                FROM financial_reports
+                FROM asset_fundamental_reports
                 WHERE report_type = :report_type
                   AND (:as_of_date IS NULL OR report_date <= :as_of_date)
         """
@@ -244,7 +244,7 @@ class RawDataRepository:
     ) -> pd.DataFrame:
         sql = """
             SELECT ticker, date, market_cap, imported_at
-            FROM market_cap_snapshots
+            FROM asset_market_caps
             WHERE 1 = 1
         """
         params = self._date_params(start_date, end_date)
@@ -260,10 +260,10 @@ class RawDataRepository:
     ) -> list[MarketCapSnapshot]:
         sql = """
             SELECT mcs.ticker, mcs.date, mcs.market_cap, mcs.imported_at
-            FROM market_cap_snapshots mcs
+            FROM asset_market_caps mcs
             JOIN (
                 SELECT ticker, MAX(date) AS max_date
-                FROM market_cap_snapshots
+                FROM asset_market_caps
                 WHERE (:as_of_date IS NULL OR date <= :as_of_date)
         """
         params: dict[str, Any] = {"as_of_date": as_of_date}
@@ -289,7 +289,7 @@ class RawDataRepository:
     def latest_candle_date(self, ticker: str) -> Optional[date]:
         with self.engine.connect() as connection:
             return connection.execute(
-                text("SELECT MAX(date) FROM daily_candles WHERE ticker = :ticker"),
+                text("SELECT MAX(date) FROM asset_price_bars WHERE ticker = :ticker"),
                 {"ticker": ticker},
             ).scalar_one()
 
@@ -315,7 +315,7 @@ class RawDataRepository:
         if dialect == "sqlite":
             statement = text(
                 """
-                INSERT INTO tickers
+                INSERT INTO assets
                     (ticker, name, sector, is_active, first_seen, last_seen, removed_at)
                 VALUES
                     (:ticker, :name, :sector, :is_active, :sync_time, :sync_time, NULL)
@@ -330,7 +330,7 @@ class RawDataRepository:
         else:
             statement = text(
                 """
-                INSERT INTO tickers
+                INSERT INTO assets
                     (ticker, name, sector, is_active, first_seen, last_seen, removed_at)
                 VALUES
                     (:ticker, :name, :sector, :is_active, :sync_time, :sync_time, NULL)
@@ -356,7 +356,7 @@ class RawDataRepository:
         sync_time = sync_time or datetime.now()
         statement = text(
             """
-            UPDATE tickers
+            UPDATE assets
             SET is_active = 0, removed_at = :sync_time
             WHERE is_active = 1 AND ticker NOT IN :tickers
             """
@@ -407,7 +407,7 @@ class RawDataRepository:
         if dialect == "sqlite":
             statement = text(
                 """
-                INSERT INTO daily_candles
+                INSERT INTO asset_price_bars
                     (ticker, date, open, high, low, close, volume)
                 VALUES
                     (:ticker, :date, :open, :high, :low, :close, :volume)
@@ -422,7 +422,7 @@ class RawDataRepository:
         else:
             statement = text(
                 """
-                INSERT INTO daily_candles
+                INSERT INTO asset_price_bars
                     (ticker, date, open, high, low, close, volume)
                 VALUES
                     (:ticker, :date, :open, :high, :low, :close, :volume)
@@ -452,7 +452,7 @@ class RawDataRepository:
         rows = self._mappings(
             """
             SELECT ticker
-            FROM tickers
+            FROM assets
             WHERE is_active = 1
               AND (
                   last_fundamental_update IS NULL
@@ -489,7 +489,7 @@ class RawDataRepository:
         if dialect == "sqlite":
             statement = text(
                 """
-                INSERT INTO financial_reports
+                INSERT INTO asset_fundamental_reports
                     (
                         ticker,
                         report_date,
@@ -534,7 +534,7 @@ class RawDataRepository:
         else:
             statement = text(
                 """
-                INSERT INTO financial_reports
+                INSERT INTO asset_fundamental_reports
                     (
                         ticker,
                         report_date,
@@ -596,7 +596,7 @@ class RawDataRepository:
         if dialect == "sqlite":
             statement = text(
                 """
-                INSERT INTO market_cap_snapshots
+                INSERT INTO asset_market_caps
                     (ticker, date, market_cap, imported_at)
                 VALUES
                     (:ticker, :date, :market_cap, :imported_at)
@@ -608,7 +608,7 @@ class RawDataRepository:
         else:
             statement = text(
                 """
-                INSERT INTO market_cap_snapshots
+                INSERT INTO asset_market_caps
                     (ticker, date, market_cap, imported_at)
                 VALUES
                     (:ticker, :date, :market_cap, :imported_at)
@@ -630,7 +630,7 @@ class RawDataRepository:
             connection.execute(
                 text(
                     """
-                    UPDATE tickers
+                    UPDATE assets
                     SET last_fundamental_update = :updated_at
                     WHERE ticker = :ticker
                     """

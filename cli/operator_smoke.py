@@ -6,10 +6,10 @@ from cli.errors import CliUsageError, require_non_empty, run_cli
 
 
 RAW_TABLES = {
-    "tickers": None,
-    "daily_candles": "date",
-    "financial_reports": "report_date",
-    "market_cap_snapshots": "date",
+    "assets": None,
+    "asset_price_bars": "date",
+    "asset_fundamental_reports": "report_date",
+    "asset_market_caps": "date",
 }
 
 
@@ -114,7 +114,7 @@ def main() -> None:
     require_non_empty(
         "benchmark price rows",
         len(benchmark_prices),
-        hint="verify the selected benchmark has daily_candles rows",
+        hint="verify the selected benchmark has asset_price_bars rows",
     )
 
     print(
@@ -139,7 +139,7 @@ def main() -> None:
     require_non_empty(
         "indicator rows",
         len(indicator_values),
-        hint="verify prices, ttm fundamentals, and market-cap snapshots overlap",
+        hint="verify prices, ttm fundamentals, and asset_market_caps rows overlap",
     )
 
     strategy_result = strategy.run(

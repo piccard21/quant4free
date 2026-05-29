@@ -1,20 +1,20 @@
 -- Raw market data fixture for the modular quant framework.
 -- Contains only non-portfolio raw data tables.
--- Generated from the legacy full dump on 2026-05-24.
+-- Generated from the canonical AP14 raw-data fixture on 2026-05-24.
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 SET time_zone = "+00:00";
 SET FOREIGN_KEY_CHECKS = 0;
 
-DROP TABLE IF EXISTS `market_cap_snapshots`;
-DROP TABLE IF EXISTS `financial_reports`;
-DROP TABLE IF EXISTS `daily_candles`;
-DROP TABLE IF EXISTS `tickers`;
+DROP TABLE IF EXISTS `asset_market_caps`;
+DROP TABLE IF EXISTS `asset_fundamental_reports`;
+DROP TABLE IF EXISTS `asset_price_bars`;
+DROP TABLE IF EXISTS `assets`;
 
 --
--- Table structure for `tickers`
+-- Table structure for `assets`
 --
-CREATE TABLE `tickers` (
+CREATE TABLE `assets` (
   `ticker` varchar(10) NOT NULL COMMENT 'Eindeutiges Börsenkürzel des Unternehmens, z. B. AAPL oder BRK-B',
   `name` varchar(255) NOT NULL COMMENT 'Offizieller Firmenname laut Quellen wie Wikipedia oder Yahoo Finance',
   `sector` varchar(255) DEFAULT NULL COMMENT 'GICS-Sektor des Unternehmens',
@@ -24,14 +24,14 @@ CREATE TABLE `tickers` (
   `removed_at` datetime DEFAULT NULL COMMENT 'Zeitpunkt der Entfernung aus dem Index',
   `last_fundamental_update` datetime DEFAULT NULL COMMENT 'Letztes Update der Fundamentaldaten',
   PRIMARY KEY (`ticker`),
-  KEY `idx_tickers_is_active` (`is_active`),
-  KEY `idx_tickers_last_fundamental_update` (`last_fundamental_update`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='CORE: Stammdaten aller S&P-500 Unternehmen';
+  KEY `idx_assets_is_active` (`is_active`),
+  KEY `idx_assets_last_fundamental_update` (`last_fundamental_update`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Canonical asset master data';
 
 --
--- Table structure for `daily_candles`
+-- Table structure for `asset_price_bars`
 --
-CREATE TABLE `daily_candles` (
+CREATE TABLE `asset_price_bars` (
   `ticker` varchar(10) NOT NULL COMMENT 'Ticker (FK)',
   `date` date NOT NULL COMMENT 'Handelstag',
   `open` decimal(20,4) DEFAULT NULL COMMENT 'Eröffnungskurs',
@@ -40,13 +40,13 @@ CREATE TABLE `daily_candles` (
   `close` decimal(20,4) DEFAULT NULL COMMENT 'Schlusskurs',
   `volume` bigint DEFAULT NULL COMMENT 'Handelsvolumen',
   PRIMARY KEY (`ticker`,`date`),
-  KEY `idx_daily_candles_ticker_date_desc` (`ticker`,`date` DESC)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='CORE: Tägliche OHLCV Kursdaten';
+  KEY `idx_asset_price_bars_ticker_date_desc` (`ticker`,`date` DESC)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Canonical daily OHLCV price bars';
 
 --
--- Table structure for `financial_reports`
+-- Table structure for `asset_fundamental_reports`
 --
-CREATE TABLE `financial_reports` (
+CREATE TABLE `asset_fundamental_reports` (
   `ticker` varchar(10) NOT NULL COMMENT 'Ticker (FK)',
   `report_date` date NOT NULL COMMENT 'Berichtsdatum',
   `report_type` enum('annual','ttm') NOT NULL COMMENT 'Berichtstyp (annual / ttm)',
@@ -60,25 +60,25 @@ CREATE TABLE `financial_reports` (
   `source` varchar(50) DEFAULT NULL COMMENT 'Datenquelle',
   `imported_at` datetime DEFAULT NULL COMMENT 'Importzeitpunkt',
   PRIMARY KEY (`ticker`,`report_date`,`report_type`),
-  KEY `idx_financial_reports_ticker_type_date` (`ticker`,`report_type`,`report_date` DESC)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='CORE: Fundamentaldaten (Annual + TTM)';
+  KEY `idx_asset_fundamental_reports_ticker_type_date` (`ticker`,`report_type`,`report_date` DESC)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Canonical annual and TTM fundamental reports';
 
 --
--- Table structure for `market_cap_snapshots`
+-- Table structure for `asset_market_caps`
 --
-CREATE TABLE `market_cap_snapshots` (
+CREATE TABLE `asset_market_caps` (
   `ticker` varchar(10) NOT NULL COMMENT 'Ticker (FK)',
   `date` date NOT NULL COMMENT 'Datum des Snapshots',
   `market_cap` bigint DEFAULT NULL COMMENT 'Marktkapitalisierung',
   `imported_at` datetime DEFAULT NULL COMMENT 'Importzeitpunkt',
   PRIMARY KEY (`ticker`,`date`),
-  KEY `idx_market_cap_snapshots_ticker_date_desc` (`ticker`,`date` DESC)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='CORE: Tägliche Market Cap Snapshots';
+  KEY `idx_asset_market_caps_ticker_date_desc` (`ticker`,`date` DESC)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Canonical market-cap time series';
 
 --
--- Data for `tickers` (506 rows)
+-- Data for `assets` (506 rows)
 --
-INSERT INTO `tickers` (`ticker`, `name`, `sector`, `is_active`, `first_seen`, `last_seen`, `removed_at`, `last_fundamental_update`) VALUES
+INSERT INTO `assets` (`ticker`, `name`, `sector`, `is_active`, `first_seen`, `last_seen`, `removed_at`, `last_fundamental_update`) VALUES
   ('A', 'Agilent Technologies', 'Health Care', 1, '2026-04-22 07:41:34', '2026-05-23 03:00:05', NULL, '2026-05-15 01:03:05'),
   ('AAPL', 'Apple Inc.', 'Information Technology', 1, '2026-04-22 07:41:34', '2026-05-23 03:00:05', NULL, '2026-05-15 01:03:09'),
   ('ABBV', 'AbbVie', 'Health Care', 1, '2026-04-22 07:41:34', '2026-05-23 03:00:05', NULL, '2026-05-15 01:03:13'),
@@ -580,7 +580,7 @@ INSERT INTO `tickers` (`ticker`, `name`, `sector`, `is_active`, `first_seen`, `l
   ('XEL', 'Xcel Energy', 'Utilities', 1, '2026-04-22 07:41:34', '2026-05-23 03:00:05', NULL, '2026-05-14 07:26:23'),
   ('XOM', 'ExxonMobil', 'Energy', 1, '2026-04-22 07:41:34', '2026-05-23 03:00:05', NULL, '2026-05-14 07:26:27');
 
-INSERT INTO `tickers` (`ticker`, `name`, `sector`, `is_active`, `first_seen`, `last_seen`, `removed_at`, `last_fundamental_update`) VALUES
+INSERT INTO `assets` (`ticker`, `name`, `sector`, `is_active`, `first_seen`, `last_seen`, `removed_at`, `last_fundamental_update`) VALUES
   ('XYL', 'Xylem Inc.', 'Industrials', 1, '2026-04-22 07:41:34', '2026-05-23 03:00:05', NULL, '2026-05-14 07:26:31'),
   ('XYZ', 'Block, Inc.', 'Financials', 1, '2026-04-22 07:41:34', '2026-05-23 03:00:05', NULL, '2026-05-15 01:02:44'),
   ('YUM', 'Yum! Brands', 'Consumer Discretionary', 1, '2026-04-22 07:41:34', '2026-05-23 03:00:05', NULL, '2026-05-15 01:02:48'),
@@ -589,9 +589,9 @@ INSERT INTO `tickers` (`ticker`, `name`, `sector`, `is_active`, `first_seen`, `l
   ('ZTS', 'Zoetis', 'Health Care', 1, '2026-04-22 07:41:34', '2026-05-23 03:00:05', NULL, '2026-05-15 01:03:01');
 
 --
--- Data for `daily_candles` (200962 rows)
+-- Data for `asset_price_bars` (200962 rows)
 --
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('A', '2024-10-21', 138.3500, 138.8100, 136.2200, 136.7600, 975900),
   ('A', '2024-10-22', 134.6900, 134.7500, 131.9800, 133.4600, 1822700),
   ('A', '2024-10-23', 133.2700, 134.3000, 131.3600, 133.0300, 1657500),
@@ -1093,7 +1093,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('AAPL', '2025-03-18', 214.1600, 215.1500, 211.4900, 212.6900, 42432400),
   ('AAPL', '2025-03-19', 214.2200, 218.7600, 213.7500, 215.2400, 54385400);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('AAPL', '2025-03-20', 213.9900, 217.4900, 212.2200, 214.1000, 48862900),
   ('AAPL', '2025-03-21', 211.5600, 218.8400, 211.2800, 218.2700, 94127800),
   ('AAPL', '2025-03-24', 221.0000, 221.4800, 218.5800, 220.7300, 44299500),
@@ -1595,7 +1595,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('ABBV', '2025-08-13', 199.7600, 201.7200, 199.2100, 201.4700, 3558500),
   ('ABBV', '2025-08-14', 201.8000, 205.0600, 200.8600, 204.6800, 4635400);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('ABBV', '2025-08-15', 205.9100, 206.8400, 204.3200, 206.6900, 4430900),
   ('ABBV', '2025-08-18', 206.6000, 208.3400, 205.9600, 206.5700, 6083500),
   ('ABBV', '2025-08-19', 206.5300, 207.8000, 205.1000, 206.1900, 3975500),
@@ -2097,7 +2097,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('ABNB', '2026-01-08', 136.1050, 138.7800, 134.5500, 138.6600, 3592800),
   ('ABNB', '2026-01-09', 140.0050, 141.4000, 137.9100, 139.2700, 4577800);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('ABNB', '2026-01-12', 139.2800, 140.2400, 137.0150, 138.5100, 3371100),
   ('ABNB', '2026-01-13', 138.1400, 140.1900, 136.5000, 140.0700, 4108700),
   ('ABNB', '2026-01-14', 139.5000, 139.6500, 130.1500, 132.7900, 7681600),
@@ -2599,7 +2599,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('ACGL', '2024-10-31', 102.1200, 103.2100, 98.2700, 98.5600, 3438200),
   ('ACGL', '2024-11-01', 98.5700, 99.3400, 95.8600, 96.0200, 4006500);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('ACGL', '2024-11-04', 96.1600, 96.2800, 94.9500, 95.0000, 2293300),
   ('ACGL', '2024-11-05', 95.2400, 96.5200, 95.0500, 96.5000, 1906700),
   ('ACGL', '2024-11-06', 101.8800, 101.9700, 100.1500, 101.7000, 3283100),
@@ -3101,7 +3101,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('ACN', '2025-04-01', 311.6000, 316.0200, 310.9800, 313.5800, 3503900),
   ('ACN', '2025-04-02', 309.7500, 318.0000, 309.7500, 316.3300, 4123000);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('ACN', '2025-04-03', 308.0000, 311.7900, 300.9700, 301.4600, 3614800),
   ('ACN', '2025-04-04', 296.8000, 299.0500, 284.6000, 285.0600, 4659000),
   ('ACN', '2025-04-07', 278.9400, 293.0400, 275.0100, 284.7200, 6333600),
@@ -3603,7 +3603,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('ADBE', '2025-08-27', 355.9800, 360.3700, 355.1600, 356.3500, 2353800),
   ('ADBE', '2025-08-28', 357.6300, 358.2600, 349.1100, 353.9600, 3803100);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('ADBE', '2025-08-29', 354.0000, 357.2500, 352.4600, 356.7000, 2639300),
   ('ADBE', '2025-09-02', 350.2400, 352.7100, 341.2800, 345.6300, 4229400),
   ('ADBE', '2025-09-03', 345.7200, 348.5100, 343.3600, 348.5000, 3035300),
@@ -4105,7 +4105,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('ADI', '2026-01-23', 310.4900, 313.5400, 303.1600, 305.6000, 2907000),
   ('ADI', '2026-01-26', 305.1500, 306.6900, 303.7600, 304.0100, 2757700);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('ADI', '2026-01-27', 305.2400, 306.9900, 300.7600, 303.8300, 3552700),
   ('ADI', '2026-01-28', 313.0000, 318.1700, 308.5000, 317.6300, 3888300),
   ('ADI', '2026-01-29', 316.0700, 319.2600, 308.9300, 318.7000, 3131800),
@@ -4607,7 +4607,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('ADP', '2024-11-14', 307.1100, 307.7200, 301.4000, 301.9900, 1505800),
   ('ADP', '2024-11-15', 301.9300, 301.9500, 297.0700, 297.6400, 1457700);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('ADP', '2024-11-18', 297.6400, 299.8400, 296.9500, 297.8900, 1075900),
   ('ADP', '2024-11-19', 296.3800, 299.0900, 295.0600, 297.5400, 1741700),
   ('ADP', '2024-11-20', 296.4800, 300.6200, 295.1500, 298.5900, 2159300),
@@ -5109,7 +5109,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('ADSK', '2025-04-15', 262.4000, 266.5500, 262.0000, 265.3400, 1082300),
   ('ADSK', '2025-04-16', 261.7900, 266.1500, 257.9100, 260.1600, 1323100);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('ADSK', '2025-04-17', 262.3000, 262.3900, 258.1400, 259.4700, 1053400),
   ('ADSK', '2025-04-21', 255.9200, 256.5200, 250.4600, 254.2700, 1277200),
   ('ADSK', '2025-04-22', 257.8100, 263.1400, 256.0400, 261.1400, 1072900),
@@ -5611,7 +5611,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('AEE', '2025-09-11', 99.1900, 100.4600, 99.0500, 100.3100, 999300),
   ('AEE', '2025-09-12', 100.2200, 101.0400, 100.1200, 100.7900, 917300);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('AEE', '2025-09-15', 100.6700, 101.0400, 100.2400, 100.4700, 1150500),
   ('AEE', '2025-09-16', 100.0600, 100.4000, 98.5100, 98.5600, 964900),
   ('AEE', '2025-09-17', 99.1700, 99.8100, 98.7800, 98.9700, 1053600),
@@ -6113,7 +6113,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('AEP', '2026-02-06', 121.2100, 122.4400, 119.8600, 120.8000, 2767700),
   ('AEP', '2026-02-09', 120.5400, 121.4800, 119.9200, 121.1000, 2654000);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('AEP', '2026-02-10', 120.2400, 122.4000, 119.7100, 121.2300, 3506000),
   ('AEP', '2026-02-11', 121.4600, 122.5900, 120.4700, 122.2500, 2843800),
   ('AEP', '2026-02-12', 124.2000, 128.9200, 123.6900, 126.4300, 6301700),
@@ -6615,7 +6615,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('AFL', '2024-11-29', 114.0100, 115.0700, 113.9000, 114.0000, 1307200),
   ('AFL', '2024-12-02', 114.1700, 114.6000, 111.1100, 111.4000, 2491400);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('AFL', '2024-12-03', 112.2400, 112.2400, 106.7400, 106.7600, 3045100),
   ('AFL', '2024-12-04', 105.9200, 107.2500, 105.0000, 106.9900, 2379600),
   ('AFL', '2024-12-05', 107.4000, 108.5300, 107.1600, 107.7500, 1897700),
@@ -7117,7 +7117,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('AIG', '2025-04-30', 81.3500, 81.9500, 80.0000, 81.5200, 5777400),
   ('AIG', '2025-05-01', 80.6000, 81.4100, 80.3500, 80.8400, 5974900);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('AIG', '2025-05-02', 80.6300, 84.1000, 78.4500, 83.6600, 5783300),
   ('AIG', '2025-05-05', 83.4100, 84.0500, 82.6500, 83.0500, 2619000),
   ('AIG', '2025-05-06', 82.5100, 83.3100, 82.3200, 82.5300, 2482300),
@@ -7619,7 +7619,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('AIZ', '2025-09-25', 215.3900, 216.5700, 212.1000, 216.0000, 480400),
   ('AIZ', '2025-09-26', 217.5100, 218.7000, 215.2700, 215.6200, 362800);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('AIZ', '2025-09-29', 215.6700, 215.8500, 213.2100, 214.4500, 224000),
   ('AIZ', '2025-09-30', 214.1900, 217.0200, 214.1900, 216.6000, 254700),
   ('AIZ', '2025-10-01', 215.1400, 219.0200, 215.1400, 217.4800, 360700),
@@ -8121,7 +8121,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('AJG', '2026-02-23', 214.5500, 218.3400, 213.0100, 214.3300, 2375100),
   ('AJG', '2026-02-24', 213.4500, 216.2300, 209.4400, 215.9800, 2985000);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('AJG', '2026-02-25', 216.7000, 218.3100, 213.5800, 218.1300, 2263200),
   ('AJG', '2026-02-26', 219.6100, 225.8900, 218.6900, 225.2200, 2313200),
   ('AJG', '2026-02-27', 228.4100, 228.8100, 223.5100, 228.2000, 2959700),
@@ -8623,7 +8623,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('ALB', '2024-12-13', 102.0000, 102.0100, 98.0400, 99.3800, 1643700),
   ('ALB', '2024-12-16', 98.5900, 100.9100, 97.5600, 99.5400, 1634300);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('ALB', '2024-12-17', 98.7900, 100.3100, 96.4200, 97.5500, 1757300),
   ('ALB', '2024-12-18', 97.0000, 97.6100, 90.1000, 90.5400, 2536300),
   ('ALB', '2024-12-19', 91.5000, 93.8400, 88.7400, 88.9200, 2360700),
@@ -9125,7 +9125,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('ALGN', '2025-05-14', 189.5300, 190.1900, 186.0300, 187.6500, 855700),
   ('ALGN', '2025-05-15', 187.2400, 188.4000, 184.7200, 186.7200, 688300);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('ALGN', '2025-05-16', 187.3400, 188.3600, 183.3200, 188.2900, 758000),
   ('ALGN', '2025-05-19', 184.3300, 185.9700, 183.8000, 184.8400, 522900),
   ('ALGN', '2025-05-20', 184.6600, 185.7200, 181.7600, 182.5800, 569800),
@@ -9627,7 +9627,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('ALL', '2025-10-09', 212.8900, 213.2400, 208.2300, 208.9900, 1103600),
   ('ALL', '2025-10-10', 209.2600, 210.3900, 205.3600, 205.6700, 990000);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('ALL', '2025-10-13', 204.4900, 206.6900, 203.2800, 205.6400, 773500),
   ('ALL', '2025-10-14', 206.5700, 209.9100, 206.3300, 209.5200, 994800),
   ('ALL', '2025-10-15', 206.0700, 206.5000, 198.1400, 200.4200, 2509100),
@@ -10129,7 +10129,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('ALLE', '2026-03-09', 148.2700, 150.7200, 146.0600, 150.2200, 805900),
   ('ALLE', '2026-03-10', 149.8300, 150.3800, 147.3400, 147.5300, 1300000);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('ALLE', '2026-03-11', 149.7400, 150.0400, 146.2200, 146.6400, 782800),
   ('ALLE', '2026-03-12', 145.1100, 147.7000, 145.0400, 145.8500, 990300),
   ('ALLE', '2026-03-13', 146.6300, 147.2900, 144.3400, 145.3500, 693700),
@@ -10631,7 +10631,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('AMCR', '2024-12-30', 46.8000, 46.9000, 46.4500, 46.7000, 1753600),
   ('AMCR', '2024-12-31', 46.7000, 47.1000, 46.6500, 47.0500, 1660380);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('AMCR', '2025-01-02', 47.0500, 47.5000, 46.6000, 46.7500, 2363720),
   ('AMCR', '2025-01-03', 46.7000, 46.9000, 46.4500, 46.6500, 2372920),
   ('AMCR', '2025-01-06', 47.9000, 48.4500, 47.0000, 47.1500, 4133380),
@@ -11133,7 +11133,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('AMD', '2025-05-29', 115.4900, 115.5400, 112.1300, 113.0300, 30501400),
   ('AMD', '2025-05-30', 111.5800, 112.1100, 108.6200, 110.7300, 36088500);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('AMD', '2025-06-02', 111.0600, 114.8600, 111.0100, 114.6300, 34078400),
   ('AMD', '2025-06-03', 114.5000, 117.6800, 113.2800, 117.3100, 37161500),
   ('AMD', '2025-06-04', 117.4100, 119.3000, 115.7300, 118.5800, 31025000),
@@ -11635,7 +11635,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('AME', '2025-10-23', 185.6000, 189.7700, 185.3100, 189.2000, 1066800),
   ('AME', '2025-10-24', 189.9500, 189.9500, 186.3800, 187.1400, 1386500);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('AME', '2025-10-27', 187.3800, 188.4600, 185.8200, 186.7500, 1106800),
   ('AME', '2025-10-28', 186.7300, 187.0000, 184.0600, 185.1000, 1595700),
   ('AME', '2025-10-29', 185.0600, 187.1400, 182.8700, 184.1900, 2201800),
@@ -12137,7 +12137,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('AMGN', '2026-03-23', 351.8000, 353.4200, 348.6100, 349.7700, 2368700),
   ('AMGN', '2026-03-24', 346.5600, 352.5800, 345.8000, 348.4300, 2336700);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('AMGN', '2026-03-25', 350.7600, 358.0000, 350.7600, 353.9300, 1831900),
   ('AMGN', '2026-03-26', 350.3300, 354.8100, 348.5200, 353.1600, 2044800),
   ('AMGN', '2026-03-27', 355.6600, 355.6600, 347.8000, 348.7700, 2274800),
@@ -12639,7 +12639,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('AMT', '2025-01-15', 184.0500, 185.3000, 180.0700, 180.3200, 2230700),
   ('AMT', '2025-01-16', 181.0000, 190.5300, 180.4100, 190.0700, 3544800);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('AMT', '2025-01-17', 190.7600, 191.7500, 189.4300, 190.3900, 2882500),
   ('AMT', '2025-01-21', 191.3100, 193.7700, 189.3300, 189.9300, 2460800),
   ('AMT', '2025-01-22', 188.4600, 188.9700, 183.6500, 185.2900, 2753700),
@@ -13141,7 +13141,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('AMZN', '2025-06-12', 211.7800, 213.5800, 211.3300, 213.2400, 27640000),
   ('AMZN', '2025-06-13', 209.9600, 214.0500, 209.6200, 212.1000, 29337800);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('AMZN', '2025-06-16', 212.3100, 217.0600, 211.6000, 216.1000, 33284200),
   ('AMZN', '2025-06-17', 215.2000, 217.4100, 214.5600, 214.8200, 32086300),
   ('AMZN', '2025-06-18', 215.0900, 217.9600, 212.3400, 212.5200, 44360500),
@@ -13643,7 +13643,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('ANET', '2025-11-06', 140.6500, 141.9900, 132.5900, 134.0200, 13296100),
   ('ANET', '2025-11-07', 134.4100, 136.6100, 132.4500, 134.6500, 11341600);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('ANET', '2025-11-10', 137.5000, 138.9800, 134.5870, 137.2600, 6974300),
   ('ANET', '2025-11-11', 134.8700, 136.3750, 132.4100, 134.9300, 7189300),
   ('ANET', '2025-11-12', 136.2200, 136.5980, 133.7780, 134.9800, 6471400),
@@ -14145,7 +14145,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('AON', '2026-04-07', 325.6100, 326.5500, 320.1000, 322.4700, 1187700),
   ('AON', '2026-04-08', 322.4700, 330.9300, 321.5800, 329.7600, 1397600);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('AON', '2026-04-09', 326.5400, 328.1700, 322.6900, 325.4000, 1314400),
   ('AON', '2026-04-10', 323.1600, 323.2900, 307.8100, 312.5700, 2414200),
   ('AON', '2026-04-13', 315.0000, 325.6800, 313.0000, 325.4000, 1687500),
@@ -14647,7 +14647,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('APA', '2025-01-30', 23.3700, 23.4800, 22.8200, 22.9900, 4692000),
   ('APA', '2025-01-31', 22.7600, 22.9200, 21.9000, 21.9300, 14807500);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('APA', '2025-02-03', 21.8200, 21.9200, 21.1900, 21.4700, 6867800),
   ('APA', '2025-02-04', 21.1500, 22.5100, 21.1500, 22.3900, 5965600),
   ('APA', '2025-02-05', 22.3200, 22.4500, 22.1000, 22.1900, 4278800),
@@ -15149,7 +15149,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('APD', '2025-06-27', 282.1500, 284.7500, 281.4200, 282.3500, 2433400),
   ('APD', '2025-06-30', 281.1300, 283.3200, 278.1000, 282.0600, 1286100);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('APD', '2025-07-01', 278.4400, 287.2300, 276.4900, 285.4700, 1324400),
   ('APD', '2025-07-02', 286.0400, 290.5100, 285.0600, 290.3000, 1113800),
   ('APD', '2025-07-03', 288.4600, 292.6700, 288.4600, 291.8400, 682400),
@@ -15651,7 +15651,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('APH', '2025-11-20', 140.6900, 140.6900, 130.2100, 130.3600, 10313300),
   ('APH', '2025-11-21', 130.3600, 132.1900, 127.1900, 131.6000, 8207300);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('APH', '2025-11-24', 132.6700, 138.3100, 132.5300, 137.8800, 13568400),
   ('APH', '2025-11-25', 137.5100, 138.3400, 133.9400, 137.8100, 7102900),
   ('APH', '2025-11-26', 138.9200, 139.4400, 137.7600, 138.7200, 6443400),
@@ -16153,7 +16153,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('APO', '2026-04-21', 128.2800, 131.0000, 126.7200, 127.2600, 5040000),
   ('APO', '2026-04-22', 128.2300, 130.3000, 127.0000, 129.0600, 3600300);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('APO', '2026-04-23', 127.3300, 127.8000, 122.5900, 124.7700, 4522900),
   ('APO', '2026-04-24', 124.4500, 125.8000, 122.2600, 124.2600, 3429400),
   ('APO', '2026-04-27', 124.2600, 126.1300, 122.7400, 123.3300, 2893800),
@@ -16655,7 +16655,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('APTV', '2025-02-13', 65.9000, 66.8700, 65.8000, 66.4100, 2452300),
   ('APTV', '2025-02-14', 67.1100, 67.4000, 66.0800, 67.0000, 2121500);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('APTV', '2025-02-18', 67.3200, 67.3900, 66.0900, 66.8800, 2894900),
   ('APTV', '2025-02-19', 67.1600, 67.5000, 66.3200, 66.6600, 1828100),
   ('APTV', '2025-02-20', 67.0400, 67.9700, 66.7600, 67.6200, 2617300),
@@ -17157,7 +17157,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('ARE', '2025-07-14', 79.7400, 80.3600, 78.1100, 78.6100, 2185200),
   ('ARE', '2025-07-15', 79.0500, 79.6600, 77.2000, 77.3200, 1345100);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('ARE', '2025-07-16', 77.7000, 79.2000, 77.0100, 78.1500, 1297600),
   ('ARE', '2025-07-17', 78.1600, 79.5900, 78.0600, 78.8900, 1602400),
   ('ARE', '2025-07-18', 78.8300, 79.3000, 77.7900, 78.1700, 1471600),
@@ -17659,7 +17659,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('ARES', '2025-12-05', 162.6000, 165.4600, 162.3100, 165.4600, 1349300),
   ('ARES', '2025-12-08', 162.1600, 165.5250, 160.0000, 164.2600, 2344100);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('ARES', '2025-12-09', 178.8100, 179.7050, 173.5300, 176.2000, 15485800),
   ('ARES', '2025-12-10', 178.5800, 181.1900, 174.7100, 178.2800, 47940600),
   ('ARES', '2025-12-11', 178.0000, 179.8800, 174.8900, 176.8700, 4140800),
@@ -18161,7 +18161,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('ATO', '2026-05-05', 186.5000, 188.9000, 185.5700, 187.2500, 860900),
   ('ATO', '2026-05-06', 188.9800, 188.9800, 183.7000, 184.7600, 906800);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('ATO', '2026-05-07', 186.8600, 190.1900, 180.6800, 181.8600, 1868800),
   ('ATO', '2026-05-08', 183.4900, 184.8300, 180.8500, 180.8700, 1136600),
   ('ATO', '2026-05-11', 182.4500, 183.1400, 180.6100, 182.1300, 796400),
@@ -18663,7 +18663,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('AVGO', '2025-02-28', 195.7600, 201.1900, 193.1500, 199.4300, 39747200),
   ('AVGO', '2025-03-03', 204.0000, 204.0600, 184.5300, 187.3700, 37435600);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('AVGO', '2025-03-04', 189.2200, 193.9500, 180.4800, 187.4800, 37910500),
   ('AVGO', '2025-03-05', 191.8600, 194.0800, 187.1000, 191.5800, 25644500),
   ('AVGO', '2025-03-06', 181.0400, 186.8300, 177.6100, 179.4500, 56864100),
@@ -19165,7 +19165,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('AVY', '2025-07-28', 176.9000, 176.9900, 174.0700, 174.3600, 434600),
   ('AVY', '2025-07-29', 174.4000, 174.8700, 171.9300, 172.2700, 708500);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('AVY', '2025-07-30', 171.9500, 171.9500, 167.9100, 168.4200, 587200),
   ('AVY', '2025-07-31', 167.2500, 170.0100, 167.2500, 167.7700, 720300),
   ('AVY', '2025-08-01', 167.3400, 167.3400, 164.1900, 165.8200, 765700),
@@ -19667,7 +19667,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('AWK', '2025-12-19', 132.6800, 132.6800, 130.2200, 130.2500, 2985200),
   ('AWK', '2025-12-22', 129.8000, 132.1900, 129.0900, 131.6700, 1038500);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('AWK', '2025-12-23', 131.5500, 131.7300, 130.4600, 130.7500, 869100),
   ('AWK', '2025-12-24', 130.6600, 131.4000, 130.6200, 131.2800, 368600),
   ('AWK', '2025-12-26', 131.3300, 131.5200, 130.2300, 130.5500, 563400),
@@ -20169,7 +20169,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('AXON', '2026-05-19', 398.4400, 402.0300, 382.0000, 392.3400, 789400),
   ('AXON', '2026-05-20', 389.4400, 402.5200, 383.1000, 398.4400, 963900);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('AXON', '2026-05-21', 393.1900, 395.1300, 380.4300, 389.8400, 1100100),
   ('AXON', '2026-05-22', 392.0000, 400.0000, 384.0500, 386.0000, 1302261),
   ('AXP', '2024-10-21', 275.0000, 276.3600, 269.5300, 270.7400, 4092700),
@@ -20671,7 +20671,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('AZO', '2025-03-14', 3550.0000, 3578.0601, 3520.9199, 3554.9099, 164200),
   ('AZO', '2025-03-17', 3555.1799, 3627.4399, 3550.5200, 3620.8201, 129200);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('AZO', '2025-03-18', 3634.2100, 3634.2100, 3585.9600, 3614.2700, 87200),
   ('AZO', '2025-03-19', 3616.0000, 3620.4800, 3571.3701, 3591.6101, 134600),
   ('AZO', '2025-03-20', 3584.0901, 3610.0000, 3567.0901, 3573.3799, 81300),
@@ -21173,7 +21173,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('BA', '2025-08-11', 229.0000, 229.3200, 225.1700, 225.9600, 4872700),
   ('BA', '2025-08-12', 226.9500, 232.6100, 226.4600, 232.6100, 7396400);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('BA', '2025-08-13', 233.2500, 235.6000, 229.3300, 233.3700, 6670400),
   ('BA', '2025-08-14', 231.6500, 233.9700, 230.8600, 233.1900, 5320800),
   ('BA', '2025-08-15', 233.3600, 236.4500, 231.4300, 235.2600, 6291400),
@@ -21675,7 +21675,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('BAC', '2026-01-06', 57.0100, 57.4100, 56.7500, 57.2500, 31791900),
   ('BAC', '2026-01-07', 56.6900, 56.8100, 55.4400, 55.6400, 49695500);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('BAC', '2026-01-08', 55.4800, 56.5800, 55.4700, 56.1800, 30933700),
   ('BAC', '2026-01-09', 56.1700, 56.6100, 55.7900, 55.8500, 30768800),
   ('BAC', '2026-01-12', 55.2900, 55.4500, 54.7300, 55.1900, 45860600),
@@ -22177,7 +22177,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('BAX', '2024-10-29', 35.9500, 36.3500, 35.9000, 35.9900, 2515300),
   ('BAX', '2024-10-30', 35.8000, 36.1900, 35.7100, 35.8600, 2671800);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('BAX', '2024-10-31', 35.7000, 36.0200, 35.5900, 35.7000, 2722400),
   ('BAX', '2024-11-01', 36.0000, 36.4900, 35.8200, 35.8700, 3167100),
   ('BAX', '2024-11-04', 36.0100, 36.2400, 35.7800, 35.8000, 2725800),
@@ -22679,7 +22679,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('BBY', '2025-03-28', 74.3900, 74.8700, 72.2600, 72.4500, 2547500),
   ('BBY', '2025-03-31', 71.3200, 74.3100, 71.1000, 73.6100, 3529000);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('BBY', '2025-04-01', 73.6600, 74.7200, 73.1500, 74.3700, 2346500),
   ('BBY', '2025-04-02', 73.6000, 76.2900, 73.2800, 75.7300, 2160700),
   ('BBY', '2025-04-03', 66.3000, 67.1600, 61.8600, 62.2200, 10734600),
@@ -23181,7 +23181,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('BDX', '2025-08-25', 156.6824, 156.8239, 152.5393, 153.0267, 1561380),
   ('BDX', '2025-08-26', 152.5786, 153.4827, 152.1226, 152.5708, 2855894);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('BDX', '2025-08-27', 152.2327, 153.8129, 152.2327, 153.6163, 1692650),
   ('BDX', '2025-08-28', 153.5377, 153.5377, 149.9528, 150.3538, 2281841),
   ('BDX', '2025-08-29', 150.7547, 151.7610, 150.1572, 151.7138, 1691124),
@@ -23683,7 +23683,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('BEN', '2026-01-21', 25.0800, 25.5000, 25.0100, 25.4700, 3588200),
   ('BEN', '2026-01-22', 25.6600, 25.9600, 25.6000, 25.7700, 5826100);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('BEN', '2026-01-23', 25.6300, 25.7000, 25.3000, 25.3100, 3460800),
   ('BEN', '2026-01-26', 25.4400, 25.8400, 25.4000, 25.5500, 5799500),
   ('BEN', '2026-01-27', 25.5900, 25.8300, 25.4700, 25.5000, 5727000),
@@ -24185,7 +24185,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('BG', '2024-11-12', 87.2900, 88.7600, 87.2000, 87.4600, 1755100),
   ('BG', '2024-11-13', 87.0300, 87.9600, 86.3600, 86.6200, 1986700);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('BG', '2024-11-14', 86.9800, 88.3900, 86.1500, 88.0600, 2025900),
   ('BG', '2024-11-15', 88.4800, 92.1600, 88.3000, 90.6000, 3252700),
   ('BG', '2024-11-18', 91.0900, 91.9200, 90.6500, 91.3100, 2566800),
@@ -24687,7 +24687,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('BIIB', '2025-04-11', 114.3200, 116.3900, 112.1800, 115.1700, 1618700),
   ('BIIB', '2025-04-14', 116.5100, 119.9900, 115.3800, 119.2600, 1687600);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('BIIB', '2025-04-15', 118.8100, 119.9300, 116.6100, 116.9800, 1030700),
   ('BIIB', '2025-04-16', 117.0000, 118.0000, 114.9600, 115.2900, 1341100),
   ('BIIB', '2025-04-17', 115.0200, 118.7700, 114.6600, 118.6100, 1206300),
@@ -25189,7 +25189,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('BK', '2025-09-09', 103.8900, 106.1800, 103.1700, 104.7700, 3918200),
   ('BK', '2025-09-10', 104.5100, 104.9600, 102.6300, 104.0000, 2737400);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('BK', '2025-09-11', 104.0000, 106.3300, 103.6600, 105.6000, 3697900),
   ('BK', '2025-09-12', 105.1600, 106.5200, 105.0500, 106.4800, 2609400),
   ('BK', '2025-09-15', 107.0100, 107.0100, 106.1000, 106.4200, 2523200),
@@ -25691,7 +25691,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('BKNG', '2026-02-06', 177.7508, 180.9576, 174.7668, 178.2868, 13297500),
   ('BKNG', '2026-02-09', 176.7476, 177.5512, 168.7692, 169.4820, 16940000);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('BKNG', '2026-02-10', 168.7808, 175.2000, 167.0352, 171.2456, 14335000),
   ('BKNG', '2026-02-11', 170.1432, 175.1120, 167.9792, 172.4976, 16720000),
   ('BKNG', '2026-02-12', 171.0984, 175.4004, 165.5940, 166.3640, 17067500),
@@ -26193,7 +26193,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('BLDR', '2024-11-29', 187.9400, 188.5400, 185.0000, 186.4700, 372900),
   ('BLDR', '2024-12-02', 185.1900, 185.9800, 183.2200, 184.8200, 727900);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('BLDR', '2024-12-03', 185.1200, 187.2200, 183.1900, 184.4700, 659400),
   ('BLDR', '2024-12-04', 182.5900, 184.1400, 176.6200, 177.1200, 1262300),
   ('BLDR', '2024-12-05', 177.0000, 178.4800, 175.2300, 175.8900, 1323400),
@@ -26695,7 +26695,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('BLK', '2025-04-30', 905.9600, 915.8800, 893.9400, 914.2600, 1028900),
   ('BLK', '2025-05-01', 912.9600, 923.8800, 905.9100, 916.1400, 451700);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('BLK', '2025-05-02', 931.4200, 935.1600, 924.3200, 929.2000, 822500),
   ('BLK', '2025-05-05', 922.9400, 933.7000, 920.1900, 920.5300, 384100),
   ('BLK', '2025-05-06', 910.4900, 923.7700, 906.5700, 914.9700, 482900),
@@ -27197,7 +27197,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('BMY', '2025-09-25', 44.1800, 44.4600, 43.1900, 43.4100, 21345600),
   ('BMY', '2025-09-26', 43.9600, 44.1400, 43.2500, 44.1200, 14999600);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('BMY', '2025-09-29', 44.0000, 44.6800, 43.7900, 44.1500, 20722400),
   ('BMY', '2025-09-30', 44.1800, 45.5300, 44.1200, 45.1000, 35920400),
   ('BMY', '2025-10-01', 46.0000, 48.5800, 45.6400, 47.4300, 36615400),
@@ -27699,7 +27699,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('BR', '2025-08-25', 262.0300, 263.0000, 256.0400, 256.6900, 580500),
   ('BR', '2025-08-26', 256.8600, 257.3000, 255.3600, 257.2900, 1292400);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('BR', '2025-08-27', 257.5300, 259.0200, 256.3400, 258.1500, 459000),
   ('BR', '2025-08-28', 258.4000, 258.5000, 256.2700, 257.0700, 542200),
   ('BR', '2025-08-29', 257.7500, 258.7000, 255.6100, 255.6200, 817500),
@@ -28201,7 +28201,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('BRK-B', '2026-01-21', 484.0000, 488.0000, 481.5700, 483.8300, 5730200),
   ('BRK-B', '2026-01-22', 483.2600, 485.8800, 481.7200, 484.4900, 4054200);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('BRK-B', '2026-01-23', 482.2600, 483.4200, 478.4400, 478.9700, 5436600),
   ('BRK-B', '2026-01-26', 478.4700, 484.8900, 477.0800, 483.4700, 5077200),
   ('BRK-B', '2026-01-27', 482.6000, 483.5000, 474.6700, 474.6700, 6314500),
@@ -28703,7 +28703,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('BSX', '2024-11-12', 88.6300, 89.0100, 88.0100, 88.7200, 4989300),
   ('BSX', '2024-11-13', 88.7500, 89.3000, 88.6600, 88.7700, 4176500);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('BSX', '2024-11-14', 88.6500, 89.0900, 87.4800, 87.5900, 5120200),
   ('BSX', '2024-11-15', 87.1200, 87.8000, 86.0100, 86.9900, 10230100),
   ('BSX', '2024-11-18', 88.7500, 91.0800, 88.5000, 90.4500, 9011400),
@@ -29205,7 +29205,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('BX', '2025-04-11', 125.9200, 128.6000, 123.3100, 127.1800, 7806900),
   ('BX', '2025-04-14', 130.8600, 132.1000, 128.3400, 130.4700, 6846000);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('BX', '2025-04-15', 130.4300, 135.1000, 129.9100, 133.5400, 6224200),
   ('BX', '2025-04-16', 131.4300, 132.7400, 127.1300, 129.3800, 5767300),
   ('BX', '2025-04-17', 132.0000, 132.5000, 128.6400, 130.3900, 4577000),
@@ -29707,7 +29707,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('BXP', '2025-09-09', 75.0000, 75.0000, 72.0100, 72.4000, 3222900),
   ('BXP', '2025-09-10', 71.1900, 74.3300, 71.1900, 73.8700, 2389100);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('BXP', '2025-09-11', 73.9600, 76.6000, 73.6400, 76.2300, 1508300),
   ('BXP', '2025-09-12', 76.2700, 77.9200, 76.0500, 77.1800, 2141900),
   ('BXP', '2025-09-15', 77.6900, 77.9400, 76.2800, 77.8100, 2099900),
@@ -30209,7 +30209,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('C', '2026-02-04', 117.7800, 119.9400, 116.9300, 117.4300, 12408300),
   ('C', '2026-02-05', 116.4100, 116.4100, 112.9200, 115.7400, 18704600);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('C', '2026-02-06', 117.3600, 122.9700, 117.3600, 122.6900, 15248800),
   ('C', '2026-02-09', 122.1900, 125.1600, 121.6900, 123.7700, 12887500),
   ('C', '2026-02-10', 123.7200, 125.0000, 119.5000, 122.1500, 12121300),
@@ -30711,7 +30711,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('CAH', '2024-11-26', 122.9000, 122.9900, 120.5600, 122.4400, 1684700),
   ('CAH', '2024-11-27', 122.0100, 123.4900, 121.5200, 122.6300, 1041500);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('CAH', '2024-11-29', 122.8200, 123.6300, 122.0000, 122.2400, 878200),
   ('CAH', '2024-12-02', 122.9000, 123.1700, 121.6400, 122.4700, 2391600),
   ('CAH', '2024-12-03', 123.1800, 123.7000, 122.1500, 123.2700, 1451000),
@@ -31213,7 +31213,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('CARR', '2025-04-28', 60.2100, 61.2070, 59.7700, 60.4900, 4197200),
   ('CARR', '2025-04-29', 60.2600, 61.4700, 60.2400, 60.8200, 4881700);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('CARR', '2025-04-30', 60.6000, 62.6700, 60.0800, 62.5400, 8626200),
   ('CARR', '2025-05-01', 67.7200, 70.3050, 66.0700, 69.8000, 10603900),
   ('CARR', '2025-05-02', 70.0000, 71.7500, 69.3400, 71.5300, 6134500),
@@ -31715,7 +31715,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('CASY', '2025-09-23', 549.6000, 556.0200, 546.9400, 551.0800, 324300),
   ('CASY', '2025-09-24', 551.0000, 556.4400, 544.5000, 547.0500, 215900);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('CASY', '2025-09-25', 545.1200, 547.9100, 542.4300, 543.1300, 232800),
   ('CASY', '2025-09-26', 545.6900, 549.4800, 533.9800, 547.5400, 210900),
   ('CASY', '2025-09-29', 548.8400, 560.9500, 545.0300, 560.9400, 273200),
@@ -32217,7 +32217,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('CAT', '2026-02-19', 752.0000, 762.0000, 744.1500, 760.5300, 2908000),
   ('CAT', '2026-02-20', 755.0000, 771.9700, 752.1100, 759.7400, 2095100);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('CAT', '2026-02-23', 758.9500, 767.9800, 752.7800, 756.4700, 2289600),
   ('CAT', '2026-02-24', 755.0000, 773.9400, 751.6900, 768.2300, 2615300),
   ('CAT', '2026-02-25', 772.5000, 777.6000, 756.7400, 766.6100, 2606500),
@@ -32719,7 +32719,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('CBOE', '2024-12-11', 203.0500, 205.1200, 201.2100, 202.5900, 629800),
   ('CBOE', '2024-12-12', 203.9600, 204.0700, 199.6200, 199.8500, 619700);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('CBOE', '2024-12-13', 201.4800, 201.4800, 198.5200, 200.9800, 536600),
   ('CBOE', '2024-12-16', 200.3400, 202.1600, 195.6500, 195.6500, 687200),
   ('CBOE', '2024-12-17', 197.0000, 198.5700, 195.6400, 198.0800, 932800),
@@ -33221,7 +33221,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('CBRE', '2025-05-12', 130.8600, 133.8000, 130.8600, 132.6900, 2210100),
   ('CBRE', '2025-05-13', 133.0400, 133.0400, 131.0400, 131.3600, 1720200);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('CBRE', '2025-05-14', 131.1600, 131.9300, 128.6000, 129.0600, 1968500),
   ('CBRE', '2025-05-15', 128.7200, 130.5400, 127.9900, 130.2700, 1230100),
   ('CBRE', '2025-05-16', 130.8900, 131.7500, 129.9200, 131.6100, 1341500),
@@ -33723,7 +33723,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('CCI', '2025-10-07', 94.2100, 95.1500, 93.2800, 95.1400, 3420300),
   ('CCI', '2025-10-08', 94.8300, 96.5000, 94.6300, 96.4200, 4330200);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('CCI', '2025-10-09', 96.9800, 97.3500, 96.1200, 96.6200, 1894900),
   ('CCI', '2025-10-10', 97.5000, 97.8100, 95.5200, 97.5800, 2703600),
   ('CCI', '2025-10-13', 96.2000, 97.2700, 95.2900, 96.1000, 2626400),
@@ -34225,7 +34225,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('CCL', '2026-03-05', 27.7100, 28.4100, 26.7100, 27.1600, 34668300),
   ('CCL', '2026-03-06', 25.8400, 25.9700, 25.4400, 25.7900, 36028000);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('CCL', '2026-03-09', 24.4700, 26.3900, 23.4700, 26.3900, 56154000),
   ('CCL', '2026-03-10', 25.9000, 26.9600, 25.2800, 26.2100, 35613600),
   ('CCL', '2026-03-11', 26.0100, 26.5500, 25.5100, 25.9700, 23368300),
@@ -34727,7 +34727,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('CDW', '2024-12-26', 174.2900, 177.4200, 174.2900, 177.1200, 944400),
   ('CDW', '2024-12-27', 176.5500, 177.6900, 174.7700, 175.8100, 639300);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('CDW', '2024-12-30', 174.5900, 174.5900, 171.0400, 173.3500, 776800),
   ('CDW', '2024-12-31', 174.5600, 175.6300, 173.1600, 174.0400, 711700),
   ('CDW', '2025-01-02', 174.5300, 175.4400, 168.4300, 170.0300, 996400),
@@ -35229,7 +35229,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('CEG', '2025-05-27', 303.8600, 310.2600, 296.2650, 309.0600, 3611500),
   ('CEG', '2025-05-28', 309.4500, 313.0850, 306.6600, 308.0500, 2512000);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('CEG', '2025-05-29', 313.8800, 314.5000, 300.1000, 303.3700, 2710600),
   ('CEG', '2025-05-30', 301.4400, 306.5000, 299.2600, 306.1500, 3656100),
   ('CEG', '2025-06-02', 306.8900, 313.9000, 304.5700, 313.4300, 2097100),
@@ -35731,7 +35731,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('CF', '2025-10-21', 84.5000, 85.0100, 83.2600, 83.2900, 2617600),
   ('CF', '2025-10-22', 83.5000, 86.8200, 83.4200, 85.9300, 3078300);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('CF', '2025-10-23', 86.8600, 87.6700, 85.8100, 86.9300, 1985800),
   ('CF', '2025-10-24', 87.1600, 87.6400, 86.3000, 86.4700, 1458700),
   ('CF', '2025-10-27', 87.2700, 87.8700, 85.7700, 86.3900, 1617600),
@@ -36233,7 +36233,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('CFG', '2026-03-19', 56.2100, 57.3500, 55.7500, 57.0500, 4381200),
   ('CFG', '2026-03-20', 57.0700, 57.4100, 56.3200, 57.0200, 9118400);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('CFG', '2026-03-23', 58.7200, 59.1190, 57.9200, 57.9800, 3508200),
   ('CFG', '2026-03-24', 57.3200, 59.4000, 57.3200, 58.9400, 5087600),
   ('CFG', '2026-03-25', 59.6100, 60.1700, 58.5700, 59.4200, 3684000),
@@ -36735,7 +36735,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('CHRW', '2025-01-13', 101.3900, 103.7100, 100.9200, 103.5700, 818100),
   ('CHRW', '2025-01-14', 103.8100, 104.5700, 102.5100, 102.8400, 838000);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('CHRW', '2025-01-15', 104.4900, 105.1800, 102.5900, 103.0300, 1074700),
   ('CHRW', '2025-01-16', 103.2500, 104.1400, 102.2100, 102.6900, 748300),
   ('CHRW', '2025-01-17', 102.2000, 103.9100, 101.6700, 103.5800, 1119300),
@@ -37237,7 +37237,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('CHTR', '2025-06-10', 396.2800, 406.9100, 395.7500, 406.7700, 1078000),
   ('CHTR', '2025-06-11', 406.7500, 408.6100, 397.9100, 399.7900, 1014200);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('CHTR', '2025-06-12', 399.6700, 400.2900, 395.6600, 396.9000, 919600),
   ('CHTR', '2025-06-13', 392.3700, 394.8800, 387.7800, 388.7200, 1311100),
   ('CHTR', '2025-06-16', 389.9900, 392.6900, 374.2000, 375.2300, 1470000),
@@ -37739,7 +37739,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('CI', '2025-11-04', 257.7000, 264.8000, 256.0000, 264.6600, 3686500),
   ('CI', '2025-11-05', 261.4600, 266.1800, 259.4700, 259.5800, 3202200);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('CI', '2025-11-06', 259.5800, 264.5700, 255.6700, 256.3800, 2882000),
   ('CI', '2025-11-07', 257.0000, 265.8800, 255.5300, 264.5800, 3025500),
   ('CI', '2025-11-10', 261.1000, 263.5900, 256.5200, 258.1600, 2543300),
@@ -38241,7 +38241,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('CIEN', '2026-04-02', 400.9800, 453.0000, 400.0000, 447.7600, 3617700),
   ('CIEN', '2026-04-06', 455.4500, 459.8000, 432.7700, 434.2600, 1939100);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('CIEN', '2026-04-07', 435.2800, 449.3400, 421.3000, 447.8800, 1969500),
   ('CIEN', '2026-04-08', 475.5000, 499.3900, 471.6600, 494.0100, 4110400),
   ('CIEN', '2026-04-09', 498.9100, 513.4900, 473.7300, 487.3800, 3280400),
@@ -38743,7 +38743,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('CL', '2025-01-28', 90.7500, 91.9000, 89.6200, 89.8600, 4790700),
   ('CL', '2025-01-29', 90.1100, 90.6100, 89.5500, 89.5700, 3225900);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('CL', '2025-01-30', 90.5500, 91.0100, 89.9500, 90.8900, 5415300),
   ('CL', '2025-01-31', 85.4300, 87.3900, 85.3300, 86.7000, 11099000),
   ('CL', '2025-02-03', 87.0700, 87.2700, 85.7000, 87.0300, 6877800),
@@ -39245,7 +39245,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('CLX', '2025-06-25', 121.0000, 121.4500, 119.4100, 119.4800, 1631400),
   ('CLX', '2025-06-26', 119.6700, 119.7500, 117.3500, 118.0100, 1830000);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('CLX', '2025-06-27', 118.5000, 119.3400, 118.1400, 119.1400, 5265700),
   ('CLX', '2025-06-30', 119.1000, 120.1800, 118.6700, 120.0700, 2136300),
   ('CLX', '2025-07-01', 120.5100, 124.0900, 120.5100, 123.5400, 2341600),
@@ -39747,7 +39747,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('CMCSA', '2025-11-18', 25.6420, 25.8201, 25.3702, 25.6420, 31200787),
   ('CMCSA', '2025-11-19', 25.5764, 25.6514, 25.0890, 25.1828, 29309743);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('CMCSA', '2025-11-20', 25.2858, 25.4358, 24.8828, 24.9578, 26345084),
   ('CMCSA', '2025-11-21', 24.9203, 25.6982, 24.9203, 25.6326, 33688178),
   ('CMCSA', '2025-11-24', 25.5858, 25.6232, 24.7704, 24.7985, 55123888),
@@ -40249,7 +40249,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('CME', '2026-04-17', 293.5700, 294.0800, 284.4800, 287.6500, 3976200),
   ('CME', '2026-04-20', 288.2200, 289.9900, 286.5700, 287.4500, 2071100);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('CME', '2026-04-21', 288.4600, 289.0000, 283.0500, 284.4000, 2714200),
   ('CME', '2026-04-22', 275.0600, 286.9700, 274.6000, 285.7100, 3393800),
   ('CME', '2026-04-23', 285.1100, 286.6000, 280.0800, 285.4700, 2655100),
@@ -40751,7 +40751,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('CMI', '2025-02-11', 372.4400, 373.3300, 369.0000, 372.5500, 580100),
   ('CMI', '2025-02-12', 366.0300, 368.6100, 363.7900, 364.5500, 634000);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('CMI', '2025-02-13', 364.2000, 370.7200, 362.8900, 369.3200, 521100),
   ('CMI', '2025-02-14', 370.7200, 373.8700, 368.8700, 373.7800, 802000),
   ('CMI', '2025-02-18', 374.6900, 379.6700, 371.8100, 379.1300, 838800),
@@ -41253,7 +41253,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('CMS', '2025-07-10', 69.2400, 70.6800, 68.8400, 70.5400, 2288400),
   ('CMS', '2025-07-11', 70.1200, 70.6600, 69.8300, 70.3500, 1760200);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('CMS', '2025-07-14', 70.2800, 70.9700, 70.1700, 70.5500, 1574000),
   ('CMS', '2025-07-15', 70.3600, 70.6600, 69.7500, 70.3300, 2109000),
   ('CMS', '2025-07-16', 70.2700, 70.8300, 70.0300, 70.6900, 1592800),
@@ -41755,7 +41755,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('CNC', '2025-12-03', 38.7800, 39.3400, 38.5900, 38.8100, 3838200),
   ('CNC', '2025-12-04', 38.6700, 39.0000, 38.4000, 38.8500, 4798200);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('CNC', '2025-12-05', 38.8800, 38.8800, 37.7500, 38.3400, 7470600),
   ('CNC', '2025-12-08', 38.6700, 38.6700, 37.7700, 37.8800, 5167300),
   ('CNC', '2025-12-09', 37.9000, 38.3700, 37.8600, 38.0800, 4350700),
@@ -42257,7 +42257,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('CNP', '2026-05-01', 43.6200, 44.0600, 43.3300, 43.3500, 4627600),
   ('CNP', '2026-05-04', 43.0900, 43.6000, 42.8400, 43.3200, 3697800);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('CNP', '2026-05-05', 42.8900, 44.0300, 42.8500, 43.5300, 6330900),
   ('CNP', '2026-05-06', 43.2800, 43.4200, 42.2600, 42.3300, 7087600),
   ('CNP', '2026-05-07', 42.2000, 42.4000, 41.9200, 42.2400, 4982400),
@@ -42759,7 +42759,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('COHR', '2025-02-26', 78.5200, 80.7500, 78.0000, 78.4000, 4183400),
   ('COHR', '2025-02-27', 81.2500, 82.1500, 74.8200, 74.9200, 4011100);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('COHR', '2025-02-28', 74.0000, 76.1700, 72.5800, 75.1900, 3617100),
   ('COHR', '2025-03-03', 76.0000, 76.7200, 67.7000, 68.2700, 5134300),
   ('COHR', '2025-03-04', 66.3800, 72.0900, 64.7500, 69.5700, 5901500),
@@ -43261,7 +43261,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('COIN', '2025-07-24', 404.2500, 405.3100, 392.0000, 396.7000, 7904600),
   ('COIN', '2025-07-25', 391.9000, 397.4800, 386.3900, 391.6600, 8643300);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('COIN', '2025-07-28', 394.6200, 395.3900, 375.2600, 379.4900, 11270400),
   ('COIN', '2025-07-29', 383.5900, 384.7800, 365.7400, 371.4400, 9334700),
   ('COIN', '2025-07-30', 382.9500, 386.5800, 372.7100, 377.4800, 11100000),
@@ -43763,7 +43763,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('COO', '2025-12-17', 82.6300, 84.2500, 82.2300, 82.4800, 3629100),
   ('COO', '2025-12-18', 82.8000, 83.3100, 81.9200, 82.4600, 3336700);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('COO', '2025-12-19', 82.5700, 83.0800, 82.0800, 82.7500, 3587800),
   ('COO', '2025-12-22', 83.3800, 84.1800, 82.6100, 83.8400, 1964300),
   ('COO', '2025-12-23', 83.4500, 83.6100, 82.5600, 82.8800, 1609500),
@@ -44265,7 +44265,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('COP', '2026-05-15', 120.7800, 122.4800, 120.4900, 122.4100, 7059500),
   ('COP', '2026-05-18', 122.0000, 125.1500, 120.3900, 124.5400, 5805200);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('COP', '2026-05-19', 125.8600, 126.0000, 124.1200, 125.1100, 6029000),
   ('COP', '2026-05-20', 124.2700, 126.0000, 121.7700, 122.3600, 5665700),
   ('COP', '2026-05-21', 124.0100, 124.4100, 119.8000, 120.5500, 5754500),
@@ -44767,7 +44767,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('COST', '2025-03-12', 938.0000, 944.3800, 923.2500, 927.0800, 2331600),
   ('COST', '2025-03-13', 922.0000, 923.5000, 887.4700, 890.6200, 3447200);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('COST', '2025-03-14', 891.8100, 906.9500, 881.5600, 903.9200, 3186400),
   ('COST', '2025-03-17', 901.6300, 923.3900, 898.0000, 916.6100, 2256100),
   ('COST', '2025-03-18', 913.0000, 917.5600, 896.8400, 898.0500, 2182000),
@@ -45269,7 +45269,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('CPAY', '2025-08-07', 318.3000, 322.0000, 300.8300, 304.5000, 1399100),
   ('CPAY', '2025-08-08', 305.9800, 305.9800, 296.5700, 301.7000, 580200);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('CPAY', '2025-08-11', 302.3400, 306.7700, 302.1800, 303.7700, 522800),
   ('CPAY', '2025-08-12', 304.6400, 310.9400, 304.6400, 309.3700, 575200),
   ('CPAY', '2025-08-13', 310.1800, 316.6000, 309.8000, 316.5900, 543400),
@@ -45771,7 +45771,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('CPB', '2026-01-02', 27.9400, 27.9900, 27.6100, 27.7100, 4904300),
   ('CPB', '2026-01-05', 27.6600, 27.7100, 26.6300, 26.6700, 9991700);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('CPB', '2026-01-06', 26.7000, 27.0300, 26.5800, 27.0100, 8382300),
   ('CPB', '2026-01-07', 27.1500, 27.3200, 26.1800, 26.2600, 9282500),
   ('CPB', '2026-01-08', 25.7400, 26.4900, 25.6200, 26.4600, 7579000),
@@ -46273,7 +46273,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('CPT', '2024-10-25', 121.2300, 121.2300, 118.1000, 118.2900, 474600),
   ('CPT', '2024-10-28', 119.0800, 119.9800, 118.2000, 118.7000, 547700);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('CPT', '2024-10-29', 118.2900, 118.9100, 117.0600, 117.4200, 824900),
   ('CPT', '2024-10-30', 117.3300, 118.4200, 117.0100, 117.3600, 666800),
   ('CPT', '2024-10-31', 116.3700, 117.5500, 115.5500, 115.7900, 1843100),
@@ -46775,7 +46775,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('CRH', '2025-03-26', 97.8900, 98.6100, 94.5800, 94.5800, 6411400),
   ('CRH', '2025-03-27', 94.0000, 94.0300, 91.8300, 92.1400, 10479800);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('CRH', '2025-03-28', 91.0600, 91.2900, 87.5500, 88.1400, 11039900),
   ('CRH', '2025-03-31', 85.8400, 88.4200, 84.9600, 87.9700, 9364400),
   ('CRH', '2025-04-01', 87.3600, 88.9600, 86.5500, 88.8500, 5311300),
@@ -47277,7 +47277,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('CRL', '2025-08-21', 158.2100, 158.2900, 154.4300, 154.5400, 394800),
   ('CRL', '2025-08-22', 155.9500, 164.5800, 154.7900, 161.8400, 1254500);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('CRL', '2025-08-25', 161.7400, 164.2600, 160.6000, 164.1100, 702700),
   ('CRL', '2025-08-26', 164.7000, 165.0700, 162.6100, 163.7100, 548500),
   ('CRL', '2025-08-27', 163.3300, 164.2500, 161.2600, 162.8000, 417300),
@@ -47779,7 +47779,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('CRM', '2026-01-16', 232.9500, 232.9500, 226.4400, 227.1100, 13902600),
   ('CRM', '2026-01-20', 223.5400, 227.9400, 219.3600, 220.0700, 13050800);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('CRM', '2026-01-21', 220.1500, 223.3900, 218.9600, 221.5800, 12616600),
   ('CRM', '2026-01-22', 222.2400, 228.7200, 221.1100, 228.0900, 9483000),
   ('CRM', '2026-01-23', 226.7800, 230.8500, 226.6500, 228.0500, 9408000),
@@ -48281,7 +48281,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('CSCO', '2024-11-08', 58.0900, 58.2000, 57.6600, 58.0600, 17517700),
   ('CSCO', '2024-11-11', 59.0000, 59.3800, 58.3600, 58.6300, 17827000);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('CSCO', '2024-11-12', 58.7600, 59.0400, 58.4300, 58.7100, 16609400),
   ('CSCO', '2024-11-13', 58.1500, 59.2800, 57.8400, 59.1800, 36350600),
   ('CSCO', '2024-11-14', 58.9900, 58.9900, 57.5200, 57.9200, 33747700),
@@ -48783,7 +48783,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('CSGP', '2025-04-09', 72.2400, 79.2000, 71.2100, 78.7000, 5874800),
   ('CSGP', '2025-04-10', 77.3000, 77.3000, 72.9000, 75.4200, 3889600);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('CSGP', '2025-04-11', 75.2700, 77.7400, 74.4300, 77.3900, 2224800),
   ('CSGP', '2025-04-14', 77.7000, 79.8900, 76.9000, 79.5300, 2314400),
   ('CSGP', '2025-04-15', 79.6700, 81.0700, 79.6700, 80.5100, 2596000),
@@ -49285,7 +49285,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('CSX', '2025-09-05', 32.6100, 32.7600, 32.1700, 32.5300, 9677400),
   ('CSX', '2025-09-08', 32.5000, 32.5800, 32.0000, 32.4300, 16025700);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('CSX', '2025-09-09', 32.3700, 32.5200, 32.1900, 32.2000, 9822600),
   ('CSX', '2025-09-10', 32.0700, 32.3400, 31.8000, 32.0500, 8497200),
   ('CSX', '2025-09-11', 32.0300, 32.8900, 31.9600, 32.8500, 10280200),
@@ -49787,7 +49787,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('CTAS', '2026-02-02', 190.9700, 192.3900, 188.6500, 190.9100, 1882700),
   ('CTAS', '2026-02-03', 187.7000, 191.1400, 186.1400, 190.7300, 3030400);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('CTAS', '2026-02-04', 191.8500, 194.8600, 190.3900, 192.6100, 2962300),
   ('CTAS', '2026-02-05', 193.6300, 196.9000, 192.3900, 194.1100, 2261000),
   ('CTAS', '2026-02-06', 194.2800, 196.3300, 193.9300, 195.8700, 1689500),
@@ -50289,7 +50289,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('CTSH', '2024-12-11', 80.5900, 81.8200, 80.3200, 81.2500, 2150600),
   ('CTSH', '2024-12-12', 81.0700, 81.6000, 80.3300, 80.3700, 1869300);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('CTSH', '2024-12-13', 80.0500, 80.6500, 79.4900, 80.0600, 2698700),
   ('CTSH', '2024-12-16', 80.3400, 80.9700, 79.8500, 80.7000, 2587100),
   ('CTSH', '2024-12-17', 81.3200, 82.4600, 80.8700, 81.0300, 3368500),
@@ -50791,7 +50791,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('CTVA', '2025-05-12', 69.1300, 69.2800, 67.4500, 67.9600, 3809800),
   ('CTVA', '2025-05-13', 68.0900, 68.6500, 67.7900, 67.9000, 3550700);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('CTVA', '2025-05-14', 67.4300, 67.8100, 66.7100, 67.5900, 4005500),
   ('CTVA', '2025-05-15', 67.4900, 68.4700, 67.2800, 68.2900, 2931700),
   ('CTVA', '2025-05-16', 68.2600, 68.7780, 67.9300, 68.6100, 3064600),
@@ -51293,7 +51293,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('CVNA', '2025-10-07', 371.8550, 378.0500, 363.0000, 370.3100, 2339300),
   ('CVNA', '2025-10-08', 370.1000, 373.0000, 360.6250, 360.9100, 2699000);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('CVNA', '2025-10-09', 362.2400, 362.9750, 347.8000, 360.0300, 2485700),
   ('CVNA', '2025-10-10', 360.0000, 364.0000, 327.5200, 329.2400, 3859000),
   ('CVNA', '2025-10-13', 333.5200, 341.9750, 329.5000, 338.2800, 2376000),
@@ -51795,7 +51795,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('CVS', '2026-03-05', 79.9600, 80.3200, 78.3000, 78.6900, 10055800),
   ('CVS', '2026-03-06', 78.7700, 78.8600, 76.9300, 77.9200, 7139700);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('CVS', '2026-03-09', 77.2400, 78.4100, 76.3000, 78.2600, 6872200),
   ('CVS', '2026-03-10', 78.5900, 78.7500, 76.1000, 76.3200, 6480800),
   ('CVS', '2026-03-11', 76.0000, 76.5100, 75.3200, 75.7200, 5530400),
@@ -52297,7 +52297,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('D', '2024-12-26', 53.5400, 53.8700, 53.5000, 53.7100, 1835200),
   ('D', '2024-12-27', 53.3600, 54.1000, 53.3300, 53.9300, 2932200);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('D', '2024-12-30', 53.7500, 54.0300, 53.3500, 53.8700, 3202200),
   ('D', '2024-12-31', 54.0100, 54.2600, 53.3500, 53.8600, 2714900),
   ('D', '2025-01-02', 54.2800, 54.6100, 53.9300, 54.4000, 3680700),
@@ -52799,7 +52799,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('DAL', '2025-05-27', 48.7600, 50.1300, 48.5300, 49.4000, 11316100),
   ('DAL', '2025-05-28', 49.2700, 49.5200, 48.4200, 48.6000, 7390500);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('DAL', '2025-05-29', 49.1700, 49.3800, 48.2000, 48.5000, 9060900),
   ('DAL', '2025-05-30', 48.2400, 48.7100, 47.8400, 48.3900, 9190700),
   ('DAL', '2025-06-02', 48.0900, 48.8600, 47.4900, 48.5000, 8117500),
@@ -53301,7 +53301,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('DASH', '2025-10-21', 266.6200, 267.2500, 259.8600, 261.9700, 2029600),
   ('DASH', '2025-10-22', 261.5200, 262.8300, 250.3800, 252.3100, 4247900);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('DASH', '2025-10-23', 251.0000, 258.9400, 246.7200, 254.5900, 4772300),
   ('DASH', '2025-10-24', 255.6300, 261.6750, 253.2400, 258.1500, 2719600),
   ('DASH', '2025-10-27', 265.4000, 269.0000, 262.3500, 263.3500, 3706200),
@@ -53803,7 +53803,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('DD', '2026-03-19', 43.3100, 43.8200, 42.6400, 43.5200, 4563600),
   ('DD', '2026-03-20', 43.7400, 43.9200, 42.0400, 42.4400, 10006500);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('DD', '2026-03-23', 43.8400, 44.9700, 43.4800, 44.1400, 5737100),
   ('DD', '2026-03-24', 43.7300, 45.7900, 43.5800, 45.3300, 4537200),
   ('DD', '2026-03-25', 46.0000, 46.4400, 45.5600, 46.3300, 2961600),
@@ -54305,7 +54305,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('DE', '2025-01-13', 408.0100, 432.2700, 406.0800, 429.9100, 1988700),
   ('DE', '2025-01-14', 430.7000, 433.4400, 427.3600, 432.3100, 1224700);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('DE', '2025-01-15', 437.9800, 438.0000, 426.4500, 428.8800, 1432100),
   ('DE', '2025-01-16', 431.8900, 439.8700, 428.5100, 439.1100, 1181300),
   ('DE', '2025-01-17', 447.8100, 457.2200, 443.6400, 455.4400, 2315500),
@@ -54807,7 +54807,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('DECK', '2025-06-10', 111.6700, 111.8000, 109.3100, 110.0000, 2366200),
   ('DECK', '2025-06-11', 111.2600, 111.6800, 107.8800, 107.9300, 2561300);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('DECK', '2025-06-12', 107.5000, 107.8500, 106.6500, 107.7000, 1704600),
   ('DECK', '2025-06-13', 104.9200, 106.0000, 100.8000, 101.4800, 3319400),
   ('DECK', '2025-06-16', 103.3000, 104.5000, 102.1600, 103.6300, 2804400),
@@ -55309,7 +55309,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('DELL', '2025-11-04', 155.4700, 157.9200, 153.3100, 154.6400, 5330200),
   ('DELL', '2025-11-05', 152.1000, 154.9300, 149.1500, 152.4100, 7326500);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('DELL', '2025-11-06', 152.7400, 155.0000, 148.8200, 149.1800, 4255100),
   ('DELL', '2025-11-07', 147.9900, 147.9900, 143.0800, 146.7000, 5780800),
   ('DELL', '2025-11-10', 149.7400, 150.0500, 141.0900, 142.6900, 8203600),
@@ -55811,7 +55811,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('DG', '2026-04-02', 116.3200, 119.8700, 115.3200, 119.7400, 2571200),
   ('DG', '2026-04-06', 119.9900, 125.1400, 119.9800, 125.0100, 3163400);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('DG', '2026-04-07', 123.7700, 124.3300, 120.4700, 121.2100, 3126400),
   ('DG', '2026-04-08', 121.9400, 124.4500, 120.6500, 123.0500, 2904300),
   ('DG', '2026-04-09', 121.4400, 121.9300, 118.0200, 119.7500, 3151300),
@@ -56313,7 +56313,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('DHI', '2025-01-28', 146.9200, 147.0900, 143.8500, 143.9500, 3016900),
   ('DHI', '2025-01-29', 143.9500, 144.4900, 140.9500, 141.9300, 3283900);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('DHI', '2025-01-30', 143.1000, 147.3900, 142.1000, 145.9300, 3566900),
   ('DHI', '2025-01-31', 144.4200, 145.9900, 141.7300, 141.9000, 3216400),
   ('DHI', '2025-02-03', 139.8600, 139.9800, 136.5400, 137.4600, 3347000),
@@ -56815,7 +56815,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('DHR', '2025-06-25', 196.9000, 201.3700, 195.7000, 201.0000, 4379600),
   ('DHR', '2025-06-26', 201.9800, 205.6100, 200.6000, 201.4600, 5685500);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('DHR', '2025-06-27', 202.0500, 203.5000, 197.7000, 198.8000, 5619700),
   ('DHR', '2025-06-30', 198.9200, 200.4500, 196.0200, 197.5400, 4537400),
   ('DHR', '2025-07-01', 196.9900, 205.0400, 196.3800, 201.1000, 3976000),
@@ -57317,7 +57317,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('DIS', '2025-11-18', 105.1000, 107.0800, 105.0000, 106.2800, 11796200),
   ('DIS', '2025-11-19', 106.0800, 107.5900, 104.0800, 104.6700, 12790000);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('DIS', '2025-11-20', 105.3700, 105.8000, 102.5000, 102.7000, 12609900),
   ('DIS', '2025-11-21', 103.4800, 104.7800, 102.6900, 104.2800, 10785400),
   ('DIS', '2025-11-24', 104.0900, 104.3400, 101.8900, 101.9400, 15024800),
@@ -57819,7 +57819,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('DLR', '2026-04-17', 199.4600, 204.2100, 199.2200, 203.6200, 2063100),
   ('DLR', '2026-04-20', 203.8400, 204.6000, 202.3400, 203.9100, 1579000);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('DLR', '2026-04-21', 203.9400, 204.9400, 201.1600, 201.2700, 2081200),
   ('DLR', '2026-04-22', 202.8500, 203.8200, 199.8900, 200.8600, 2001200),
   ('DLR', '2026-04-23', 202.0000, 203.2300, 198.0500, 200.0000, 2743200),
@@ -58321,7 +58321,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('DOC', '2025-02-11', 19.4300, 19.6700, 19.3700, 19.6100, 5353000),
   ('DOC', '2025-02-12', 19.2300, 19.5200, 19.2300, 19.4600, 4932400);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('DOC', '2025-02-13', 19.4800, 20.0000, 19.4800, 19.9600, 5153700),
   ('DOC', '2025-02-14', 19.6900, 19.7700, 19.4800, 19.5900, 4495700),
   ('DOC', '2025-02-18', 19.5000, 19.7300, 19.5000, 19.5800, 3484400),
@@ -58823,7 +58823,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('DOV', '2025-07-10', 188.7800, 192.4100, 188.3300, 190.5200, 657800),
   ('DOV', '2025-07-11', 188.7600, 189.5000, 188.1600, 188.9400, 730000);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('DOV', '2025-07-14', 188.5200, 189.2100, 186.0000, 188.9000, 1924900),
   ('DOV', '2025-07-15', 190.9200, 190.9200, 187.0000, 187.0700, 971800),
   ('DOV', '2025-07-16', 187.3300, 189.0000, 184.8800, 187.8400, 805600),
@@ -59325,7 +59325,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('DOW', '2025-12-03', 23.9800, 24.4650, 23.7350, 23.7600, 10524700),
   ('DOW', '2025-12-04', 23.8500, 23.9300, 22.7500, 22.8700, 10415800);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('DOW', '2025-12-05', 23.1700, 23.6850, 22.9350, 22.9600, 9023600),
   ('DOW', '2025-12-08', 22.9000, 23.2500, 22.7600, 22.8600, 11723700),
   ('DOW', '2025-12-09', 22.8850, 23.8450, 22.8500, 23.1100, 11305700),
@@ -59827,7 +59827,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('DPZ', '2026-05-01', 341.0000, 342.7000, 334.3400, 337.7700, 691000),
   ('DPZ', '2026-05-04', 336.9300, 340.7700, 328.2200, 330.4200, 1062800);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('DPZ', '2026-05-05', 329.8000, 335.6500, 329.1000, 331.7300, 739000),
   ('DPZ', '2026-05-06', 334.2700, 335.6800, 322.1700, 324.6600, 1132200),
   ('DPZ', '2026-05-07', 324.6600, 336.3700, 323.8300, 332.5300, 1035700),
@@ -60329,7 +60329,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('DTE', '2025-02-26', 132.8700, 133.4200, 131.8400, 132.6500, 877400),
   ('DTE', '2025-02-27', 131.8200, 133.0000, 131.1900, 131.8400, 697600);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('DTE', '2025-02-28', 133.0700, 134.1100, 131.7200, 133.7000, 1161900),
   ('DTE', '2025-03-03', 133.3200, 135.2400, 132.9500, 135.2400, 1082200),
   ('DTE', '2025-03-04', 135.9900, 136.2800, 131.6300, 131.9400, 1298300),
@@ -60831,7 +60831,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('DUK', '2025-07-24', 119.5100, 120.1000, 119.2100, 119.7500, 2133200),
   ('DUK', '2025-07-25', 119.6800, 120.3900, 119.5900, 119.9300, 2317100);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('DUK', '2025-07-28', 119.6300, 119.9100, 117.4500, 117.6000, 2930100),
   ('DUK', '2025-07-29', 118.0200, 119.5300, 117.6900, 119.4900, 2848000),
   ('DUK', '2025-07-30', 119.5000, 121.4900, 119.2500, 120.4800, 3432300),
@@ -61333,7 +61333,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('DVA', '2025-12-17', 117.7800, 120.0800, 117.5000, 118.4200, 692200),
   ('DVA', '2025-12-18', 118.5100, 118.6800, 115.3700, 116.1500, 636800);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('DVA', '2025-12-19', 115.7500, 116.5300, 114.6500, 115.2000, 1883100),
   ('DVA', '2025-12-22', 114.9500, 117.4400, 114.7000, 116.5100, 627800),
   ('DVA', '2025-12-23', 116.2800, 116.2800, 114.6500, 114.7200, 442800),
@@ -61835,7 +61835,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('DVN', '2026-05-15', 47.8800, 49.5600, 47.7400, 49.4900, 16485700),
   ('DVN', '2026-05-18', 49.0100, 50.1400, 48.3200, 49.6800, 15396100);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('DVN', '2026-05-19', 50.1300, 50.3700, 49.0600, 49.6900, 12242200),
   ('DVN', '2026-05-20', 49.3500, 50.2800, 48.3600, 48.4600, 12715900),
   ('DVN', '2026-05-21', 48.9700, 49.1300, 46.7000, 47.1100, 17921200),
@@ -62337,7 +62337,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('EA', '2025-03-12', 137.0000, 138.1500, 135.7300, 136.1200, 3177500),
   ('EA', '2025-03-13', 135.7900, 138.2600, 135.2300, 137.7200, 3165100);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('EA', '2025-03-14', 138.1500, 139.2300, 137.8700, 138.7100, 3065500),
   ('EA', '2025-03-17', 138.9800, 143.3700, 138.6000, 142.9000, 4510500),
   ('EA', '2025-03-18', 142.1200, 143.4300, 141.5400, 141.8700, 2728400),
@@ -62839,7 +62839,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('EBAY', '2025-08-07', 92.7800, 93.5000, 92.2600, 93.0200, 4940400),
   ('EBAY', '2025-08-08', 93.3900, 93.5000, 92.2400, 93.1400, 5326400);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('EBAY', '2025-08-11', 93.1200, 95.3700, 92.8000, 95.3000, 6543500),
   ('EBAY', '2025-08-12', 94.9300, 97.1900, 94.7900, 97.0600, 5690100),
   ('EBAY', '2025-08-13', 97.8300, 100.9600, 97.7000, 100.7700, 7374100),
@@ -63341,7 +63341,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('ECL', '2026-01-02', 261.2000, 263.4100, 259.1400, 262.6400, 1119900),
   ('ECL', '2026-01-05', 261.9300, 264.6000, 260.0000, 263.1800, 1754600);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('ECL', '2026-01-06', 262.5800, 272.6300, 261.5700, 271.5300, 1435400),
   ('ECL', '2026-01-07', 272.4900, 272.9100, 267.7400, 268.7500, 1250200),
   ('ECL', '2026-01-08', 266.2700, 273.5400, 265.7800, 271.7400, 990300),
@@ -63843,7 +63843,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('EFX', '2024-10-25', 272.9200, 272.9400, 268.9200, 269.8900, 771500),
   ('EFX', '2024-10-28', 272.7400, 274.4700, 269.6900, 270.0200, 760800);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('EFX', '2024-10-29', 268.2600, 271.4600, 267.2300, 268.4700, 966600),
   ('EFX', '2024-10-30', 268.4500, 273.4200, 267.9200, 269.3200, 855200),
   ('EFX', '2024-10-31', 268.8800, 270.1200, 264.8900, 265.0200, 855500),
@@ -64345,7 +64345,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('EG', '2025-03-26', 364.0700, 369.0100, 363.9000, 366.1600, 206700),
   ('EG', '2025-03-27', 367.9700, 368.9400, 362.4800, 367.5100, 268300);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('EG', '2025-03-28', 368.5600, 370.2100, 360.4600, 361.9900, 253500),
   ('EG', '2025-03-31', 362.7000, 366.4600, 358.6800, 363.3300, 324900),
   ('EG', '2025-04-01', 364.2800, 367.2300, 360.8700, 365.4100, 243500),
@@ -64847,7 +64847,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('EIX', '2025-08-21', 56.1300, 56.1500, 53.3900, 53.8100, 3356700),
   ('EIX', '2025-08-22', 54.3400, 55.7300, 54.2000, 55.6000, 2685800);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('EIX', '2025-08-25', 55.1900, 55.4500, 54.3900, 54.5000, 2043600),
   ('EIX', '2025-08-26', 54.5700, 55.0900, 54.3800, 54.9200, 3221300),
   ('EIX', '2025-08-27', 54.9200, 55.7100, 54.8800, 55.3800, 2150500),
@@ -65349,7 +65349,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('EL', '2026-01-16', 114.8900, 115.7000, 112.8700, 115.0500, 2913700),
   ('EL', '2026-01-20', 113.0000, 114.8300, 112.5000, 114.4600, 3880000);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('EL', '2026-01-21', 114.7100, 118.0700, 114.5200, 117.8700, 2899500),
   ('EL', '2026-01-22', 118.5400, 120.2700, 117.1700, 119.4900, 3602700),
   ('EL', '2026-01-23', 119.3400, 120.1800, 116.0100, 117.6900, 2725300),
@@ -65851,7 +65851,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('EME', '2024-11-08', 507.8700, 519.1000, 506.0000, 514.1500, 593200),
   ('EME', '2024-11-11', 521.7800, 525.3100, 516.3400, 520.4400, 634900);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('EME', '2024-11-12', 521.6100, 524.5000, 510.8900, 514.0800, 472000),
   ('EME', '2024-11-13', 515.0000, 517.0000, 498.6100, 500.3600, 454900),
   ('EME', '2024-11-14', 500.3800, 502.5000, 492.8000, 498.1100, 556600),
@@ -66353,7 +66353,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('EMR', '2025-04-09', 93.2900, 105.0700, 92.3600, 104.4300, 4978100),
   ('EMR', '2025-04-10', 101.5300, 102.3200, 96.0100, 99.7300, 3565900);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('EMR', '2025-04-11', 99.1900, 101.3500, 97.6100, 100.4900, 3621100),
   ('EMR', '2025-04-14', 102.1600, 102.1600, 99.7400, 101.0400, 3388000),
   ('EMR', '2025-04-15', 100.8600, 101.6400, 99.8800, 100.4400, 2972500),
@@ -66855,7 +66855,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('EOG', '2025-09-05', 119.9100, 120.5700, 117.0400, 117.9300, 3711200),
   ('EOG', '2025-09-08', 117.8500, 118.4200, 116.0600, 117.6500, 2550500);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('EOG', '2025-09-09', 118.3800, 119.7500, 117.2600, 117.3100, 2359000),
   ('EOG', '2025-09-10', 117.7500, 120.2900, 117.3800, 120.2600, 2128100),
   ('EOG', '2025-09-11', 119.0800, 120.4000, 118.5400, 120.0000, 2283100),
@@ -67357,7 +67357,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('EPAM', '2026-02-02', 208.0000, 214.4300, 206.7700, 210.4200, 568300),
   ('EPAM', '2026-02-03', 205.9300, 205.9300, 178.8300, 183.3300, 2444100);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('EPAM', '2026-02-04', 179.6600, 185.7100, 173.4500, 184.7800, 1540500),
   ('EPAM', '2026-02-05', 181.8400, 186.2800, 173.4600, 177.4700, 1518200),
   ('EPAM', '2026-02-06', 179.0300, 186.9700, 179.0300, 186.6800, 819600),
@@ -67859,7 +67859,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('EQR', '2024-11-22', 75.1100, 76.2700, 74.7600, 75.7900, 1049600),
   ('EQR', '2024-11-25', 76.5400, 77.2200, 76.2600, 76.4100, 2317000);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('EQR', '2024-11-26', 76.5100, 77.3600, 76.3800, 77.1000, 1071500),
   ('EQR', '2024-11-27', 77.8100, 78.3200, 77.3100, 77.4800, 1234600),
   ('EQR', '2024-11-29', 77.4600, 77.7500, 76.5900, 76.6600, 1464600),
@@ -68361,7 +68361,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('EQT', '2025-04-24', 49.6000, 49.7600, 48.3000, 48.8200, 10317800),
   ('EQT', '2025-04-25', 48.6600, 50.3500, 48.3100, 50.2400, 9360300);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('EQT', '2025-04-28', 49.9800, 51.3800, 49.7600, 51.1200, 9331200),
   ('EQT', '2025-04-29', 50.4800, 51.6300, 49.7000, 51.2200, 6302200),
   ('EQT', '2025-04-30', 50.1500, 50.2500, 48.9400, 49.4400, 11852300),
@@ -68863,7 +68863,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('ERIE', '2025-09-19', 319.6200, 321.2400, 317.7400, 317.9900, 292500),
   ('ERIE', '2025-09-22', 317.6400, 321.5000, 316.1000, 321.0300, 109300);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('ERIE', '2025-09-23', 323.6500, 324.3500, 316.7600, 317.3000, 150800),
   ('ERIE', '2025-09-24', 316.6200, 317.2800, 310.1900, 314.2700, 221400),
   ('ERIE', '2025-09-25', 315.2600, 317.2800, 310.4900, 312.9500, 119900),
@@ -69365,7 +69365,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('ES', '2026-02-17', 75.0000, 75.0000, 72.2500, 73.0300, 4114800),
   ('ES', '2026-02-18', 73.2000, 73.5100, 71.5900, 71.7200, 2263800);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('ES', '2026-02-19', 71.7100, 74.1500, 71.7100, 73.6700, 2642100),
   ('ES', '2026-02-20', 73.8400, 74.2800, 73.1000, 73.5600, 4759600),
   ('ES', '2026-02-23', 73.3700, 74.9800, 73.3700, 74.8700, 2455800),
@@ -69867,7 +69867,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('ETN', '2024-12-09', 371.4400, 373.0000, 358.3300, 364.0600, 2338200),
   ('ETN', '2024-12-10', 363.5400, 364.0200, 357.9500, 358.4900, 1891000);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('ETN', '2024-12-11', 364.4100, 365.0000, 353.3300, 361.9100, 2440700),
   ('ETN', '2024-12-12', 361.9300, 363.0600, 358.0800, 358.6400, 1223500),
   ('ETN', '2024-12-13', 359.7600, 360.8200, 355.8900, 356.0100, 1165000),
@@ -70369,7 +70369,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('ETR', '2025-05-08', 84.0400, 84.2300, 83.1500, 83.3100, 4275700),
   ('ETR', '2025-05-09', 83.6500, 83.8900, 82.4700, 82.9200, 2170800);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('ETR', '2025-05-12', 83.0000, 83.1300, 81.0600, 81.2700, 4293800),
   ('ETR', '2025-05-13', 81.4300, 82.1000, 80.5600, 80.8900, 3921700),
   ('ETR', '2025-05-14', 81.3600, 81.3600, 79.4000, 80.5100, 3728300),
@@ -70871,7 +70871,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('EVRG', '2025-10-03', 76.1000, 77.4600, 76.1000, 76.6200, 2723100),
   ('EVRG', '2025-10-06', 76.6400, 77.7100, 76.6300, 77.4800, 2480800);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('EVRG', '2025-10-07', 77.6500, 78.1800, 77.4400, 77.6900, 1518300),
   ('EVRG', '2025-10-08', 77.9800, 77.9800, 77.2400, 77.8300, 2860500),
   ('EVRG', '2025-10-09', 78.3800, 78.5600, 76.6300, 76.6900, 2416400),
@@ -71373,7 +71373,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('EW', '2026-03-03', 85.8700, 86.5600, 83.7600, 85.2800, 5593900),
   ('EW', '2026-03-04', 85.1400, 85.8100, 84.2200, 85.2200, 4439300);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('EW', '2026-03-05', 84.4400, 84.8300, 82.9700, 83.8900, 6404800),
   ('EW', '2026-03-06', 83.0000, 83.0800, 80.5000, 81.6400, 5223800),
   ('EW', '2026-03-09', 80.8700, 84.2900, 80.5400, 84.2600, 4758700),
@@ -71875,7 +71875,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('EXE', '2024-12-23', 94.4400, 96.8800, 94.0900, 96.6300, 1398900),
   ('EXE', '2024-12-24', 97.0600, 97.7900, 95.8800, 97.4700, 1031500);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('EXE', '2024-12-26', 96.6000, 96.7800, 95.5200, 96.2000, 1275600),
   ('EXE', '2024-12-27', 96.1400, 97.2350, 95.5900, 96.6100, 1101000),
   ('EXE', '2024-12-30', 97.4900, 101.4600, 97.4900, 99.8400, 2637700),
@@ -72377,7 +72377,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('EXPD', '2025-05-22', 113.0700, 114.2800, 112.2800, 113.6900, 1396700),
   ('EXPD', '2025-05-23', 111.3300, 113.2200, 110.8200, 112.4600, 1102900);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('EXPD', '2025-05-27', 113.5600, 114.9000, 112.7000, 114.2800, 1519500),
   ('EXPD', '2025-05-28', 114.2300, 114.4600, 112.0100, 112.1300, 1438300),
   ('EXPD', '2025-05-29', 112.9400, 113.4600, 112.1000, 113.2700, 1565500),
@@ -72879,7 +72879,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('EXPE', '2025-10-17', 213.7600, 216.5900, 212.6100, 214.7600, 1617500),
   ('EXPE', '2025-10-20', 215.4000, 219.7600, 215.4000, 218.2500, 989200);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('EXPE', '2025-10-21', 217.9400, 227.3200, 217.9400, 226.1400, 1611900),
   ('EXPE', '2025-10-22', 225.4000, 227.8700, 224.1200, 226.3900, 1310000),
   ('EXPE', '2025-10-23', 225.2400, 228.9500, 213.5500, 215.6500, 2677500),
@@ -73381,7 +73381,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('EXR', '2026-03-17', 143.4200, 143.4200, 137.8400, 138.3600, 2117800),
   ('EXR', '2026-03-18', 138.2600, 139.2900, 136.2000, 136.3700, 1159800);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('EXR', '2026-03-19', 135.9200, 137.0400, 135.0000, 135.9900, 1088500),
   ('EXR', '2026-03-20', 135.0400, 136.0700, 129.4700, 130.2600, 2102300),
   ('EXR', '2026-03-23', 133.1000, 134.5300, 130.9600, 131.8300, 1380300),
@@ -73883,7 +73883,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('FANG', '2025-01-08', 171.5500, 173.0000, 169.4700, 170.9900, 1666000),
   ('FANG', '2025-01-10', 174.8900, 177.2600, 171.7000, 174.7700, 2725200);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('FANG', '2025-01-13', 176.0700, 180.0900, 175.7100, 177.6100, 3038500),
   ('FANG', '2025-01-14', 177.0000, 178.8700, 175.6900, 177.6800, 1734400),
   ('FANG', '2025-01-15', 178.4900, 180.2500, 177.6800, 179.5600, 1669800),
@@ -74385,7 +74385,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('FAST', '2025-06-06', 41.7300, 42.1600, 41.6600, 42.0600, 4408000),
   ('FAST', '2025-06-09', 42.2500, 42.3000, 41.7700, 42.1300, 4706700);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('FAST', '2025-06-10', 42.1300, 42.7400, 42.0500, 42.7200, 4536100),
   ('FAST', '2025-06-11', 42.5400, 42.7500, 42.2400, 42.6500, 5574100),
   ('FAST', '2025-06-12', 42.5000, 43.1000, 42.2700, 42.8600, 4355600),
@@ -74887,7 +74887,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('FCX', '2025-10-31', 41.5900, 42.5200, 41.2600, 41.7000, 11939500),
   ('FCX', '2025-11-03', 41.5700, 41.5900, 40.4300, 41.1800, 13717200);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('FCX', '2025-11-04', 39.9700, 40.0300, 39.1200, 39.4200, 14388400),
   ('FCX', '2025-11-05', 39.8900, 40.6700, 39.6200, 40.2100, 12057600),
   ('FCX', '2025-11-06', 39.9100, 39.9200, 38.5400, 38.6500, 25307300),
@@ -75389,7 +75389,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('FDS', '2026-03-31', 215.7000, 222.5000, 210.5900, 216.9900, 2220800),
   ('FDS', '2026-04-01', 215.8600, 227.4500, 214.2400, 224.8600, 1689300);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('FDS', '2026-04-02', 225.0500, 231.2100, 222.2200, 227.6800, 1012300),
   ('FDS', '2026-04-06', 227.5400, 231.9600, 224.3700, 230.9400, 812800),
   ('FDS', '2026-04-07', 230.7200, 232.5500, 225.5000, 227.6000, 723200),
@@ -75891,7 +75891,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('FE', '2025-01-24', 38.8900, 39.2300, 38.8900, 39.2100, 3570500),
   ('FE', '2025-01-27', 39.7600, 40.9000, 39.5300, 40.8800, 5477500);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('FE', '2025-01-28', 40.7500, 41.0300, 39.8300, 40.1900, 4678400),
   ('FE', '2025-01-29', 40.2500, 40.3100, 39.6400, 39.6700, 5014600),
   ('FE', '2025-01-30', 40.0900, 40.1000, 39.2900, 39.7200, 4522400),
@@ -76393,7 +76393,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('FFIV', '2025-06-23', 287.4300, 295.3400, 285.7100, 295.0900, 452300),
   ('FFIV', '2025-06-24', 297.0000, 298.7000, 293.2800, 295.9000, 435300);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('FFIV', '2025-06-25', 295.7800, 297.0200, 293.8800, 294.4100, 407100),
   ('FFIV', '2025-06-26', 295.0000, 295.1300, 284.2700, 289.0900, 996000),
   ('FFIV', '2025-06-27', 288.8800, 297.5700, 287.8300, 295.7500, 675600),
@@ -76895,7 +76895,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('FICO', '2025-11-14', 1719.6400, 1760.7900, 1691.3700, 1741.3700, 118000),
   ('FICO', '2025-11-17', 1750.2300, 1768.2500, 1732.9800, 1760.2500, 187800);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('FICO', '2025-11-18', 1760.2500, 1761.6899, 1719.9900, 1724.9700, 173400),
   ('FICO', '2025-11-19', 1722.4600, 1748.1100, 1702.7500, 1736.1600, 124600),
   ('FICO', '2025-11-20', 1750.0000, 1780.9700, 1709.3300, 1720.5500, 140500),
@@ -77397,7 +77397,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('FIS', '2026-04-15', 47.3900, 49.1400, 47.1000, 48.3200, 6231500),
   ('FIS', '2026-04-16', 48.7600, 49.1800, 48.4500, 48.6200, 4788300);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('FIS', '2026-04-17', 48.8900, 49.2800, 48.2400, 48.5000, 5418900),
   ('FIS', '2026-04-20', 48.5000, 48.8500, 47.9700, 48.3200, 3618000),
   ('FIS', '2026-04-21', 48.3000, 48.9600, 47.5100, 47.6900, 4975500),
@@ -77899,7 +77899,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('FITB', '2025-02-07', 44.3100, 44.3200, 43.7100, 44.0400, 3146300),
   ('FITB', '2025-02-10', 44.2900, 44.2900, 43.2800, 43.3300, 4062400);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('FITB', '2025-02-11', 43.3300, 44.0300, 43.0400, 44.0000, 3676100),
   ('FITB', '2025-02-12', 43.5500, 43.6300, 43.1000, 43.4300, 4406400),
   ('FITB', '2025-02-13', 43.4000, 43.7400, 43.2100, 43.5800, 3913400),
@@ -78401,7 +78401,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('FIX', '2025-07-08', 540.9000, 544.0000, 519.9900, 527.4200, 382500),
   ('FIX', '2025-07-09', 535.6700, 541.2700, 529.2400, 535.0200, 407300);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('FIX', '2025-07-10', 535.0000, 539.4600, 517.0300, 533.7700, 359100),
   ('FIX', '2025-07-11', 532.6000, 543.0400, 530.0200, 539.5000, 263900),
   ('FIX', '2025-07-14', 539.5000, 549.2000, 534.4800, 542.9500, 316700),
@@ -78903,7 +78903,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('FOX', '2025-12-01', 57.7100, 59.7300, 57.7100, 59.3400, 1542600),
   ('FOX', '2025-12-02', 59.4600, 59.5600, 58.4000, 59.2200, 1146400);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('FOX', '2025-12-03', 59.3500, 60.2520, 59.1220, 59.3300, 920200),
   ('FOX', '2025-12-04', 59.3700, 60.2400, 59.2450, 60.1900, 1091300),
   ('FOX', '2025-12-05', 60.0700, 61.2600, 60.0690, 60.8900, 971300),
@@ -79405,7 +79405,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('FOXA', '2026-04-29', 63.0400, 63.6900, 62.6450, 62.9400, 2218200),
   ('FOXA', '2026-04-30', 62.2800, 63.7800, 62.0600, 63.4900, 2796800);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('FOXA', '2026-05-01', 64.2400, 64.6550, 62.9900, 63.3500, 1832500),
   ('FOXA', '2026-05-04', 63.3500, 63.4900, 62.2500, 62.3600, 2011900),
   ('FOXA', '2026-05-05', 62.5400, 62.8250, 61.2500, 62.2300, 2334100),
@@ -79907,7 +79907,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('FSLR', '2025-02-24', 155.2200, 155.6500, 151.0000, 152.9100, 2711000),
   ('FSLR', '2025-02-25', 150.9300, 152.6700, 146.1900, 147.4600, 5095000);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('FSLR', '2025-02-26', 154.6600, 167.9600, 154.6600, 156.8400, 7054300),
   ('FSLR', '2025-02-27', 155.8800, 160.9200, 140.8400, 141.1800, 4416300),
   ('FSLR', '2025-02-28', 141.0900, 141.3200, 133.9000, 136.1800, 5783800),
@@ -80409,7 +80409,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('FTNT', '2025-07-22', 106.9300, 107.4000, 104.6400, 104.8100, 2951400),
   ('FTNT', '2025-07-23', 104.9100, 105.1500, 103.1400, 105.0600, 2582700);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('FTNT', '2025-07-24', 105.3100, 106.1900, 104.0300, 104.7700, 2440000),
   ('FTNT', '2025-07-25', 105.2300, 105.8500, 104.7200, 104.8200, 2087900),
   ('FTNT', '2025-07-28', 104.9800, 106.2100, 104.1200, 104.8800, 2129000),
@@ -80911,7 +80911,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('FTV', '2025-12-15', 55.3000, 55.4750, 54.7600, 55.3500, 3388500),
   ('FTV', '2025-12-16', 55.5500, 55.6700, 54.5700, 54.6600, 2821800);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('FTV', '2025-12-17', 54.5300, 55.7300, 54.4650, 55.2400, 3801500),
   ('FTV', '2025-12-18', 55.4400, 55.6700, 54.4800, 54.6700, 3477100),
   ('FTV', '2025-12-19', 54.4900, 55.0100, 54.4400, 54.9100, 12085500),
@@ -81413,7 +81413,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('GD', '2026-05-13', 343.9400, 343.9400, 339.9800, 341.3600, 898300),
   ('GD', '2026-05-14', 340.8700, 343.9900, 339.1700, 340.6200, 960400);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('GD', '2026-05-15', 339.8800, 341.9100, 333.2900, 334.5000, 1236400),
   ('GD', '2026-05-18', 335.0600, 343.4600, 334.0100, 343.1100, 984800),
   ('GD', '2026-05-19', 343.0900, 343.2200, 339.1200, 340.1400, 748100),
@@ -81915,7 +81915,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('GE', '2025-03-10', 189.2000, 192.2100, 187.9100, 192.1200, 6195000),
   ('GE', '2025-03-11', 189.9300, 193.6800, 188.3200, 191.7200, 5356700);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('GE', '2025-03-12', 194.9200, 197.2500, 192.4300, 195.0000, 4735000),
   ('GE', '2025-03-13', 194.5500, 195.6200, 191.6700, 192.4200, 3837200),
   ('GE', '2025-03-14', 195.3700, 197.7000, 193.6000, 197.1100, 3263200),
@@ -82417,7 +82417,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('GEHC', '2025-08-05', 70.9900, 71.5400, 70.5100, 70.7400, 3726200),
   ('GEHC', '2025-08-06', 70.9400, 71.0300, 69.5800, 69.9600, 5171000);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('GEHC', '2025-08-07', 70.8500, 71.5300, 70.0100, 71.1000, 4233700),
   ('GEHC', '2025-08-08', 71.2000, 72.0850, 71.0100, 72.0000, 3025100),
   ('GEHC', '2025-08-11', 72.0400, 73.3400, 71.9200, 73.0000, 4130000),
@@ -82919,7 +82919,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('GEN', '2025-12-30', 27.5300, 27.6600, 27.4400, 27.4600, 1921400),
   ('GEN', '2025-12-31', 27.3600, 27.5000, 27.1900, 27.1900, 2156600);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('GEN', '2026-01-02', 27.2300, 27.3400, 26.0300, 26.0700, 3808300),
   ('GEN', '2026-01-05', 25.9900, 26.4500, 25.7900, 26.1400, 4007300),
   ('GEN', '2026-01-06', 26.0300, 26.4000, 25.8900, 26.2100, 3826900),
@@ -83421,7 +83421,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('GILD', '2024-10-23', 88.1500, 88.3900, 87.1400, 87.2300, 4373500),
   ('GILD', '2024-10-24', 87.7200, 89.2200, 87.6200, 88.7800, 7183500);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('GILD', '2024-10-25', 89.4500, 89.7400, 88.4500, 89.0000, 5734900),
   ('GILD', '2024-10-28', 89.2400, 89.4200, 88.5200, 88.7600, 5961700),
   ('GILD', '2024-10-29', 88.3800, 88.5200, 86.8100, 88.0800, 6655800),
@@ -83923,7 +83923,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('GIS', '2025-03-24', 58.0000, 59.0900, 57.7800, 58.1700, 5381900),
   ('GIS', '2025-03-25', 58.4700, 58.4700, 57.6300, 57.7900, 4987900);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('GIS', '2025-03-26', 57.9400, 59.3000, 57.8300, 59.0700, 5204200),
   ('GIS', '2025-03-27', 59.5300, 60.0300, 59.3200, 59.6600, 4013100),
   ('GIS', '2025-03-28', 60.0100, 60.4700, 58.9800, 59.1100, 5763500),
@@ -84425,7 +84425,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('GL', '2025-08-19', 135.4500, 137.2300, 135.4500, 136.7700, 485600),
   ('GL', '2025-08-20', 137.6400, 139.3700, 136.9400, 139.1000, 565200);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('GL', '2025-08-21', 138.9000, 140.4100, 138.7700, 139.6200, 396300),
   ('GL', '2025-08-22', 140.1700, 141.7900, 139.7900, 141.2400, 491100),
   ('GL', '2025-08-25', 140.9700, 141.5300, 139.2800, 139.3900, 486600),
@@ -84927,7 +84927,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('GLW', '2026-01-14', 89.9700, 90.8000, 88.4100, 90.2100, 4446000),
   ('GLW', '2026-01-15', 92.0000, 94.9800, 91.8000, 93.4900, 5501300);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('GLW', '2026-01-16', 93.8400, 94.6100, 92.1300, 94.2000, 7146600),
   ('GLW', '2026-01-20', 91.3900, 93.4800, 91.2700, 92.5700, 4574600),
   ('GLW', '2026-01-21', 93.1300, 94.4600, 91.5500, 93.5200, 3861000),
@@ -85429,7 +85429,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('GNRC', '2024-11-06', 186.0000, 188.3000, 181.3000, 183.5000, 2287800),
   ('GNRC', '2024-11-07', 183.5000, 188.0900, 182.4000, 186.7100, 1014300);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('GNRC', '2024-11-08', 186.7000, 190.4200, 185.8500, 189.3500, 852500),
   ('GNRC', '2024-11-11', 191.0200, 195.9400, 188.7900, 195.1100, 746600),
   ('GNRC', '2024-11-12', 192.9700, 194.6500, 187.5800, 190.3200, 617400),
@@ -85931,7 +85931,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('GOOG', '2025-04-07', 143.3900, 154.9300, 142.6600, 149.2400, 47823000),
   ('GOOG', '2025-04-08', 153.5750, 154.4400, 145.2100, 146.5800, 35304400);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('GOOG', '2025-04-09', 146.3300, 161.8700, 145.8100, 161.0600, 46479500),
   ('GOOG', '2025-04-10', 158.7600, 160.0300, 152.2000, 155.3700, 35270500),
   ('GOOG', '2025-04-11', 155.5850, 159.8600, 155.5850, 159.4000, 22582000),
@@ -86433,7 +86433,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('GOOGL', '2025-09-03', 226.2100, 231.3100, 224.7900, 230.6600, 103336100),
   ('GOOGL', '2025-09-04', 229.6500, 232.3700, 226.1100, 232.3000, 51684200);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('GOOGL', '2025-09-05', 232.2000, 235.7600, 231.9000, 235.0000, 46588900),
   ('GOOGL', '2025-09-08', 235.4700, 238.1300, 233.6700, 234.0400, 32474700),
   ('GOOGL', '2025-09-09', 234.1700, 240.4700, 233.2300, 239.6300, 38061000),
@@ -86935,7 +86935,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('GPC', '2026-01-29', 140.9800, 141.5600, 137.7200, 138.8800, 986300),
   ('GPC', '2026-01-30', 137.5000, 138.9900, 136.2600, 138.9900, 2047300);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('GPC', '2026-02-02', 139.2100, 141.2800, 137.4400, 141.2600, 865500),
   ('GPC', '2026-02-03', 140.9600, 145.2000, 140.3400, 142.8400, 1279500),
   ('GPC', '2026-02-04', 144.2700, 148.3000, 143.7800, 147.9500, 1340900),
@@ -87437,7 +87437,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('GRMN', '2024-11-20', 206.2400, 207.1300, 204.1600, 205.5900, 855600),
   ('GRMN', '2024-11-21', 207.5400, 210.0600, 207.1400, 209.1100, 577300);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('GRMN', '2024-11-22', 209.3400, 211.2700, 209.2800, 210.3300, 776400),
   ('GRMN', '2024-11-25', 212.2900, 216.4400, 212.1200, 214.5200, 1721800),
   ('GRMN', '2024-11-26', 214.5000, 215.4800, 210.7500, 212.8500, 1160600),
@@ -87939,7 +87939,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('GS', '2025-04-22', 510.2300, 521.0000, 508.9300, 519.9900, 2514600),
   ('GS', '2025-04-23', 533.6300, 551.7900, 528.2600, 529.3100, 3048100);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('GS', '2025-04-24', 527.1000, 546.8400, 523.4200, 545.3700, 2223600),
   ('GS', '2025-04-25', 544.6000, 549.0900, 541.2200, 544.8600, 1612700),
   ('GS', '2025-04-28', 544.8600, 554.5000, 542.4700, 546.4000, 1459700),
@@ -88441,7 +88441,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('GWW', '2025-09-17', 999.0600, 1009.4700, 988.8700, 997.9300, 278000),
   ('GWW', '2025-09-18', 997.1400, 1011.6400, 991.7600, 1005.2300, 269100);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('GWW', '2025-09-19', 1009.6900, 1009.6900, 980.3700, 987.6100, 488400),
   ('GWW', '2025-09-22', 977.8400, 987.5900, 974.4000, 979.1700, 342400),
   ('GWW', '2025-09-23', 984.4600, 990.0000, 971.7200, 975.7800, 273800),
@@ -88943,7 +88943,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('HAL', '2026-02-12', 35.1300, 35.3900, 33.6200, 34.2900, 14968500),
   ('HAL', '2026-02-13', 34.1400, 34.5400, 33.8200, 33.9600, 11533900);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('HAL', '2026-02-17', 34.2300, 34.4600, 33.1000, 33.7100, 9323500),
   ('HAL', '2026-02-18', 34.3400, 34.8800, 34.1900, 34.7700, 9986500),
   ('HAL', '2026-02-19', 35.1500, 35.6100, 34.9200, 35.3700, 9132400),
@@ -89445,7 +89445,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('HBAN', '2024-12-05', 17.6800, 17.9600, 17.6100, 17.7000, 12806600),
   ('HBAN', '2024-12-06', 17.7200, 17.8500, 17.5400, 17.6100, 11142700);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('HBAN', '2024-12-09', 17.6100, 17.6700, 17.2600, 17.2800, 13151400),
   ('HBAN', '2024-12-10', 17.3500, 17.4800, 17.1800, 17.2400, 12640600),
   ('HBAN', '2024-12-11', 17.4100, 17.5200, 17.2900, 17.3900, 16226700),
@@ -89947,7 +89947,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('HCA', '2025-05-06', 349.6000, 360.9400, 346.2100, 356.7000, 1587000),
   ('HCA', '2025-05-07', 356.1500, 363.5100, 350.1700, 360.9800, 1984400);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('HCA', '2025-05-08', 358.6900, 363.9600, 353.7000, 353.9200, 1224500),
   ('HCA', '2025-05-09', 354.0000, 356.9300, 352.3700, 353.7000, 979500),
   ('HCA', '2025-05-12', 355.0600, 373.3700, 354.7600, 363.2800, 1679400),
@@ -90449,7 +90449,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('HD', '2025-10-01', 404.3900, 405.1300, 395.3100, 397.0200, 3787800),
   ('HD', '2025-10-02', 395.5000, 397.3800, 393.7900, 395.0100, 2964700);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('HD', '2025-10-03', 394.1300, 397.3200, 392.6300, 395.0600, 2951300),
   ('HD', '2025-10-06', 394.5000, 394.5000, 385.7200, 389.3300, 3653700),
   ('HD', '2025-10-07', 389.4500, 389.7500, 385.5100, 386.8100, 2505700),
@@ -90951,7 +90951,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('HIG', '2026-02-27', 141.6400, 141.8900, 139.1300, 140.8300, 3944600),
   ('HIG', '2026-03-02', 139.5300, 142.4500, 139.1200, 141.8600, 1420100);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('HIG', '2026-03-03', 140.0000, 141.5400, 138.7500, 141.0800, 1424800),
   ('HIG', '2026-03-04', 140.7100, 142.5000, 139.3800, 142.1700, 1386000),
   ('HIG', '2026-03-05', 141.2500, 142.1500, 139.5600, 139.6800, 2051000),
@@ -91453,7 +91453,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('HLT', '2024-12-19', 245.2300, 247.0800, 243.5700, 245.7500, 1432900),
   ('HLT', '2024-12-20', 245.2800, 252.0600, 244.0000, 249.4200, 3064000);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('HLT', '2024-12-23', 247.7500, 251.3400, 247.0800, 250.7100, 1041700),
   ('HLT', '2024-12-24', 250.8600, 253.2700, 250.1400, 253.2600, 460700),
   ('HLT', '2024-12-26', 251.0000, 252.8900, 251.0000, 251.7600, 651300),
@@ -91955,7 +91955,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('HON', '2025-05-20', 210.4241, 212.3091, 210.4241, 212.1206, 3536950),
   ('HON', '2025-05-21', 211.5269, 212.0264, 208.7747, 209.1140, 3831695);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('HON', '2025-05-22', 208.6616, 212.0924, 208.4731, 210.7729, 3093346),
   ('HON', '2025-05-23', 208.1244, 210.1791, 208.1244, 209.2648, 2691969),
   ('HON', '2025-05-27', 211.5174, 213.7229, 209.5476, 213.4402, 3279339),
@@ -92457,7 +92457,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('HOOD', '2025-10-15', 138.0950, 139.6500, 133.5350, 134.1500, 22187000),
   ('HOOD', '2025-10-16', 135.3800, 137.4800, 130.5700, 131.4400, 23359400);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('HOOD', '2025-10-17', 128.1600, 131.2050, 125.6000, 129.9100, 25237100),
   ('HOOD', '2025-10-20', 133.4250, 140.1980, 132.9000, 135.8000, 27605900),
   ('HOOD', '2025-10-21', 135.2900, 135.3100, 131.3500, 131.8400, 19498300),
@@ -92959,7 +92959,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('HPE', '2026-03-13', 21.8800, 21.9800, 21.3600, 21.5800, 14179100),
   ('HPE', '2026-03-16', 21.9000, 22.1100, 21.6500, 21.8500, 16518800);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('HPE', '2026-03-17', 21.9400, 22.2750, 21.6200, 21.6700, 16696700),
   ('HPE', '2026-03-18', 21.7100, 21.9950, 21.4400, 21.5300, 10572700),
   ('HPE', '2026-03-19', 21.2300, 22.1750, 21.1600, 22.1200, 10302300),
@@ -93461,7 +93461,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('HRL', '2025-01-06', 31.3200, 31.3300, 30.5100, 30.6800, 2071300),
   ('HRL', '2025-01-07', 30.8600, 31.2400, 30.0800, 30.1400, 2262500);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('HRL', '2025-01-08', 30.1800, 30.4700, 29.9900, 30.4400, 2030000),
   ('HRL', '2025-01-10', 30.2800, 30.6000, 29.8200, 30.0500, 3194500),
   ('HRL', '2025-01-13', 29.9500, 30.3900, 29.8000, 30.2600, 3314200),
@@ -93963,7 +93963,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('HSIC', '2025-06-04', 70.4900, 71.3100, 69.9100, 70.3900, 1210600),
   ('HSIC', '2025-06-05', 70.5300, 70.9200, 70.1100, 70.4700, 865100);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('HSIC', '2025-06-06', 71.1200, 71.2900, 70.2700, 70.3700, 1052300),
   ('HSIC', '2025-06-09', 70.3700, 71.8000, 69.6200, 70.9000, 1100700),
   ('HSIC', '2025-06-10', 71.1000, 72.5400, 70.5200, 71.3700, 971700),
@@ -94465,7 +94465,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('HST', '2025-10-29', 16.2200, 16.5100, 16.1200, 16.3100, 6914400),
   ('HST', '2025-10-30', 16.2400, 16.4500, 16.0700, 16.0800, 6799000);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('HST', '2025-10-31', 16.0500, 16.0700, 15.6100, 16.0200, 10793300),
   ('HST', '2025-11-03', 15.9400, 16.1800, 15.7900, 16.1300, 8161700),
   ('HST', '2025-11-04', 15.9800, 16.2100, 15.8800, 16.0500, 12376100),
@@ -94967,7 +94967,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('HSY', '2026-03-27', 210.9300, 216.0800, 210.4500, 213.7300, 1715000),
   ('HSY', '2026-03-30', 213.5500, 215.2800, 211.3800, 213.5500, 1617300);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('HSY', '2026-03-31', 215.0700, 215.1900, 205.5400, 207.8900, 2473200),
   ('HSY', '2026-04-01', 203.3900, 205.2100, 199.6200, 202.8900, 2245600),
   ('HSY', '2026-04-02', 202.8000, 206.4900, 200.8300, 206.1900, 1686200),
@@ -95469,7 +95469,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('HUM', '2025-01-22', 281.1300, 285.8700, 278.2900, 284.9200, 908300),
   ('HUM', '2025-01-23', 289.6600, 307.2800, 282.1600, 293.8000, 5077400);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('HUM', '2025-01-24', 291.6000, 298.5000, 289.8200, 294.6300, 1216100),
   ('HUM', '2025-01-27', 298.1500, 303.6500, 296.7500, 297.7600, 2177700),
   ('HUM', '2025-01-28', 296.7000, 303.9600, 296.5000, 303.1100, 1134300),
@@ -95971,7 +95971,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('HWM', '2025-06-18', 172.0100, 173.6300, 169.9300, 170.2300, 2343400),
   ('HWM', '2025-06-20', 171.7100, 173.4600, 169.0600, 173.3400, 4597400);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('HWM', '2025-06-23', 172.9000, 175.7800, 172.3900, 175.6300, 2427100),
   ('HWM', '2025-06-24', 177.0000, 177.5000, 173.7800, 176.5700, 2509400),
   ('HWM', '2025-06-25', 177.7300, 178.6900, 175.2800, 176.0800, 2692900),
@@ -96473,7 +96473,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('IBKR', '2025-11-12', 71.3900, 72.9800, 71.0000, 72.7000, 4300200),
   ('IBKR', '2025-11-13', 72.5200, 72.5200, 66.7400, 67.0400, 6274100);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('IBKR', '2025-11-14', 65.4100, 67.2300, 64.4200, 66.0300, 5337100),
   ('IBKR', '2025-11-17', 65.7600, 66.4800, 62.9600, 63.4100, 4918000),
   ('IBKR', '2025-11-18', 62.7200, 64.2600, 62.0900, 63.2700, 4146700),
@@ -96975,7 +96975,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('IBM', '2026-04-13', 233.6300, 238.0700, 231.7000, 237.8200, 5349600),
   ('IBM', '2026-04-14', 238.7500, 241.5400, 238.1200, 240.2700, 3777300);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('IBM', '2026-04-15', 242.2500, 246.0600, 240.9900, 244.8000, 3879500),
   ('IBM', '2026-04-16', 248.7500, 251.2200, 246.1300, 251.0000, 4817500),
   ('IBM', '2026-04-17', 254.6700, 255.6500, 251.0400, 253.4700, 5671500),
@@ -97477,7 +97477,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('IDXX', '2025-02-05', 469.2400, 471.8200, 457.2300, 468.5500, 749200),
   ('IDXX', '2025-02-06', 468.6700, 469.9900, 458.8200, 460.5600, 646300);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('IDXX', '2025-02-07', 465.0000, 468.8000, 457.3500, 459.7800, 624600),
   ('IDXX', '2025-02-10', 460.6800, 466.5300, 458.8600, 464.9100, 829900),
   ('IDXX', '2025-02-11', 460.6500, 467.6900, 460.2800, 463.7400, 516800),
@@ -97979,7 +97979,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('IEX', '2025-07-03', 182.7500, 183.5300, 180.6900, 181.2500, 224100),
   ('IEX', '2025-07-07', 180.1200, 181.3800, 178.2700, 179.3300, 802500);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('IEX', '2025-07-08', 179.4600, 184.0300, 178.4400, 182.4700, 911500),
   ('IEX', '2025-07-09', 183.5200, 184.8900, 181.7200, 184.3800, 1036200),
   ('IEX', '2025-07-10', 184.2700, 187.7100, 183.8600, 185.4200, 686200),
@@ -98481,7 +98481,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('IFF', '2025-11-26', 68.7400, 70.0100, 68.6500, 69.7800, 1351800),
   ('IFF', '2025-11-28', 69.7300, 70.1000, 69.4300, 69.4800, 877200);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('IFF', '2025-12-01', 69.2800, 69.9800, 69.1000, 69.2700, 1356100),
   ('IFF', '2025-12-02', 69.4100, 69.5000, 67.8900, 68.5400, 1829400),
   ('IFF', '2025-12-03', 68.7300, 69.1000, 67.0700, 67.1200, 1960100),
@@ -98983,7 +98983,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('INCY', '2026-04-27', 94.5000, 97.6600, 94.5000, 95.7200, 2148500),
   ('INCY', '2026-04-28', 94.7500, 98.3600, 92.7900, 97.7400, 2531000);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('INCY', '2026-04-29', 99.1800, 102.8600, 96.6700, 99.1000, 2242700),
   ('INCY', '2026-04-30', 100.3300, 100.8500, 94.9300, 95.2700, 2409600),
   ('INCY', '2026-05-01', 95.2600, 97.0500, 94.8200, 96.9100, 1203600),
@@ -99485,7 +99485,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('INTU', '2025-02-20', 583.0200, 586.1000, 573.3900, 579.0800, 2703900),
   ('INTU', '2025-02-21', 580.5500, 582.1500, 561.2500, 565.4700, 2006400);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('INTU', '2025-02-24', 565.9600, 572.7500, 563.3000, 567.2400, 2040900),
   ('INTU', '2025-02-25', 567.3100, 571.4200, 553.2400, 555.6300, 3014500),
   ('INTU', '2025-02-26', 635.5000, 638.9900, 615.4400, 625.5100, 4674200),
@@ -99987,7 +99987,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('INVH', '2025-07-18', 32.2800, 32.4950, 32.1350, 32.2400, 2459000),
   ('INVH', '2025-07-21', 32.2600, 32.5400, 32.0350, 32.0600, 2362700);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('INVH', '2025-07-22', 32.1100, 32.6300, 32.0650, 32.6000, 2943900),
   ('INVH', '2025-07-23', 32.5800, 32.6700, 32.2850, 32.4800, 2216100),
   ('INVH', '2025-07-24', 32.3300, 32.4500, 32.1050, 32.1200, 2923800),
@@ -100489,7 +100489,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('IP', '2025-12-11', 39.2200, 39.8100, 39.0000, 39.0500, 6118500),
   ('IP', '2025-12-12', 39.2300, 39.2300, 38.4100, 38.5400, 8580500);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('IP', '2025-12-15', 38.8000, 38.8800, 38.4000, 38.6000, 4468100),
   ('IP', '2025-12-16', 38.7300, 38.9800, 38.4200, 38.6100, 3918100),
   ('IP', '2025-12-17', 38.4100, 39.1000, 38.2400, 38.6900, 3495700),
@@ -100991,7 +100991,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('IQV', '2026-05-11', 178.1200, 179.7300, 172.3800, 173.5500, 1569400),
   ('IQV', '2026-05-12', 173.9800, 176.2400, 170.9800, 175.0600, 1213000);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('IQV', '2026-05-13', 174.1600, 176.2600, 168.0700, 172.3800, 1516000),
   ('IQV', '2026-05-14', 174.1000, 175.9500, 170.5500, 170.6800, 1687600),
   ('IQV', '2026-05-15', 170.0700, 173.3500, 168.6800, 169.1200, 1791100),
@@ -101493,7 +101493,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('IRM', '2025-03-06', 86.5000, 86.7600, 82.6200, 82.7900, 3712300),
   ('IRM', '2025-03-07', 83.2000, 84.8300, 81.5000, 84.3800, 3869000);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('IRM', '2025-03-10', 83.6500, 85.1700, 81.7100, 83.4000, 3424900),
   ('IRM', '2025-03-11', 83.3600, 85.1400, 82.6700, 84.5100, 2586000),
   ('IRM', '2025-03-12', 86.1700, 87.0200, 84.3700, 86.4500, 2269900),
@@ -101995,7 +101995,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('ISRG', '2025-08-01', 475.4600, 486.0600, 473.2400, 483.1200, 2982900),
   ('ISRG', '2025-08-04', 486.7500, 490.0000, 478.8200, 483.3600, 2493500);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('ISRG', '2025-08-05', 483.2200, 486.5100, 476.7500, 477.0000, 2610100),
   ('ISRG', '2025-08-06', 477.0400, 480.9900, 473.2600, 474.0600, 2191700),
   ('ISRG', '2025-08-07', 478.4200, 479.1300, 463.9000, 469.8100, 1777900),
@@ -102497,7 +102497,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('IT', '2025-12-26', 251.7600, 252.7100, 250.3400, 252.6100, 540100),
   ('IT', '2025-12-29', 251.6800, 255.5100, 251.4800, 253.8000, 547000);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('IT', '2025-12-30', 252.1200, 255.5000, 250.9000, 254.5900, 680900),
   ('IT', '2025-12-31', 252.7500, 255.6400, 251.6600, 252.2800, 582000),
   ('IT', '2026-01-02', 250.3900, 252.2800, 236.8900, 237.0300, 910100),
@@ -102999,7 +102999,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('IVZ', '2024-10-21', 18.4900, 18.6900, 17.9400, 18.0200, 6702000),
   ('IVZ', '2024-10-22', 17.8400, 18.3700, 17.6300, 18.0400, 7079900);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('IVZ', '2024-10-23', 17.9800, 18.0000, 17.1800, 17.5000, 5368400),
   ('IVZ', '2024-10-24', 17.6100, 17.6600, 17.4300, 17.6200, 2488400),
   ('IVZ', '2024-10-25', 17.7800, 17.9300, 17.5800, 17.6300, 2474600),
@@ -103501,7 +103501,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('J', '2025-03-20', 121.9010, 122.6337, 120.3960, 120.6832, 1259773),
   ('J', '2025-03-21', 119.5446, 120.1980, 118.3366, 120.0495, 2558936);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('J', '2025-03-24', 120.8911, 122.1584, 120.4356, 121.9703, 1314010),
   ('J', '2025-03-25', 122.1188, 123.2970, 121.4059, 122.3960, 862439),
   ('J', '2025-03-26', 122.6832, 123.8713, 121.9802, 122.7426, 922433),
@@ -104003,7 +104003,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('JBHT', '2025-08-15', 145.3600, 145.4800, 143.2200, 143.4500, 544600),
   ('JBHT', '2025-08-18', 143.5500, 144.3900, 142.1300, 142.5200, 507300);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('JBHT', '2025-08-19', 144.9600, 149.8100, 142.6800, 147.2300, 1082200),
   ('JBHT', '2025-08-20', 146.7100, 146.8900, 142.4200, 142.5300, 991000),
   ('JBHT', '2025-08-21', 141.3200, 143.5400, 140.7400, 143.4000, 1216800),
@@ -104505,7 +104505,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('JBL', '2026-01-12', 224.9200, 231.3100, 224.1900, 230.5800, 1203900),
   ('JBL', '2026-01-13', 230.2800, 241.1000, 230.2800, 238.3500, 1167900);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('JBL', '2026-01-14', 240.0000, 245.5900, 237.2400, 241.3400, 1363800),
   ('JBL', '2026-01-15', 246.5000, 256.1700, 243.6100, 253.1800, 1577900),
   ('JBL', '2026-01-16', 253.4100, 254.4900, 248.5400, 251.2900, 1580700),
@@ -105007,7 +105007,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('JKHY', '2024-11-04', 183.0600, 186.4100, 183.0600, 184.3200, 644500),
   ('JKHY', '2024-11-05', 184.3200, 185.8000, 182.7600, 185.5200, 601500);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('JKHY', '2024-11-06', 189.3600, 189.6300, 177.6300, 180.4000, 1436200),
   ('JKHY', '2024-11-07', 180.3200, 181.6900, 178.0000, 179.9700, 720800),
   ('JKHY', '2024-11-08', 180.5200, 183.6800, 179.1500, 179.7700, 561000),
@@ -105509,7 +105509,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('JNJ', '2025-04-03', 158.7500, 160.6500, 157.4800, 159.8200, 13249300),
   ('JNJ', '2025-04-04', 159.1600, 159.8200, 152.9300, 153.2400, 16601700);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('JNJ', '2025-04-07', 151.2800, 152.7100, 147.4000, 150.6200, 18083000),
   ('JNJ', '2025-04-08', 153.5900, 153.5900, 148.0000, 150.0000, 12018400),
   ('JNJ', '2025-04-09', 142.2000, 153.1900, 141.5000, 150.9700, 18773700),
@@ -106011,7 +106011,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('JPM', '2025-08-29', 302.0400, 302.9500, 299.7300, 301.4200, 6796400),
   ('JPM', '2025-09-02', 300.2600, 300.4600, 294.5000, 299.7000, 7221900);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('JPM', '2025-09-03', 300.5700, 300.5700, 296.3800, 299.5100, 6316900),
   ('JPM', '2025-09-04', 300.0000, 304.4300, 298.2800, 303.8200, 6605800),
   ('JPM', '2025-09-05', 303.6500, 305.1500, 294.3100, 294.3800, 9837700),
@@ -106513,7 +106513,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('KDP', '2026-01-27', 27.5900, 27.6400, 27.2100, 27.5900, 9154600),
   ('KDP', '2026-01-28', 27.5400, 27.7600, 26.4000, 26.7100, 12373100);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('KDP', '2026-01-29', 26.7700, 27.0200, 26.6400, 26.8200, 12411700),
   ('KDP', '2026-01-30', 26.8200, 27.5300, 26.7700, 27.4400, 11489500),
   ('KDP', '2026-02-02', 27.4200, 27.5900, 27.2300, 27.4700, 8480900),
@@ -107015,7 +107015,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('KEYS', '2024-11-18', 149.5600, 151.6000, 148.4300, 151.4200, 1936800),
   ('KEYS', '2024-11-19', 149.1400, 152.5800, 147.8950, 152.1300, 2278300);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('KEYS', '2024-11-20', 165.2100, 168.4600, 159.0000, 165.4800, 3223400),
   ('KEYS', '2024-11-21', 165.3900, 170.5220, 162.8300, 170.4300, 1917100),
   ('KEYS', '2024-11-22', 169.6000, 171.0500, 168.2500, 170.2800, 1424300),
@@ -107517,7 +107517,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('KHC', '2025-04-17', 28.9800, 29.5700, 28.8400, 29.4600, 7779500),
   ('KHC', '2025-04-21', 29.5600, 29.9800, 29.3930, 29.9400, 6921200);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('KHC', '2025-04-22', 29.9500, 30.4200, 29.8300, 30.2000, 8982500),
   ('KHC', '2025-04-23', 30.1300, 30.4150, 29.7600, 30.0900, 7552400),
   ('KHC', '2025-04-24', 30.1100, 30.1200, 29.4500, 29.6400, 8345500),
@@ -108019,7 +108019,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('KIM', '2025-09-15', 22.3800, 22.4600, 22.2600, 22.3400, 3417200),
   ('KIM', '2025-09-16', 22.3000, 22.3800, 22.0500, 22.1100, 4117100);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('KIM', '2025-09-17', 22.1300, 22.3800, 21.9200, 21.9500, 5236900),
   ('KIM', '2025-09-18', 21.9500, 22.2100, 21.9500, 22.1700, 2646100),
   ('KIM', '2025-09-19', 22.2200, 22.2800, 21.9100, 21.9400, 7513100),
@@ -108521,7 +108521,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('KKR', '2026-02-10', 107.2100, 109.5300, 106.6000, 107.2100, 9036600),
   ('KKR', '2026-02-11', 107.6000, 109.2500, 104.2800, 105.0600, 6812600);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('KKR', '2026-02-12', 106.9300, 107.9900, 98.4800, 101.1200, 8987100),
   ('KKR', '2026-02-13', 101.3100, 102.9200, 100.7700, 101.7300, 4234500),
   ('KKR', '2026-02-17', 102.0000, 103.4900, 99.7100, 102.5500, 6434000),
@@ -109023,7 +109023,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('KMB', '2024-12-03', 139.2900, 139.7500, 136.5100, 136.8100, 2187700),
   ('KMB', '2024-12-04', 136.0500, 136.7900, 135.3500, 136.7900, 2068200);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('KMB', '2024-12-05', 137.0900, 138.3200, 136.6000, 138.1500, 2201700),
   ('KMB', '2024-12-06', 137.1200, 137.7700, 134.5000, 134.7300, 2207200),
   ('KMB', '2024-12-09', 134.5000, 135.0900, 131.5900, 132.9500, 3423800),
@@ -109525,7 +109525,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('KMI', '2025-05-02', 26.6300, 26.8900, 26.4500, 26.8300, 10497900),
   ('KMI', '2025-05-05', 26.5600, 27.0000, 26.2700, 26.8700, 17724100);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('KMI', '2025-05-06', 26.8500, 27.3800, 26.7300, 27.2100, 19004700),
   ('KMI', '2025-05-07', 27.2800, 27.7700, 27.2300, 27.6200, 13832600),
   ('KMI', '2025-05-08', 27.8500, 27.8700, 27.0200, 27.0400, 14765200),
@@ -110027,7 +110027,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('KO', '2025-09-29', 65.6700, 66.1000, 65.3500, 66.0400, 14818500),
   ('KO', '2025-09-30', 66.0700, 66.6400, 65.9600, 66.3200, 13815000);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('KO', '2025-10-01', 66.5100, 66.8300, 66.2900, 66.7800, 14877500),
   ('KO', '2025-10-02', 66.5300, 66.6500, 65.8600, 66.1000, 14350700),
   ('KO', '2025-10-03', 66.1000, 66.9900, 66.0400, 66.6500, 12249200),
@@ -110529,7 +110529,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('KR', '2026-02-25', 67.7300, 68.7000, 67.1400, 67.5900, 6626200),
   ('KR', '2026-02-26', 67.9000, 67.9000, 66.4400, 67.1800, 5165100);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('KR', '2026-02-27', 67.3600, 68.6600, 67.1700, 68.2400, 6773500),
   ('KR', '2026-03-02', 68.1200, 69.2700, 67.7100, 69.0500, 5491900),
   ('KR', '2026-03-03', 69.2600, 69.7700, 68.1300, 68.6400, 5307300),
@@ -111031,7 +111031,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('L', '2024-12-17', 83.5000, 84.1200, 83.2000, 83.6400, 846200),
   ('L', '2024-12-18', 83.2900, 84.2500, 81.4400, 81.5000, 1162700);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('L', '2024-12-19', 81.8800, 82.5700, 80.7700, 81.6600, 1092600),
   ('L', '2024-12-20', 81.5000, 83.9300, 81.2100, 83.1900, 2847800),
   ('L', '2024-12-23', 82.5800, 83.4500, 82.4200, 83.3700, 835200),
@@ -111533,7 +111533,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('LDOS', '2025-05-16', 155.2800, 159.1500, 155.2800, 159.0000, 1007000),
   ('LDOS', '2025-05-19', 158.5000, 159.7300, 157.7900, 159.5300, 915400);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('LDOS', '2025-05-20', 159.0300, 161.0000, 158.5500, 160.3000, 826800),
   ('LDOS', '2025-05-21', 159.9400, 159.9400, 157.8300, 158.9400, 1282500),
   ('LDOS', '2025-05-22', 158.8100, 159.4500, 157.0300, 158.3000, 1077600),
@@ -112035,7 +112035,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('LEN', '2025-10-13', 117.9800, 119.2100, 117.4700, 118.0200, 3242500),
   ('LEN', '2025-10-14', 118.4100, 122.4600, 117.3000, 122.2300, 4302700);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('LEN', '2025-10-15', 122.5700, 123.6700, 121.3300, 122.4400, 3169800),
   ('LEN', '2025-10-16', 122.7000, 122.9800, 120.9500, 122.8700, 3087700),
   ('LEN', '2025-10-17', 123.0100, 125.9400, 122.4500, 125.8200, 4500200),
@@ -112537,7 +112537,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('LH', '2026-03-11', 267.6900, 271.6400, 266.7500, 270.4200, 498700),
   ('LH', '2026-03-12', 270.0000, 272.5700, 262.5500, 262.9100, 735100);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('LH', '2026-03-13', 265.6000, 267.1200, 262.8700, 263.8000, 471200),
   ('LH', '2026-03-16', 265.8300, 270.2600, 264.0200, 266.8500, 508800),
   ('LH', '2026-03-17', 264.7300, 272.8300, 264.7300, 270.6200, 522600),
@@ -113039,7 +113039,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('LII', '2025-01-02', 614.7800, 615.4100, 600.3600, 604.5200, 244300),
   ('LII', '2025-01-03', 609.6800, 613.4300, 605.6700, 612.7100, 266300);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('LII', '2025-01-06', 610.2300, 618.8200, 604.1000, 609.9800, 365000),
   ('LII', '2025-01-07', 610.4100, 619.7000, 608.0900, 611.2900, 324400),
   ('LII', '2025-01-08', 613.6700, 626.1700, 607.2800, 625.5700, 352200),
@@ -113541,7 +113541,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('LIN', '2025-06-02', 465.1700, 466.3500, 461.3200, 464.5700, 1865400),
   ('LIN', '2025-06-03', 462.3100, 472.2800, 462.0000, 471.8200, 2606600);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('LIN', '2025-06-04', 471.1400, 475.4800, 468.9700, 473.7700, 2092600),
   ('LIN', '2025-06-05', 474.0000, 474.8800, 469.3300, 470.2600, 1679000),
   ('LIN', '2025-06-06', 473.4000, 475.2300, 471.2500, 472.7100, 1352700),
@@ -114043,7 +114043,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('LITE', '2025-10-27', 193.6300, 206.9100, 190.0600, 193.8000, 5437800),
   ('LITE', '2025-10-28', 193.8100, 199.8200, 188.3000, 198.3900, 3168800);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('LITE', '2025-10-29', 201.0900, 214.5000, 198.1100, 214.2800, 6030200),
   ('LITE', '2025-10-30', 206.5700, 212.9400, 198.5400, 200.1300, 4242400),
   ('LITE', '2025-10-31', 201.2100, 206.9900, 197.1900, 201.5600, 3449900),
@@ -114545,7 +114545,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('LLY', '2026-03-25', 912.4900, 922.1500, 909.0900, 916.3100, 2177700),
   ('LLY', '2026-03-26', 912.3800, 916.3500, 896.2900, 897.0000, 2163200);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('LLY', '2026-03-27', 896.0000, 900.8300, 877.1100, 878.2400, 2740800),
   ('LLY', '2026-03-30', 888.4800, 897.4300, 883.1100, 886.6300, 3070200),
   ('LLY', '2026-03-31', 893.4900, 924.1400, 892.1400, 919.7700, 3464200),
@@ -115047,7 +115047,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('LNT', '2025-01-17', 60.2200, 60.7300, 59.9600, 60.5500, 1697700),
   ('LNT', '2025-01-21', 61.2400, 61.9300, 60.7700, 61.0000, 1552600);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('LNT', '2025-01-22', 60.6600, 60.8400, 59.0500, 59.0900, 1293600),
   ('LNT', '2025-01-23', 59.0200, 59.2100, 58.5500, 58.6900, 1429700),
   ('LNT', '2025-01-24', 58.6300, 59.0800, 58.4500, 58.7700, 1345000),
@@ -115549,7 +115549,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('LOW', '2025-06-16', 218.3600, 218.6100, 214.8100, 216.0800, 2392500),
   ('LOW', '2025-06-17', 215.0500, 215.7800, 211.1200, 211.9200, 2518600);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('LOW', '2025-06-18', 212.5600, 213.6900, 210.4100, 210.8300, 2528400),
   ('LOW', '2025-06-20', 211.6600, 212.9300, 210.3300, 212.7500, 6148400),
   ('LOW', '2025-06-23', 212.7900, 218.7900, 211.7900, 218.5700, 2639500),
@@ -116051,7 +116051,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('LRCX', '2025-11-10', 164.5600, 167.1500, 163.7000, 166.3700, 10030600),
   ('LRCX', '2025-11-11', 164.1700, 164.6200, 157.7100, 159.1800, 9144600);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('LRCX', '2025-11-12', 161.3100, 162.1600, 158.4800, 161.4200, 8950000),
   ('LRCX', '2025-11-13', 158.8900, 160.3100, 151.7300, 153.3200, 13693700),
   ('LRCX', '2025-11-14', 147.5100, 152.9500, 145.3700, 148.2600, 15076100),
@@ -116553,7 +116553,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('LULU', '2026-04-09', 157.4300, 166.8000, 157.3100, 166.5100, 1967600),
   ('LULU', '2026-04-10', 166.7900, 167.9500, 162.8000, 163.8600, 1556600);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('LULU', '2026-04-13', 162.2000, 163.9400, 156.5500, 162.5600, 1986800),
   ('LULU', '2026-04-14', 162.5800, 164.2100, 158.4700, 160.6000, 2635800),
   ('LULU', '2026-04-15', 161.3200, 164.2100, 160.3500, 162.7400, 1853500),
@@ -117055,7 +117055,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('LVS', '2025-02-03', 44.4800, 45.3700, 44.2100, 44.9300, 6387900),
   ('LVS', '2025-02-04', 45.1800, 45.7300, 44.5000, 44.5300, 6377000);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('LVS', '2025-02-05', 44.0000, 44.1700, 43.0200, 43.5300, 8821400),
   ('LVS', '2025-02-06', 43.6800, 43.8000, 42.0500, 42.3200, 12314900),
   ('LVS', '2025-02-07', 43.0000, 44.1000, 42.7700, 42.9800, 9402000),
@@ -117557,7 +117557,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('LYB', '2025-07-01', 57.7500, 61.6900, 57.5000, 61.2000, 4525800),
   ('LYB', '2025-07-02', 62.0000, 62.8800, 60.6500, 62.5600, 4245600);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('LYB', '2025-07-03', 62.5800, 62.7800, 61.8200, 62.0100, 1962900),
   ('LYB', '2025-07-07', 61.3200, 62.0100, 60.1500, 60.7300, 2982200),
   ('LYB', '2025-07-08', 61.1100, 64.4000, 61.0000, 63.7000, 4052000),
@@ -118059,7 +118059,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('LYV', '2025-11-24', 130.4200, 130.6000, 125.4400, 125.6100, 4986000),
   ('LYV', '2025-11-25', 127.9800, 130.0200, 125.3400, 129.5600, 4446900);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('LYV', '2025-11-26', 129.7300, 132.1300, 129.7200, 131.0500, 2763600),
   ('LYV', '2025-11-28', 130.5000, 132.1500, 130.2400, 131.4500, 936000),
   ('LYV', '2025-12-01', 130.7800, 132.3500, 129.7100, 131.1000, 1896400),
@@ -118561,7 +118561,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('MA', '2026-04-23', 507.3700, 509.6500, 498.3700, 502.3800, 2724000),
   ('MA', '2026-04-24', 499.0000, 505.6100, 495.6300, 504.1700, 2406900);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('MA', '2026-04-27', 500.7600, 509.0500, 500.7600, 506.4300, 2531300),
   ('MA', '2026-04-28', 512.2500, 517.0000, 507.2400, 507.6200, 3892500),
   ('MA', '2026-04-29', 529.9900, 534.2100, 520.8900, 525.2300, 5876700),
@@ -119063,7 +119063,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('MAR', '2025-02-18', 283.5200, 289.3000, 280.8800, 288.4200, 1601800),
   ('MAR', '2025-02-19', 286.4800, 288.9300, 283.9400, 287.5600, 1414100);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('MAR', '2025-02-20', 286.9200, 287.6500, 283.3100, 287.2000, 1153100),
   ('MAR', '2025-02-21', 286.6500, 287.2000, 275.0000, 277.4700, 1983200),
   ('MAR', '2025-02-24', 279.3500, 280.6000, 274.7400, 276.7600, 2058300),
@@ -119565,7 +119565,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('MAS', '2025-07-16', 64.5900, 65.2900, 63.8500, 64.9800, 1418400),
   ('MAS', '2025-07-17', 65.1600, 66.0400, 65.1000, 65.8800, 1216200);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('MAS', '2025-07-18', 66.3300, 66.3300, 65.1700, 65.5600, 1654000),
   ('MAS', '2025-07-21', 65.9100, 66.0000, 65.0400, 65.1300, 1678200),
   ('MAS', '2025-07-22', 64.3100, 66.9000, 64.2200, 66.7100, 2262500),
@@ -120067,7 +120067,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('MCD', '2025-12-09', 310.6900, 312.7000, 308.4200, 310.7900, 2355100),
   ('MCD', '2025-12-10', 309.5000, 311.3200, 306.0100, 310.5300, 4103900);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('MCD', '2025-12-11', 311.5000, 312.9800, 309.0600, 309.7100, 4844000),
   ('MCD', '2025-12-12', 310.5300, 317.7900, 310.3700, 316.7200, 3771900),
   ('MCD', '2025-12-15', 316.7000, 319.6600, 315.8000, 318.7300, 3814900),
@@ -120569,7 +120569,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('MCHP', '2026-05-07', 102.1500, 102.2800, 99.5900, 101.5800, 15859600),
   ('MCHP', '2026-05-08', 105.0500, 105.9100, 96.8200, 99.0900, 18857300);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('MCHP', '2026-05-11', 98.1000, 101.1800, 96.5700, 99.0300, 19625200),
   ('MCHP', '2026-05-12', 97.0600, 98.1500, 94.4200, 97.7000, 12828500),
   ('MCHP', '2026-05-13', 99.6500, 99.8700, 96.0600, 96.7100, 12894100),
@@ -121071,7 +121071,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('MCO', '2025-03-04', 497.8500, 498.7600, 478.6200, 481.3000, 1103400),
   ('MCO', '2025-03-05', 480.4900, 485.7800, 477.1500, 482.1800, 801900);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('MCO', '2025-03-06', 474.0700, 477.8100, 467.2700, 470.2300, 1098700),
   ('MCO', '2025-03-07', 467.7000, 468.0300, 453.3600, 461.5100, 1245400),
   ('MCO', '2025-03-10', 454.2600, 458.5100, 446.3400, 450.2900, 1198400),
@@ -121573,7 +121573,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('MDLZ', '2025-07-30', 67.5100, 67.9500, 65.0300, 65.1000, 22047700),
   ('MDLZ', '2025-07-31', 64.7400, 65.6500, 64.1700, 64.6900, 12174500);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('MDLZ', '2025-08-01', 65.3700, 66.2900, 63.9200, 63.9300, 10650300),
   ('MDLZ', '2025-08-04', 63.9700, 64.2800, 63.3300, 63.5300, 8291500),
   ('MDLZ', '2025-08-05', 63.5700, 63.6900, 62.1700, 62.3000, 9069800),
@@ -122075,7 +122075,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('MDT', '2025-12-23', 97.5100, 97.8900, 97.2700, 97.4700, 3579700),
   ('MDT', '2025-12-24', 97.4100, 97.6000, 97.0000, 97.2700, 1979000);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('MDT', '2025-12-26', 96.7100, 96.7500, 96.0100, 96.5200, 4340500),
   ('MDT', '2025-12-29', 96.7400, 96.9100, 95.9600, 96.1500, 4790600),
   ('MDT', '2025-12-30', 96.3200, 96.8800, 96.0800, 96.6600, 3741200),
@@ -122577,7 +122577,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('MET', '2026-05-21', 82.9100, 84.3800, 82.1900, 84.3000, 4190000),
   ('MET', '2026-05-22', 84.3700, 85.2900, 83.8910, 84.0600, 3779051);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('META', '2024-10-21', 576.0300, 577.2400, 569.1100, 575.1600, 8171900),
   ('META', '2024-10-22', 574.2900, 583.5300, 572.1200, 582.0100, 8544500),
   ('META', '2024-10-23', 579.9700, 585.0000, 562.5000, 563.6900, 14248400),
@@ -123079,7 +123079,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('MGM', '2025-03-18', 32.3300, 32.4800, 31.6800, 31.8600, 4623300),
   ('MGM', '2025-03-19', 32.0400, 32.9400, 32.0000, 32.6900, 4176400);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('MGM', '2025-03-20', 32.5700, 33.2700, 32.4400, 32.5300, 4758300),
   ('MGM', '2025-03-21', 32.0200, 32.2200, 31.1600, 31.4200, 13130800),
   ('MGM', '2025-03-24', 31.8400, 32.5100, 31.7500, 32.4200, 5301400),
@@ -123581,7 +123581,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('MKC', '2025-08-13', 68.8800, 70.8600, 68.4200, 70.6200, 2934200),
   ('MKC', '2025-08-14', 70.4300, 70.4300, 69.5800, 70.1900, 1959000);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('MKC', '2025-08-15', 70.4700, 70.4700, 69.5800, 69.7000, 1709800),
   ('MKC', '2025-08-18', 69.7000, 69.7700, 68.2300, 68.4100, 3287200),
   ('MKC', '2025-08-19', 68.9200, 69.8100, 68.5600, 69.0500, 2575800),
@@ -124083,7 +124083,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('MLM', '2026-01-08', 622.4400, 638.3900, 618.8600, 638.1100, 308200),
   ('MLM', '2026-01-09', 643.1200, 667.6600, 642.4100, 666.6700, 396700);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('MLM', '2026-01-12', 665.2800, 668.8300, 657.9300, 663.7100, 374400),
   ('MLM', '2026-01-13', 661.3500, 667.3800, 648.3500, 665.7100, 536800),
   ('MLM', '2026-01-14', 656.0000, 662.8300, 635.3000, 636.7100, 724400),
@@ -124585,7 +124585,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('MNST', '2024-10-31', 52.6500, 53.1800, 52.4800, 52.6800, 4625400),
   ('MNST', '2024-11-01', 52.5000, 53.0700, 52.0800, 52.3000, 6325100);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('MNST', '2024-11-04', 52.2700, 54.1800, 52.1400, 54.0600, 8702800),
   ('MNST', '2024-11-05', 53.9800, 54.5400, 53.7600, 54.1100, 4650100),
   ('MNST', '2024-11-06', 54.7100, 54.9900, 53.6800, 54.4400, 6931000),
@@ -125087,7 +125087,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('MO', '2025-04-01', 59.9100, 60.1000, 58.5000, 58.7900, 19150200),
   ('MO', '2025-04-02', 58.7800, 58.9200, 55.7100, 57.1200, 20161000);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('MO', '2025-04-03', 58.0000, 59.2400, 57.7700, 57.8900, 14319800),
   ('MO', '2025-04-04', 57.6500, 58.8300, 55.8100, 56.0700, 16333000),
   ('MO', '2025-04-07', 53.0000, 56.1700, 52.8200, 55.6600, 16833100),
@@ -125589,7 +125589,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('MOS', '2025-08-27', 33.0700, 33.7400, 33.0000, 33.4900, 3639600),
   ('MOS', '2025-08-28', 33.6000, 33.9700, 33.0700, 33.9500, 3125100);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('MOS', '2025-08-29', 33.8900, 34.0800, 33.1400, 33.4000, 2972200),
   ('MOS', '2025-09-02', 33.1600, 33.4000, 32.9700, 33.2500, 3177500),
   ('MOS', '2025-09-03', 32.9700, 33.0300, 32.6100, 32.6900, 3390600),
@@ -126091,7 +126091,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('MPC', '2026-01-23', 177.6800, 181.6100, 175.0600, 175.3800, 1635000),
   ('MPC', '2026-01-26', 177.3500, 177.5000, 172.2400, 172.5400, 1610800);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('MPC', '2026-01-27', 172.9200, 174.0100, 170.5000, 171.7900, 2452400),
   ('MPC', '2026-01-28', 173.0000, 174.0000, 170.0800, 172.0100, 1691300),
   ('MPC', '2026-01-29', 175.4100, 180.7400, 175.2400, 175.7400, 2826200),
@@ -126593,7 +126593,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('MRK', '2024-11-14', 99.1800, 99.4000, 97.9500, 98.3600, 8704500),
   ('MRK', '2024-11-15', 97.9200, 97.9200, 94.4800, 96.3100, 16464500);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('MRK', '2024-11-18', 96.5600, 97.2900, 95.4200, 96.5600, 14139900),
   ('MRK', '2024-11-19', 96.7300, 97.5500, 95.2600, 96.5400, 13093100),
   ('MRK', '2024-11-20', 96.9800, 98.8400, 96.6600, 97.4400, 12136800),
@@ -127095,7 +127095,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('MRNA', '2025-04-15', 26.8200, 27.2100, 25.5200, 26.2400, 7035900),
   ('MRNA', '2025-04-16', 25.8500, 26.0650, 24.8130, 25.1900, 5476400);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('MRNA', '2025-04-17', 25.2800, 25.2800, 24.4300, 24.7150, 6685000),
   ('MRNA', '2025-04-21', 24.0300, 25.3400, 23.3000, 25.1300, 6862800),
   ('MRNA', '2025-04-22', 25.2700, 25.8400, 24.8700, 25.7400, 5497500),
@@ -127597,7 +127597,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('MRSH', '2025-09-11', 198.9300, 203.4700, 198.3900, 203.4600, 2998900),
   ('MRSH', '2025-09-12', 202.6300, 204.3500, 202.4300, 202.9300, 2652500);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('MRSH', '2025-09-15', 203.0600, 203.7200, 197.3100, 198.1100, 2122700),
   ('MRSH', '2025-09-16', 197.0400, 197.8100, 196.1700, 196.8300, 2162700),
   ('MRSH', '2025-09-17', 197.4000, 199.8700, 197.0700, 197.4000, 1734300),
@@ -128099,7 +128099,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('MS', '2026-02-06', 178.8900, 181.1900, 177.5000, 179.9600, 9139700),
   ('MS', '2026-02-09', 179.9900, 183.8200, 179.4600, 182.3500, 6625900);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('MS', '2026-02-10', 181.9200, 184.5800, 173.5500, 177.8900, 12854500),
   ('MS', '2026-02-11', 179.7700, 181.0400, 174.3000, 176.6800, 7777800),
   ('MS', '2026-02-12', 177.4300, 178.7900, 165.4100, 168.0600, 14436700),
@@ -128601,7 +128601,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('MSFT', '2024-11-29', 420.0900, 424.8800, 417.8000, 423.4600, 16271900),
   ('MSFT', '2024-12-02', 421.5700, 433.0000, 421.3100, 430.9800, 20207200);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('MSFT', '2024-12-03', 429.8400, 432.4700, 427.7400, 431.2000, 18302000),
   ('MSFT', '2024-12-04', 433.0300, 439.6700, 432.6300, 437.4200, 26009400),
   ('MSFT', '2024-12-05', 437.9200, 444.6600, 436.1700, 442.6200, 21697800),
@@ -129103,7 +129103,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('MSI', '2025-04-30', 435.8400, 441.5500, 430.9800, 440.3900, 795100),
   ('MSI', '2025-05-01', 440.5000, 444.3700, 438.7700, 439.1600, 981700);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('MSI', '2025-05-02', 417.3500, 420.7700, 397.0000, 406.4200, 2340600),
   ('MSI', '2025-05-05', 405.9400, 407.1700, 399.0600, 405.3700, 1157000),
   ('MSI', '2025-05-06', 402.1600, 413.7900, 400.5000, 412.6400, 1023300),
@@ -129605,7 +129605,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('MTB', '2025-09-25', 199.2000, 199.9700, 197.8900, 198.7900, 931600),
   ('MTB', '2025-09-26', 200.5300, 201.6400, 199.1500, 200.1400, 670900);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('MTB', '2025-09-29', 199.9700, 200.4200, 196.1500, 198.3000, 1175900),
   ('MTB', '2025-09-30', 198.3400, 199.7200, 194.7600, 197.6200, 847700),
   ('MTB', '2025-10-01', 196.9500, 197.8200, 194.8300, 195.2900, 918000),
@@ -130107,7 +130107,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('MTD', '2026-02-23', 1367.0601, 1397.3700, 1366.9500, 1393.2400, 100800),
   ('MTD', '2026-02-24', 1395.6700, 1411.6100, 1377.9800, 1379.6600, 135600);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('MTD', '2026-02-25', 1386.9200, 1389.2300, 1368.6100, 1379.9100, 89700),
   ('MTD', '2026-02-26', 1387.0699, 1387.0699, 1354.1801, 1377.2200, 141500),
   ('MTD', '2026-02-27', 1364.7200, 1374.9900, 1341.8400, 1366.6899, 252900),
@@ -130609,7 +130609,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('NCLH', '2024-12-13', 27.3300, 27.4000, 26.6000, 26.8000, 7171400),
   ('NCLH', '2024-12-16', 26.9400, 27.1900, 26.4200, 26.6200, 7452600);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('NCLH', '2024-12-17', 26.4000, 26.7300, 26.1500, 26.3900, 6773000),
   ('NCLH', '2024-12-18', 26.7300, 26.9000, 24.9200, 25.1000, 8681800),
   ('NCLH', '2024-12-19', 25.5600, 25.9900, 24.8900, 25.4100, 9255000),
@@ -131111,7 +131111,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('NDAQ', '2025-05-14', 81.2200, 81.4000, 80.4500, 81.0600, 11221700),
   ('NDAQ', '2025-05-15', 80.7000, 81.4400, 80.5100, 81.2800, 4587200);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('NDAQ', '2025-05-16', 81.4500, 81.9000, 80.9500, 81.9000, 5145000),
   ('NDAQ', '2025-05-19', 81.2400, 82.2700, 81.0000, 81.9600, 3293100),
   ('NDAQ', '2025-05-20', 81.4800, 81.9800, 81.3800, 81.8300, 2071700),
@@ -131613,7 +131613,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('NDSN', '2025-10-09', 234.5300, 235.3800, 231.7700, 233.7600, 254100),
   ('NDSN', '2025-10-10', 234.3000, 236.3600, 227.9600, 228.1600, 485200);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('NDSN', '2025-10-13', 229.6800, 233.3800, 229.5800, 230.5200, 289400),
   ('NDSN', '2025-10-14', 227.8100, 234.9300, 225.3200, 233.3700, 228400),
   ('NDSN', '2025-10-15', 234.0600, 235.7700, 229.0000, 231.8500, 212400),
@@ -132115,7 +132115,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('NEE', '2026-03-09', 90.2700, 92.1900, 89.6500, 92.0100, 9563600),
   ('NEE', '2026-03-10', 91.7100, 92.1400, 91.0600, 91.5400, 7485900);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('NEE', '2026-03-11', 91.5400, 92.4600, 91.1000, 91.6600, 9734300),
   ('NEE', '2026-03-12', 91.2000, 92.7300, 90.8100, 91.7300, 8730000),
   ('NEE', '2026-03-13', 92.7300, 93.9000, 92.3100, 92.7800, 7504400),
@@ -132617,7 +132617,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('NFLX', '2024-12-30', 89.4510, 90.8230, 88.9710, 90.0430, 22030000),
   ('NFLX', '2024-12-31', 90.1800, 90.2680, 88.9470, 89.1320, 18759000);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('NFLX', '2025-01-02', 89.5500, 89.8580, 87.7000, 88.6730, 23123000),
   ('NFLX', '2025-01-03', 89.3130, 89.8830, 87.9890, 88.1050, 29673000),
   ('NFLX', '2025-01-06', 88.8760, 89.2830, 87.1690, 88.1790, 34577000),
@@ -133119,7 +133119,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('NI', '2025-05-29', 38.6300, 39.0300, 38.4800, 38.9900, 2717500),
   ('NI', '2025-05-30', 38.9200, 39.6100, 38.7200, 39.5400, 6150900);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('NI', '2025-06-02', 39.2700, 39.6000, 39.1500, 39.5900, 3127700),
   ('NI', '2025-06-03', 39.7000, 39.9100, 39.0200, 39.4300, 3779300),
   ('NI', '2025-06-04', 39.3800, 39.6000, 39.0000, 39.0800, 3048600),
@@ -133621,7 +133621,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('NKE', '2025-10-23', 69.0900, 69.8900, 68.7400, 69.6800, 9124900),
   ('NKE', '2025-10-24', 69.7100, 70.0800, 68.9100, 69.1100, 7102900);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('NKE', '2025-10-27', 70.0400, 70.4400, 68.2600, 68.5900, 9838100),
   ('NKE', '2025-10-28', 68.1100, 68.6100, 67.0500, 67.4300, 11262400),
   ('NKE', '2025-10-29', 67.0100, 67.1900, 64.9500, 65.3500, 15143100),
@@ -134123,7 +134123,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('NOC', '2026-03-23', 705.8500, 706.7300, 678.7500, 680.0000, 1225900),
   ('NOC', '2026-03-24', 670.0000, 689.2900, 668.2000, 682.1600, 730600);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('NOC', '2026-03-25', 685.4800, 692.7900, 681.8000, 691.2100, 579500),
   ('NOC', '2026-03-26', 689.6500, 696.9300, 687.4800, 691.9900, 543100),
   ('NOC', '2026-03-27', 692.2600, 693.8500, 677.9600, 679.0000, 581800),
@@ -134625,7 +134625,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('NRG', '2025-01-15', 103.0000, 104.9200, 102.2200, 104.0700, 2737800),
   ('NRG', '2025-01-16', 104.2800, 106.6500, 103.6900, 106.0000, 3465100);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('NRG', '2025-01-17', 106.4200, 106.4200, 103.7500, 104.5100, 2664500),
   ('NRG', '2025-01-21', 107.1300, 112.7900, 107.1300, 111.5500, 5339600),
   ('NRG', '2025-01-22', 115.0100, 115.3800, 109.5300, 110.3500, 3596900),
@@ -135127,7 +135127,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('NSC', '2025-06-12', 250.0500, 251.6600, 249.1600, 251.4700, 985000),
   ('NSC', '2025-06-13', 250.3000, 252.2100, 247.8500, 248.6000, 916900);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('NSC', '2025-06-16', 249.9600, 252.6600, 248.8200, 252.1300, 1049000),
   ('NSC', '2025-06-17', 250.8000, 252.7800, 249.3900, 250.4200, 1333300),
   ('NSC', '2025-06-18', 251.4400, 254.3800, 250.6500, 252.9300, 1410900),
@@ -135629,7 +135629,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('NTAP', '2025-11-06', 115.3900, 116.0700, 113.6100, 113.7700, 1807900),
   ('NTAP', '2025-11-07', 112.8400, 113.5500, 110.8400, 112.9700, 1764700);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('NTAP', '2025-11-10', 114.2900, 114.7400, 110.6200, 112.5000, 2084100),
   ('NTAP', '2025-11-11', 111.7400, 112.1200, 109.5700, 110.4200, 2071700),
   ('NTAP', '2025-11-12', 111.0000, 112.8000, 110.9200, 111.5700, 2255900),
@@ -136131,7 +136131,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('NTRS', '2026-04-07', 143.1000, 146.2600, 142.0000, 145.6300, 1004200),
   ('NTRS', '2026-04-08', 148.8900, 151.9200, 148.8900, 151.7400, 1212400);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('NTRS', '2026-04-09', 151.1700, 153.0100, 150.1300, 152.6300, 948700),
   ('NTRS', '2026-04-10', 152.0000, 152.6000, 151.2200, 152.2300, 824700),
   ('NTRS', '2026-04-13', 150.7000, 154.1000, 150.6900, 153.9900, 820000),
@@ -136633,7 +136633,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('NVDA', '2025-01-30', 123.1000, 125.0000, 118.1000, 124.6500, 392925500),
   ('NVDA', '2025-01-31', 123.7800, 127.8500, 119.1900, 120.0700, 388161100);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('NVDA', '2025-02-03', 114.7500, 118.5700, 113.0100, 116.6600, 371235700),
   ('NVDA', '2025-02-04', 116.9600, 121.2000, 116.7000, 118.6500, 256550000),
   ('NVDA', '2025-02-05', 121.7600, 125.0000, 120.7600, 124.8300, 262230800),
@@ -137135,7 +137135,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('NVR', '2025-06-27', 7304.8599, 7432.2798, 7281.4702, 7375.5098, 27500),
   ('NVR', '2025-06-30', 7385.2002, 7453.0200, 7327.5698, 7385.6602, 21200);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('NVR', '2025-07-01', 7369.9102, 7793.4399, 7369.9102, 7667.8501, 25400),
   ('NVR', '2025-07-02', 7684.5200, 7812.3999, 7684.5200, 7768.5098, 21100),
   ('NVR', '2025-07-03', 7747.0000, 7754.8198, 7560.0000, 7623.2402, 17800),
@@ -137637,7 +137637,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('NWS', '2025-11-20', 28.6100, 28.7800, 27.9200, 27.9800, 755900),
   ('NWS', '2025-11-21', 28.1000, 29.1000, 28.1000, 29.0000, 767900);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('NWS', '2025-11-24', 29.0000, 29.1600, 28.6200, 28.8600, 910100),
   ('NWS', '2025-11-25', 29.0200, 29.2400, 28.5100, 29.0600, 642200),
   ('NWS', '2025-11-26', 29.1400, 29.3800, 28.9900, 29.3200, 640000),
@@ -138139,7 +138139,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('NWSA', '2026-04-21', 25.9500, 26.5200, 25.8100, 26.4200, 3740300),
   ('NWSA', '2026-04-22', 26.2300, 26.8800, 25.8700, 26.6500, 3005300);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('NWSA', '2026-04-23', 26.5400, 26.6700, 25.9400, 26.3100, 3152000),
   ('NWSA', '2026-04-24', 26.4900, 26.5400, 26.0800, 26.2000, 3560900),
   ('NWSA', '2026-04-27', 26.1200, 26.6100, 26.1200, 26.4100, 2868000),
@@ -138641,7 +138641,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('O', '2025-02-13', 54.1200, 55.0000, 53.9300, 54.9200, 4129700),
   ('O', '2025-02-14', 55.0800, 55.4300, 54.4700, 54.4900, 3721300);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('O', '2025-02-18', 54.3500, 55.2400, 54.2300, 55.2300, 3811500),
   ('O', '2025-02-19', 55.0500, 55.8800, 55.0000, 55.6700, 4123500),
   ('O', '2025-02-20', 55.6700, 56.7000, 55.6700, 56.5200, 5226100),
@@ -139143,7 +139143,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('ODFL', '2025-07-14', 166.5200, 167.6000, 164.4800, 165.7300, 1017200),
   ('ODFL', '2025-07-15', 166.6400, 166.8100, 161.2000, 161.3500, 1142200);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('ODFL', '2025-07-16', 163.6800, 164.5000, 159.2000, 160.8300, 1452400),
   ('ODFL', '2025-07-17', 161.0200, 163.8900, 160.8300, 162.2300, 1770100),
   ('ODFL', '2025-07-18', 165.5100, 165.6800, 160.4500, 162.0900, 1548700),
@@ -139645,7 +139645,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('OKE', '2025-12-05', 76.0000, 76.8500, 75.9100, 76.3400, 3288200),
   ('OKE', '2025-12-08', 76.1900, 76.1900, 74.6200, 74.9300, 4919700);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('OKE', '2025-12-09', 74.9500, 75.9500, 74.7900, 74.9600, 3556500),
   ('OKE', '2025-12-10', 75.0300, 75.1300, 73.2800, 73.7800, 4426900),
   ('OKE', '2025-12-11', 73.7700, 74.6300, 73.4400, 73.6200, 3023100),
@@ -140147,7 +140147,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('OMC', '2026-05-05', 76.1300, 78.4100, 76.0500, 77.6400, 6516100),
   ('OMC', '2026-05-06', 78.4600, 78.5000, 76.7000, 76.9100, 5316200);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('OMC', '2026-05-07', 76.7600, 77.6100, 76.1100, 76.9200, 3841200),
   ('OMC', '2026-05-08', 77.0600, 77.4800, 75.7800, 77.0600, 2837700),
   ('OMC', '2026-05-11', 77.1500, 77.2800, 74.6100, 75.1500, 7468600),
@@ -140649,7 +140649,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('ORCL', '2025-02-28', 163.1100, 166.1500, 160.8100, 166.0600, 12843300),
   ('ORCL', '2025-03-03', 166.9500, 167.1200, 161.1300, 162.0200, 8081800);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('ORCL', '2025-03-04', 159.2200, 159.7600, 153.5200, 157.4700, 13171900),
   ('ORCL', '2025-03-05', 158.0600, 162.4900, 157.0500, 161.5600, 7141000),
   ('ORCL', '2025-03-06', 157.1600, 157.1600, 149.7300, 150.9400, 12321200),
@@ -141151,7 +141151,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('ORLY', '2025-07-28', 97.6500, 98.4400, 97.0800, 97.3300, 3657700),
   ('ORLY', '2025-07-29', 97.6500, 99.5900, 97.4600, 98.9000, 4922500);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('ORLY', '2025-07-30', 99.0100, 100.6000, 98.8100, 99.3800, 5165000),
   ('ORLY', '2025-07-31', 98.7600, 99.9700, 98.1000, 98.3200, 5581800),
   ('ORLY', '2025-08-01', 99.1000, 99.8000, 97.8800, 99.1200, 4719000),
@@ -141653,7 +141653,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('OTIS', '2025-12-19', 87.0800, 87.3800, 86.7400, 87.0600, 6964300),
   ('OTIS', '2025-12-22', 86.9400, 87.4300, 86.6400, 87.2400, 2496400);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('OTIS', '2025-12-23', 87.5400, 87.9400, 87.1200, 87.8300, 1926800),
   ('OTIS', '2025-12-24', 87.7000, 88.1550, 86.2200, 87.9000, 687600),
   ('OTIS', '2025-12-26', 87.9200, 88.1100, 87.4200, 87.6200, 987100),
@@ -142155,7 +142155,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('OXY', '2026-05-19', 60.1300, 60.9400, 59.6300, 60.7000, 12682600),
   ('OXY', '2026-05-20', 60.5000, 61.2400, 58.8300, 58.8700, 12476300);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('OXY', '2026-05-21', 60.6500, 60.8400, 58.0200, 58.8300, 14021500),
   ('OXY', '2026-05-22', 58.6900, 59.1700, 58.0800, 58.8100, 6390743),
   ('PANW', '2024-10-21', 187.4850, 192.0000, 186.5150, 189.2050, 4362600),
@@ -142657,7 +142657,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('PAYX', '2025-03-14', 143.3600, 145.8500, 143.2600, 145.4400, 1591300),
   ('PAYX', '2025-03-17', 144.9100, 148.4400, 144.4800, 147.9900, 1897000);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('PAYX', '2025-03-18', 146.4700, 147.5300, 145.6200, 146.9900, 1351100),
   ('PAYX', '2025-03-19', 147.0100, 147.9000, 146.1500, 147.5300, 1722300),
   ('PAYX', '2025-03-20', 146.7400, 147.4400, 145.0300, 145.2300, 1464000),
@@ -143159,7 +143159,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('PCAR', '2025-08-11', 98.0000, 98.2500, 96.2700, 97.1500, 1409500),
   ('PCAR', '2025-08-12', 97.5900, 99.6600, 96.6700, 98.9500, 2568900);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('PCAR', '2025-08-13', 98.9700, 101.6200, 98.9200, 100.6600, 2603800),
   ('PCAR', '2025-08-14', 99.7500, 100.4500, 98.3500, 99.6900, 2214600),
   ('PCAR', '2025-08-15', 100.2400, 100.4200, 97.9700, 98.2200, 1831000),
@@ -143661,7 +143661,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('PCG', '2026-01-06', 16.1000, 16.1500, 15.8700, 16.1500, 20980200),
   ('PCG', '2026-01-07', 16.2000, 16.2700, 15.4300, 15.5100, 25686500);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('PCG', '2026-01-08', 15.5200, 15.7400, 15.4600, 15.7200, 24692700),
   ('PCG', '2026-01-09', 15.7800, 16.0200, 15.7200, 15.8500, 10633800),
   ('PCG', '2026-01-12', 15.7800, 15.8800, 15.6300, 15.7000, 13628200),
@@ -144163,7 +144163,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('PEP', '2024-10-29', 169.2000, 169.2000, 166.9700, 167.5000, 5127900),
   ('PEP', '2024-10-30', 167.0000, 167.6400, 166.0800, 166.2100, 4801500);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('PEP', '2024-10-31', 166.1000, 167.5000, 165.8100, 166.0800, 5582400),
   ('PEP', '2024-11-01', 166.0900, 166.2500, 165.2100, 165.5900, 6339000),
   ('PEP', '2024-11-04', 165.5900, 166.6500, 165.1900, 166.3400, 4885500),
@@ -144665,7 +144665,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('PFE', '2025-03-28', 25.0300, 25.2200, 24.8100, 25.2100, 32352500),
   ('PFE', '2025-03-31', 24.8000, 25.4300, 24.6100, 25.3400, 53498100);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('PFE', '2025-04-01', 25.2900, 25.3500, 24.5200, 24.5400, 54444200),
   ('PFE', '2025-04-02', 24.5000, 24.7400, 24.3100, 24.7000, 41965000),
   ('PFE', '2025-04-03', 24.7400, 24.8700, 24.2800, 24.2900, 53501800),
@@ -145167,7 +145167,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('PFG', '2025-08-25', 80.5000, 80.8900, 79.8300, 80.2800, 619100),
   ('PFG', '2025-08-26', 79.9700, 80.5900, 79.3800, 80.5500, 974500);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('PFG', '2025-08-27', 80.3700, 81.3700, 79.8500, 80.8400, 775400),
   ('PFG', '2025-08-28', 81.0800, 81.1600, 79.8400, 80.2200, 1248600),
   ('PFG', '2025-08-29', 80.3000, 80.9700, 80.2000, 80.5100, 974700),
@@ -145669,7 +145669,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('PG', '2026-01-21', 147.0600, 147.3700, 144.9700, 146.0600, 14126800),
   ('PG', '2026-01-22', 148.0800, 150.9100, 147.5000, 149.9300, 18501900);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('PG', '2026-01-23', 150.8400, 151.6500, 149.8000, 150.1500, 14562600),
   ('PG', '2026-01-26', 150.1200, 150.8800, 148.5200, 149.4900, 12655700),
   ('PG', '2026-01-27', 148.0700, 149.6400, 147.9300, 148.3400, 9546000),
@@ -146171,7 +146171,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('PH', '2024-11-12', 708.2700, 709.4500, 698.4100, 699.3200, 551400),
   ('PH', '2024-11-13', 700.7000, 711.3400, 699.5700, 706.4600, 537500);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('PH', '2024-11-14', 705.4500, 706.0000, 695.8400, 697.6300, 594100),
   ('PH', '2024-11-15', 696.1100, 704.0700, 695.7900, 698.9100, 530800),
   ('PH', '2024-11-18', 694.8000, 697.0100, 690.9600, 691.6800, 480700),
@@ -146673,7 +146673,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('PHM', '2025-04-11', 93.1000, 94.5500, 89.8100, 94.5300, 2580000),
   ('PHM', '2025-04-14', 96.4000, 96.4000, 93.8300, 95.4400, 1903900);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('PHM', '2025-04-15', 95.3800, 96.6700, 94.1000, 94.7900, 1725900),
   ('PHM', '2025-04-16', 94.9500, 95.9200, 91.9900, 92.8600, 1647500),
   ('PHM', '2025-04-17', 93.5200, 95.5900, 93.0900, 94.9500, 2870600),
@@ -147175,7 +147175,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('PKG', '2025-09-09', 215.9500, 216.6700, 212.8600, 214.0700, 748000),
   ('PKG', '2025-09-10', 213.0500, 215.7300, 212.6900, 213.0500, 616600);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('PKG', '2025-09-11', 212.9100, 217.5100, 212.5200, 217.0300, 620100),
   ('PKG', '2025-09-12', 215.7400, 216.8500, 214.9100, 215.1500, 471200),
   ('PKG', '2025-09-15', 214.5300, 215.2800, 211.5200, 211.8100, 786400),
@@ -147677,7 +147677,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('PLD', '2026-02-04', 132.9100, 135.1200, 132.7800, 134.8400, 3888800),
   ('PLD', '2026-02-05', 134.3400, 136.9700, 133.5000, 136.1400, 3746800);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('PLD', '2026-02-06', 137.0100, 137.4900, 135.6600, 136.9500, 3120600),
   ('PLD', '2026-02-09', 136.3700, 137.4900, 135.1400, 137.2800, 2047300),
   ('PLD', '2026-02-10', 137.9200, 140.9600, 137.5000, 140.4800, 2831200),
@@ -148179,7 +148179,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('PM', '2024-11-26', 130.7300, 132.9400, 130.5300, 132.2800, 3462700),
   ('PM', '2024-11-27', 132.5500, 133.4200, 131.7300, 131.8200, 4054100);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('PM', '2024-11-29', 131.6400, 133.2400, 131.4300, 133.0600, 3255600),
   ('PM', '2024-12-02', 132.4900, 132.7900, 130.7600, 131.0200, 4136400),
   ('PM', '2024-12-03', 131.6900, 131.9500, 129.2900, 129.6900, 4739400),
@@ -148681,7 +148681,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('PNC', '2025-04-28', 158.8800, 160.7500, 158.1200, 159.6500, 1917500),
   ('PNC', '2025-04-29', 158.6900, 161.3700, 158.3700, 160.6000, 1643000);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('PNC', '2025-04-30', 157.8900, 161.0800, 156.7000, 160.6900, 2113600),
   ('PNC', '2025-05-01', 159.9300, 162.5800, 158.9200, 160.9900, 1996700),
   ('PNC', '2025-05-02', 163.1600, 165.9000, 163.1100, 165.5400, 1764800),
@@ -149183,7 +149183,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('PNR', '2025-09-23', 110.6400, 111.2300, 109.4600, 110.0900, 834800),
   ('PNR', '2025-09-24', 110.0100, 110.0900, 108.0200, 109.0000, 1287500);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('PNR', '2025-09-25', 107.9900, 108.6100, 107.5800, 108.3100, 724600),
   ('PNR', '2025-09-26', 108.6000, 110.0000, 108.5100, 109.7600, 689600),
   ('PNR', '2025-09-29', 110.6000, 110.9500, 109.1200, 109.6400, 872700),
@@ -149685,7 +149685,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('PNW', '2026-02-19', 98.0000, 98.9400, 96.8400, 98.4100, 1048600),
   ('PNW', '2026-02-20', 99.0800, 99.0800, 96.5300, 98.3400, 1192800);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('PNW', '2026-02-23', 98.6400, 100.0200, 98.6400, 99.6000, 905100),
   ('PNW', '2026-02-24', 99.5800, 100.6500, 98.4000, 100.0500, 1980200),
   ('PNW', '2026-02-25', 98.4600, 99.9500, 97.2300, 99.7900, 1948100),
@@ -150187,7 +150187,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('POOL', '2024-12-11', 379.3800, 380.0000, 374.6800, 375.6600, 300200),
   ('POOL', '2024-12-12', 373.0300, 373.0300, 365.5200, 369.5400, 276200);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('POOL', '2024-12-13', 367.9900, 369.2900, 360.2100, 362.9500, 361200),
   ('POOL', '2024-12-16', 361.4100, 366.4800, 359.6600, 362.3500, 336800),
   ('POOL', '2024-12-17', 360.5000, 363.6700, 357.6600, 358.5500, 299700),
@@ -150689,7 +150689,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('PPG', '2025-05-12', 113.9900, 117.4600, 113.5700, 114.2100, 1989100),
   ('PPG', '2025-05-13', 114.2500, 114.6700, 113.3000, 113.3400, 1857900);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('PPG', '2025-05-14', 113.0700, 113.4700, 111.1500, 111.6700, 1739900),
   ('PPG', '2025-05-15', 111.0600, 113.1300, 110.7900, 113.0600, 1398300),
   ('PPG', '2025-05-16', 112.9200, 114.1500, 112.0900, 114.0800, 3365300),
@@ -151191,7 +151191,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('PPL', '2025-10-07', 37.4100, 37.8100, 37.2800, 37.4900, 6031000),
   ('PPL', '2025-10-08', 37.5800, 37.6000, 37.1000, 37.2900, 3351400);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('PPL', '2025-10-09', 37.4000, 37.6000, 36.8800, 36.9400, 4281400),
   ('PPL', '2025-10-10', 37.0400, 37.4700, 36.9500, 37.2300, 3324100),
   ('PPL', '2025-10-13', 37.0500, 37.5400, 37.0100, 37.4400, 3560600),
@@ -151693,7 +151693,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('PRU', '2026-03-05', 97.6200, 99.3800, 97.5100, 99.1400, 2574300),
   ('PRU', '2026-03-06', 97.2500, 97.2500, 94.8400, 97.1200, 2626000);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('PRU', '2026-03-09', 96.0300, 97.0000, 93.3800, 95.9300, 2791900),
   ('PRU', '2026-03-10', 95.7500, 96.7600, 94.1900, 95.4700, 2271500),
   ('PRU', '2026-03-11', 95.0500, 96.1800, 93.1300, 94.9400, 2565000),
@@ -152195,7 +152195,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('PSKY', '2024-12-26', 10.3900, 10.4700, 10.3300, 10.4400, 6849800),
   ('PSKY', '2024-12-27', 10.3900, 10.5500, 10.3200, 10.4000, 5766200);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('PSKY', '2024-12-30', 10.3500, 10.4000, 10.2100, 10.3400, 8242100),
   ('PSKY', '2024-12-31', 10.3400, 10.5000, 10.3300, 10.4600, 9559000),
   ('PSKY', '2025-01-02', 10.5100, 10.6100, 10.4000, 10.5800, 9216900),
@@ -152697,7 +152697,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('PSX', '2025-05-27', 114.1600, 115.5700, 113.0800, 114.3300, 2832700),
   ('PSX', '2025-05-28', 115.2700, 115.4600, 112.5100, 112.7700, 2006400);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('PSX', '2025-05-29', 112.8800, 115.0500, 112.2900, 114.6800, 2609900),
   ('PSX', '2025-05-30', 114.3400, 114.9600, 113.1600, 113.4800, 4559900),
   ('PSX', '2025-06-02', 115.0800, 115.3400, 111.1900, 114.2800, 2841300),
@@ -153199,7 +153199,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('PTC', '2025-10-21', 204.8400, 206.8200, 203.5900, 204.5500, 623700),
   ('PTC', '2025-10-22', 205.8300, 205.8300, 202.1400, 203.0300, 628400);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('PTC', '2025-10-23', 204.1000, 204.8600, 202.8800, 204.6700, 638600),
   ('PTC', '2025-10-24', 206.1500, 206.5700, 204.6100, 204.8100, 534000),
   ('PTC', '2025-10-27', 206.4900, 206.6700, 202.9600, 203.2800, 593800),
@@ -153701,7 +153701,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('PWR', '2026-03-19', 561.8000, 580.8800, 558.5800, 577.9500, 853500),
   ('PWR', '2026-03-20', 577.5900, 582.4800, 551.0500, 555.3900, 1689500);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('PWR', '2026-03-23', 559.6800, 582.0000, 558.4000, 567.4500, 1217400),
   ('PWR', '2026-03-24', 563.7700, 581.9400, 559.0200, 578.4400, 1450600),
   ('PWR', '2026-03-25', 580.0000, 582.4800, 572.8000, 573.5000, 979200),
@@ -154203,7 +154203,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('Q', '2025-01-13', NULL, NULL, NULL, NULL, NULL),
   ('Q', '2025-01-14', NULL, NULL, NULL, NULL, NULL);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('Q', '2025-01-15', NULL, NULL, NULL, NULL, NULL),
   ('Q', '2025-01-16', NULL, NULL, NULL, NULL, NULL),
   ('Q', '2025-01-17', NULL, NULL, NULL, NULL, NULL),
@@ -154705,7 +154705,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('QCOM', '2025-06-10', 156.1900, 159.5100, 155.0700, 159.1300, 9068400),
   ('QCOM', '2025-06-11', 160.0000, 162.1400, 157.7000, 159.4800, 8859900);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('QCOM', '2025-06-12', 159.0000, 159.6100, 157.9500, 158.7000, 5689400),
   ('QCOM', '2025-06-13', 156.3400, 157.1700, 154.4400, 154.7200, 8446400),
   ('QCOM', '2025-06-16', 157.0300, 158.4500, 155.6400, 156.8700, 8686300),
@@ -155207,7 +155207,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('RCL', '2025-11-04', 266.3500, 267.5000, 256.0600, 257.3800, 3815500),
   ('RCL', '2025-11-05', 257.4100, 262.8900, 256.1100, 256.6300, 1991800);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('RCL', '2025-11-06', 255.0000, 256.6800, 252.3400, 253.5700, 1660700),
   ('RCL', '2025-11-07', 252.0000, 257.7300, 251.2200, 256.0100, 1893900),
   ('RCL', '2025-11-10', 259.5700, 265.4800, 256.1600, 264.9800, 2626300),
@@ -155709,7 +155709,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('REG', '2026-04-02', 76.1100, 77.3300, 75.6900, 76.9800, 1994400),
   ('REG', '2026-04-06', 76.9400, 77.1500, 76.4100, 76.6300, 936500);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('REG', '2026-04-07', 76.4500, 77.5500, 76.4500, 77.3300, 1144500),
   ('REG', '2026-04-08', 77.8500, 78.1200, 77.1700, 77.8600, 1945000),
   ('REG', '2026-04-09', 77.7000, 78.9900, 77.5600, 78.3500, 1206600),
@@ -156211,7 +156211,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('RF', '2025-01-28', 24.7100, 24.8600, 24.5400, 24.7500, 8675500),
   ('RF', '2025-01-29', 24.7500, 25.2500, 24.5700, 24.5800, 7472600);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('RF', '2025-01-30', 24.8900, 25.0400, 24.5400, 24.7700, 6473600),
   ('RF', '2025-01-31', 24.7000, 24.9200, 24.5100, 24.6400, 13614400),
   ('RF', '2025-02-03', 23.9400, 24.2700, 23.6900, 24.0500, 7173000),
@@ -156713,7 +156713,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('RJF', '2025-06-25', 151.2300, 151.9900, 150.0400, 151.7300, 889800),
   ('RJF', '2025-06-26', 151.7600, 152.9000, 149.3500, 152.6100, 1176800);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('RJF', '2025-06-27', 153.1500, 154.5100, 152.1200, 153.2300, 1843900),
   ('RJF', '2025-06-30', 153.6600, 154.5200, 152.0800, 153.3700, 1138200),
   ('RJF', '2025-07-01', 152.4000, 155.3500, 151.7000, 154.6400, 919500),
@@ -157215,7 +157215,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('RL', '2025-11-18', 321.2100, 329.2700, 320.6000, 328.2600, 542900),
   ('RL', '2025-11-19', 327.0000, 332.7800, 326.4000, 330.8800, 457800);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('RL', '2025-11-20', 336.0000, 338.4900, 326.9400, 326.9600, 481500),
   ('RL', '2025-11-21', 329.2600, 343.4400, 329.2400, 339.8800, 759400),
   ('RL', '2025-11-24', 339.6500, 351.2600, 337.8700, 349.9800, 828100),
@@ -157717,7 +157717,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('RMD', '2026-04-17', 226.0900, 230.0300, 225.4700, 228.1200, 1173200),
   ('RMD', '2026-04-20', 227.6600, 229.3000, 224.3000, 226.1400, 1072500);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('RMD', '2026-04-21', 225.5100, 227.3100, 220.0000, 221.2200, 1127700),
   ('RMD', '2026-04-22', 222.0000, 225.1800, 220.2100, 222.0400, 834000),
   ('RMD', '2026-04-23', 221.3800, 221.4700, 216.6800, 219.5100, 987000),
@@ -158219,7 +158219,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('ROL', '2025-02-11', 50.0100, 50.1100, 49.7600, 49.9400, 2413100),
   ('ROL', '2025-02-12', 49.3100, 50.2800, 49.1600, 50.1000, 2895000);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('ROL', '2025-02-13', 50.5700, 52.8400, 50.1100, 51.9200, 3707900),
   ('ROL', '2025-02-14', 52.1100, 52.1500, 50.5800, 50.7300, 2819000),
   ('ROL', '2025-02-18', 50.5700, 50.8100, 49.7500, 50.0100, 1980900),
@@ -158721,7 +158721,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('ROP', '2025-07-10', 553.5900, 555.8800, 544.6700, 549.8000, 944600),
   ('ROP', '2025-07-11', 549.8300, 551.9700, 545.7500, 547.4600, 743000);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('ROP', '2025-07-14', 546.0200, 548.5800, 541.2000, 548.3300, 545800),
   ('ROP', '2025-07-15', 548.4200, 551.0200, 544.7800, 544.8200, 669100),
   ('ROP', '2025-07-16', 545.5900, 548.9500, 541.9000, 545.2300, 669500),
@@ -159223,7 +159223,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('ROST', '2025-12-03', 178.3700, 178.6400, 177.1200, 178.0000, 3434600),
   ('ROST', '2025-12-04', 178.6700, 179.0500, 176.0100, 177.0900, 3431500);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('ROST', '2025-12-05', 177.4800, 177.9400, 176.0300, 177.8700, 2904200),
   ('ROST', '2025-12-08', 178.3400, 179.4200, 177.5500, 178.1900, 2553900),
   ('ROST', '2025-12-09', 177.3100, 177.6900, 175.6400, 177.0200, 2024900),
@@ -159725,7 +159725,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('RSG', '2026-05-01', 211.0500, 211.7000, 206.3600, 206.5600, 1243400),
   ('RSG', '2026-05-04', 205.8700, 207.8800, 205.1900, 206.5500, 1627200);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('RSG', '2026-05-05', 206.5200, 206.5200, 203.7000, 203.8800, 1247900),
   ('RSG', '2026-05-06', 202.4000, 203.0000, 199.5500, 199.6900, 2386600),
   ('RSG', '2026-05-07', 198.9400, 201.9700, 198.2400, 201.5500, 2782700),
@@ -160227,7 +160227,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('RVTY', '2025-02-26', 115.8500, 116.3800, 114.2800, 115.1100, 493000),
   ('RVTY', '2025-02-27', 114.2600, 114.4500, 107.3900, 110.4500, 1026100);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('RVTY', '2025-02-28', 111.0700, 112.5500, 110.2900, 112.1500, 1309500),
   ('RVTY', '2025-03-03', 112.7400, 113.0600, 109.9400, 110.3900, 1031600),
   ('RVTY', '2025-03-04', 109.6200, 110.4000, 106.6100, 109.2600, 948500),
@@ -160729,7 +160729,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('SATS', '2025-07-24', 29.9900, 30.0700, 29.0200, 29.8400, 2101500),
   ('SATS', '2025-07-25', 29.7800, 29.8900, 28.8900, 29.6700, 1222800);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('SATS', '2025-07-28', 29.4500, 29.8700, 29.1100, 29.7700, 1206500),
   ('SATS', '2025-07-29', 30.1300, 30.3000, 29.2900, 29.5100, 1649400),
   ('SATS', '2025-07-30', 30.0000, 34.2000, 29.4300, 32.8200, 6151300),
@@ -161231,7 +161231,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('SBAC', '2025-12-17', 189.5000, 192.5200, 189.3700, 190.9500, 755000),
   ('SBAC', '2025-12-18', 191.3300, 192.1800, 189.2200, 190.3600, 956100);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('SBAC', '2025-12-19', 189.2200, 191.3900, 188.3800, 190.0100, 1526800),
   ('SBAC', '2025-12-22', 188.6300, 191.5200, 186.1200, 190.6300, 673100),
   ('SBAC', '2025-12-23', 191.2100, 191.9700, 188.7800, 191.9100, 700000),
@@ -161733,7 +161733,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('SBUX', '2026-05-15', 105.7500, 107.8800, 105.0000, 106.8200, 6463900),
   ('SBUX', '2026-05-18', 106.7900, 108.1100, 105.8400, 106.6000, 6587800);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('SBUX', '2026-05-19', 105.5400, 107.5600, 105.1100, 106.3800, 5265800),
   ('SBUX', '2026-05-20', 106.3800, 107.4600, 105.4100, 106.5000, 6632500),
   ('SBUX', '2026-05-21', 105.8600, 106.1600, 103.6200, 104.1300, 8342800),
@@ -162235,7 +162235,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('SHW', '2025-03-12', 357.1900, 357.2500, 348.6800, 349.8300, 1418800),
   ('SHW', '2025-03-13', 350.6100, 354.6200, 341.5300, 342.1000, 1959500);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('SHW', '2025-03-14', 343.9500, 345.3000, 339.1900, 341.7800, 1860100),
   ('SHW', '2025-03-17', 339.6000, 344.2300, 337.6200, 342.2500, 1760100),
   ('SHW', '2025-03-18', 339.2200, 341.5000, 334.8900, 335.5300, 1645300),
@@ -162737,7 +162737,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('SJM', '2025-08-07', 109.4300, 111.2200, 108.7300, 110.9500, 1045000),
   ('SJM', '2025-08-08', 111.1000, 111.6300, 110.0500, 110.7200, 1278100);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('SJM', '2025-08-11', 111.0900, 111.5400, 110.1900, 110.9300, 1234400),
   ('SJM', '2025-08-12', 111.2600, 111.9000, 110.5800, 111.3700, 905400),
   ('SJM', '2025-08-13', 111.3400, 113.3800, 111.2100, 113.0100, 1233500),
@@ -163239,7 +163239,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('SLB', '2026-01-02', 38.4100, 40.4400, 38.0700, 40.2000, 14637200),
   ('SLB', '2026-01-05', 43.0000, 45.1600, 42.5200, 43.8000, 56362600);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('SLB', '2026-01-06', 44.2800, 44.5700, 43.4200, 43.6300, 28955400),
   ('SLB', '2026-01-07', 43.8900, 43.9000, 42.2000, 42.3700, 17255900),
   ('SLB', '2026-01-08', 42.8600, 44.5700, 42.6600, 44.4300, 20138500),
@@ -163741,7 +163741,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('SNA', '2024-10-25', 328.0000, 328.4300, 324.6300, 326.5800, 222100),
   ('SNA', '2024-10-28', 330.6300, 334.3900, 329.4200, 332.5900, 379500);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('SNA', '2024-10-29', 329.9600, 335.5000, 328.3200, 333.4800, 376000),
   ('SNA', '2024-10-30', 333.5400, 337.7200, 332.6800, 333.0500, 422000),
   ('SNA', '2024-10-31', 332.9400, 334.2100, 330.0100, 330.1300, 545200),
@@ -164243,7 +164243,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('SNDK', '2025-03-26', 53.5300, 53.7000, 51.9800, 52.6200, 1242400),
   ('SNDK', '2025-03-27', 51.9500, 54.2400, 51.7100, 52.8800, 1618100);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('SNDK', '2025-03-28', 52.2100, 52.8900, 48.4550, 48.9700, 3987300),
   ('SNDK', '2025-03-31', 47.4100, 48.3950, 47.0200, 47.6100, 2113400),
   ('SNDK', '2025-04-01', 47.5500, 49.3600, 46.5800, 48.1100, 2115600),
@@ -164745,7 +164745,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('SNPS', '2025-08-21', 597.1900, 603.9400, 593.0500, 598.1700, 1145600),
   ('SNPS', '2025-08-22', 600.3600, 612.9800, 597.4800, 606.5200, 863200);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('SNPS', '2025-08-25', 604.9700, 605.3400, 596.1000, 597.0000, 783800),
   ('SNPS', '2025-08-26', 595.9300, 600.1300, 593.0000, 596.0000, 1224400),
   ('SNPS', '2025-08-27', 596.9400, 603.8700, 593.3200, 603.1700, 916200),
@@ -165247,7 +165247,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('SO', '2026-01-16', 88.5200, 89.4000, 88.1800, 88.9000, 5201600),
   ('SO', '2026-01-20', 88.6000, 89.1800, 87.5400, 88.8200, 6844500);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('SO', '2026-01-21', 89.3300, 89.5500, 88.1200, 89.1500, 8555900),
   ('SO', '2026-01-22', 89.1300, 89.4500, 87.3900, 87.5100, 8025700),
   ('SO', '2026-01-23', 87.7700, 88.5000, 86.8900, 87.5400, 5483900),
@@ -165749,7 +165749,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('SPG', '2024-11-08', 176.2700, 179.4600, 176.2700, 179.0200, 972000),
   ('SPG', '2024-11-11', 178.8400, 181.8600, 178.5000, 181.3400, 1491200);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('SPG', '2024-11-12', 181.1900, 182.8400, 178.1600, 178.2200, 1516500),
   ('SPG', '2024-11-13', 179.3800, 181.1900, 178.5000, 179.1700, 1197200),
   ('SPG', '2024-11-14', 179.2100, 180.7900, 177.8800, 178.3100, 1187600),
@@ -166251,7 +166251,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('SPGI', '2025-04-09', 435.0000, 475.9400, 428.0000, 473.9900, 2733400),
   ('SPGI', '2025-04-10', 471.0600, 471.0600, 447.4800, 457.7600, 1685200);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('SPGI', '2025-04-11', 456.0300, 466.9000, 450.7800, 465.1400, 1045200),
   ('SPGI', '2025-04-14', 472.1800, 475.0000, 468.4600, 471.5900, 825300),
   ('SPGI', '2025-04-15', 472.5400, 475.8100, 470.0300, 470.7100, 1086100),
@@ -166753,7 +166753,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('SPY', '2025-03-06', 575.4800, 580.1700, 570.1200, 572.7100, 80094900),
   ('SPY', '2025-03-07', 570.9000, 577.3900, 565.6300, 575.9200, 81158800);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('SPY', '2025-03-10', 567.5900, 569.5400, 555.5900, 560.5800, 99326600),
   ('SPY', '2025-03-11', 559.4000, 564.0200, 552.0200, 555.9200, 88102100),
   ('SPY', '2025-03-12', 562.1700, 563.1100, 553.6900, 558.8700, 69588200),
@@ -167255,7 +167255,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('SRE', '2025-08-01', 81.6600, 81.7800, 80.4500, 80.9700, 2661700),
   ('SRE', '2025-08-04', 81.5400, 83.4900, 81.4000, 82.9800, 4358600);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('SRE', '2025-08-05', 83.2500, 83.2600, 80.6500, 82.3700, 5165600),
   ('SRE', '2025-08-06', 82.4300, 82.9200, 80.8900, 81.1500, 4807300),
   ('SRE', '2025-08-07', 81.4900, 83.2400, 81.0000, 82.5900, 5962200),
@@ -167757,7 +167757,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('STE', '2025-12-26', 255.5200, 256.9700, 253.8700, 255.4200, 284000),
   ('STE', '2025-12-29', 255.7300, 257.2400, 255.3400, 256.2200, 366500);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('STE', '2025-12-30', 255.1900, 256.3400, 253.0000, 255.4700, 278000),
   ('STE', '2025-12-31', 255.5000, 255.7900, 252.6700, 253.5200, 411100),
   ('STE', '2026-01-02', 253.4300, 253.4300, 246.6500, 250.0400, 678700),
@@ -168259,7 +168259,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('STT', '2024-10-21', 91.2000, 91.3600, 89.7800, 90.1900, 1637900),
   ('STT', '2024-10-22', 89.8600, 90.2200, 89.3500, 89.8600, 1403500);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('STT', '2024-10-23', 89.6000, 91.5700, 89.5000, 91.4300, 2457700),
   ('STT', '2024-10-24', 91.9900, 92.0600, 91.3200, 91.8700, 1722300),
   ('STT', '2024-10-25', 92.6400, 92.6400, 90.3700, 90.3800, 1553900),
@@ -168761,7 +168761,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('STX', '2025-03-20', 88.2900, 89.7800, 88.2900, 88.3800, 2060500),
   ('STX', '2025-03-21', 87.9500, 88.6900, 86.6000, 88.2700, 2576000);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('STX', '2025-03-24', 89.4100, 90.0700, 88.4800, 88.7900, 1715000),
   ('STX', '2025-03-25', 88.3200, 88.4400, 85.7300, 87.9600, 3154000),
   ('STX', '2025-03-26', 87.6000, 88.1900, 85.9400, 87.6300, 3534900),
@@ -169263,7 +169263,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('STZ', '2025-08-15', 170.6500, 171.0000, 168.0500, 168.2300, 1522100),
   ('STZ', '2025-08-18', 168.7500, 169.1600, 165.8700, 166.2500, 1994200);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('STZ', '2025-08-19', 167.7700, 168.5500, 165.0200, 165.9000, 2255800),
   ('STZ', '2025-08-20', 166.5000, 169.0000, 165.2600, 166.3000, 1465100),
   ('STZ', '2025-08-21', 166.0000, 166.0800, 163.2900, 164.9300, 1560700),
@@ -169765,7 +169765,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('SW', '2026-01-12', 42.6600, 43.2200, 41.9200, 42.9400, 4894000),
   ('SW', '2026-01-13', 42.9000, 43.0000, 42.2900, 42.6800, 4208700);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('SW', '2026-01-14', 42.9500, 43.2450, 42.4000, 42.7400, 3774900),
   ('SW', '2026-01-15', 42.4200, 43.6650, 42.4200, 43.3300, 4089700),
   ('SW', '2026-01-16', 43.1300, 43.2110, 42.3250, 42.7100, 4285800),
@@ -170267,7 +170267,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('SWKS', '2024-11-04', 88.3900, 89.3300, 87.1900, 87.9500, 1572600),
   ('SWKS', '2024-11-05', 87.4600, 88.8300, 86.9300, 88.5800, 1737600);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('SWKS', '2024-11-06', 90.1400, 91.0000, 88.9800, 90.4700, 2276800),
   ('SWKS', '2024-11-07', 91.3200, 91.5000, 90.3900, 91.1700, 1906600),
   ('SWKS', '2024-11-08', 90.1600, 90.2800, 88.1600, 89.1600, 2833300),
@@ -170769,7 +170769,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('SYF', '2025-04-03', 50.7800, 51.3500, 46.3400, 46.5600, 11259300),
   ('SYF', '2025-04-04', 44.3500, 44.6650, 41.3100, 43.8100, 9503800);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('SYF', '2025-04-07', 40.9900, 46.4700, 40.5450, 44.8100, 9164700),
   ('SYF', '2025-04-08', 46.7600, 47.1500, 43.0550, 43.8300, 6307600),
   ('SYF', '2025-04-09', 42.6200, 51.7100, 42.0950, 50.4800, 11825300),
@@ -171271,7 +171271,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('SYK', '2025-08-29', 389.7700, 391.9900, 388.3500, 391.4100, 672500),
   ('SYK', '2025-09-02', 388.9200, 390.9000, 386.0100, 389.9400, 1141000);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('SYK', '2025-09-03', 389.8800, 391.4000, 384.2500, 388.5600, 898000),
   ('SYK', '2025-09-04', 389.1200, 396.8600, 386.8100, 394.3400, 1040200),
   ('SYK', '2025-09-05', 394.0000, 396.3700, 389.6400, 392.3100, 1094100),
@@ -171773,7 +171773,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('SYY', '2026-01-27', 78.9200, 83.9600, 77.3100, 83.9200, 11004300),
   ('SYY', '2026-01-28', 84.0000, 85.3300, 82.9100, 83.5100, 5696000);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('SYY', '2026-01-29', 83.7700, 84.1700, 83.0000, 84.1100, 4081700),
   ('SYY', '2026-01-30', 84.0300, 84.3300, 83.0800, 83.8500, 5243100),
   ('SYY', '2026-02-02', 84.1200, 84.3800, 82.6300, 82.8600, 5313200),
@@ -172275,7 +172275,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('TAP', '2024-11-18', 62.4500, 62.8200, 61.8200, 61.8700, 1448300),
   ('TAP', '2024-11-19', 61.5400, 61.7300, 60.6000, 60.8000, 1741800);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('TAP', '2024-11-20', 60.7600, 60.9600, 59.6200, 60.3800, 1573500),
   ('TAP', '2024-11-21', 60.4100, 60.8500, 60.3200, 60.4700, 1331500),
   ('TAP', '2024-11-22', 60.4600, 60.9200, 60.1600, 60.3600, 1488300),
@@ -172777,7 +172777,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('TDG', '2025-04-17', 1342.9000, 1361.4100, 1333.8000, 1337.6600, 224400),
   ('TDG', '2025-04-21', 1331.4100, 1340.0601, 1290.5400, 1306.5500, 234400);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('TDG', '2025-04-22', 1314.0400, 1316.2900, 1277.7100, 1307.9000, 457100),
   ('TDG', '2025-04-23', 1336.2500, 1368.8000, 1331.3900, 1352.0000, 324800),
   ('TDG', '2025-04-24', 1354.3900, 1372.7000, 1348.2800, 1368.0200, 210300),
@@ -173279,7 +173279,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('TDY', '2025-09-15', 555.0200, 558.9300, 554.8400, 556.6600, 204700),
   ('TDY', '2025-09-16', 556.1900, 560.0000, 553.8700, 554.8800, 238100);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('TDY', '2025-09-17', 556.7000, 558.8200, 546.5700, 550.8700, 237600),
   ('TDY', '2025-09-18', 550.8700, 564.0300, 550.8700, 562.6300, 201900),
   ('TDY', '2025-09-19', 566.5000, 567.2300, 559.7800, 565.4100, 407900),
@@ -173781,7 +173781,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('TECH', '2026-02-10', 65.4800, 65.9400, 64.4200, 64.8000, 1708300),
   ('TECH', '2026-02-11', 64.3300, 64.7800, 62.7900, 63.4500, 2468300);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('TECH', '2026-02-12', 62.8200, 63.4600, 58.0400, 59.5400, 2889800),
   ('TECH', '2026-02-13', 59.6100, 61.1400, 59.0700, 59.9300, 3679200),
   ('TECH', '2026-02-17', 59.8200, 60.1100, 58.3500, 58.5000, 2559400),
@@ -174283,7 +174283,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('TER', '2024-12-03', 111.5600, 116.1000, 111.2300, 115.4700, 2669500),
   ('TER', '2024-12-04', 118.0100, 118.1100, 114.6600, 116.8900, 2628600);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('TER', '2024-12-05', 116.2100, 117.0800, 113.0300, 113.7200, 1924100),
   ('TER', '2024-12-06', 114.9900, 119.7800, 114.5000, 118.5100, 3466800),
   ('TER', '2024-12-09', 119.1100, 122.6200, 117.7000, 119.5600, 2828800),
@@ -174785,7 +174785,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('TFC', '2025-05-02', 39.3900, 39.5900, 38.8700, 39.4700, 7950100),
   ('TFC', '2025-05-05', 39.0700, 39.8700, 39.0200, 39.3500, 5954400);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('TFC', '2025-05-06', 38.8800, 39.4600, 38.7600, 38.9700, 7528100),
   ('TFC', '2025-05-07', 39.2600, 39.4800, 38.5500, 38.7100, 10077400),
   ('TFC', '2025-05-08', 39.2700, 39.7900, 38.9200, 39.5600, 7294500),
@@ -175287,7 +175287,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('TGT', '2025-09-29', 88.3600, 88.8300, 87.3100, 88.8300, 7955600),
   ('TGT', '2025-09-30', 88.5000, 90.2100, 87.2600, 89.7000, 16872300);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('TGT', '2025-10-01', 89.4800, 89.5000, 87.2600, 89.1400, 10378500),
   ('TGT', '2025-10-02', 88.9300, 90.2800, 88.1800, 89.5100, 7557400),
   ('TGT', '2025-10-03', 89.8000, 90.3700, 88.2800, 89.0300, 6872000),
@@ -175789,7 +175789,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('TJX', '2026-02-25', 157.5500, 162.6800, 154.8000, 155.8200, 8042000),
   ('TJX', '2026-02-26', 157.8200, 159.3300, 156.4200, 158.6900, 5987700);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('TJX', '2026-02-27', 158.4300, 161.6600, 158.4000, 161.6600, 7099900),
   ('TJX', '2026-03-02', 160.2200, 161.5000, 158.7500, 159.9400, 4924400),
   ('TJX', '2026-03-03', 158.6600, 159.7200, 155.7500, 159.7100, 5060100),
@@ -176291,7 +176291,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('TMO', '2024-12-17', 526.0100, 535.9400, 526.0100, 528.8400, 2544800),
   ('TMO', '2024-12-18', 528.0000, 533.3400, 515.9000, 516.1800, 1774300);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('TMO', '2024-12-19', 518.7200, 522.4300, 508.8600, 516.6900, 2235600),
   ('TMO', '2024-12-20', 516.6900, 526.4300, 515.0000, 524.0500, 2758900),
   ('TMO', '2024-12-23', 520.1800, 526.2400, 519.5900, 525.2900, 1558100),
@@ -176793,7 +176793,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('TMUS', '2025-05-16', 240.5200, 243.3200, 238.6400, 242.6600, 4402200),
   ('TMUS', '2025-05-19', 243.0000, 246.0200, 242.9100, 244.2500, 4238000);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('TMUS', '2025-05-20', 245.1200, 245.6300, 239.1200, 241.2100, 4787700),
   ('TMUS', '2025-05-21', 241.2100, 243.2300, 239.0100, 240.7600, 4110000),
   ('TMUS', '2025-05-22', 241.5300, 242.0600, 239.4400, 240.8200, 3200600),
@@ -177295,7 +177295,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('TPL', '2025-10-13', 299.2067, 303.7500, 296.7100, 297.4100, 317100),
   ('TPL', '2025-10-14', 291.4333, 306.9033, 287.5100, 302.5067, 415800);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('TPL', '2025-10-15', 305.0000, 314.4800, 305.0000, 308.9167, 440700),
   ('TPL', '2025-10-16', 308.8467, 314.9500, 306.4400, 312.7267, 465900),
   ('TPL', '2025-10-17', 310.4200, 313.3800, 306.1800, 312.9933, 420300),
@@ -177797,7 +177797,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('TPR', '2026-03-11', 147.5200, 149.4300, 145.2300, 145.4200, 2586700),
   ('TPR', '2026-03-12', 143.3600, 145.2800, 141.5800, 142.6700, 2096700);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('TPR', '2026-03-13', 143.5400, 145.4500, 141.9800, 142.1000, 1505000),
   ('TPR', '2026-03-16', 144.0600, 146.9400, 141.4800, 141.7800, 1527600),
   ('TPR', '2026-03-17', 143.1300, 144.4100, 142.7200, 143.1600, 1162700),
@@ -178299,7 +178299,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('TRMB', '2025-01-02', 70.7100, 71.0800, 69.2300, 69.7100, 1340500),
   ('TRMB', '2025-01-03', 70.2800, 70.8200, 69.7100, 70.5700, 939000);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('TRMB', '2025-01-06', 70.6200, 72.2800, 70.3000, 71.1000, 1412000),
   ('TRMB', '2025-01-07', 71.2600, 73.1600, 71.2600, 72.0200, 2115100),
   ('TRMB', '2025-01-08', 71.4200, 72.6500, 71.0300, 72.5400, 1153700),
@@ -178801,7 +178801,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('TROW', '2025-06-02', 93.0200, 93.0800, 91.4400, 92.1500, 1687500),
   ('TROW', '2025-06-03', 92.1500, 94.2500, 91.8800, 93.5800, 1454100);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('TROW', '2025-06-04', 93.7500, 94.2500, 93.4600, 93.7900, 1300300),
   ('TROW', '2025-06-05', 94.1700, 94.7000, 92.9800, 93.2400, 1235100),
   ('TROW', '2025-06-06', 94.5700, 95.3300, 93.4100, 94.2800, 1296000),
@@ -179303,7 +179303,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('TRV', '2025-10-27', 269.6400, 270.5900, 268.4900, 270.3400, 1108100),
   ('TRV', '2025-10-28', 269.4500, 272.3200, 267.5300, 268.1300, 1341300);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('TRV', '2025-10-29', 265.2800, 269.3300, 265.2400, 267.9100, 1262700),
   ('TRV', '2025-10-30', 269.0600, 274.5400, 267.9000, 271.0100, 1473500),
   ('TRV', '2025-10-31', 268.3200, 271.1000, 267.7500, 268.6200, 1900900),
@@ -179805,7 +179805,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('TSCO', '2026-03-25', 46.2400, 46.6200, 45.1900, 45.9600, 3941400),
   ('TSCO', '2026-03-26', 45.9100, 46.5600, 45.7000, 45.8900, 4049700);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('TSCO', '2026-03-27', 45.7500, 46.1800, 44.7900, 44.8700, 9052700),
   ('TSCO', '2026-03-30', 45.5200, 45.8500, 45.1300, 45.4100, 4639600),
   ('TSCO', '2026-03-31', 45.8200, 46.4000, 44.7400, 45.3000, 8226800),
@@ -180307,7 +180307,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('TSN', '2025-01-17', 55.8500, 56.2400, 55.6200, 55.7100, 1908400),
   ('TSN', '2025-01-21', 55.5500, 56.5700, 55.5400, 56.4600, 2166600);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('TSN', '2025-01-22', 56.3000, 56.3300, 55.4900, 55.6000, 2060200),
   ('TSN', '2025-01-23', 55.6000, 56.4500, 55.5700, 56.0700, 2721600),
   ('TSN', '2025-01-24', 55.9500, 56.7900, 55.8700, 56.4400, 2831700),
@@ -180809,7 +180809,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('TT', '2025-06-16', 424.6100, 432.0800, 423.4500, 426.6100, 1393800),
   ('TT', '2025-06-17', 422.5000, 425.8500, 421.3400, 421.9500, 1074500);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('TT', '2025-06-18', 422.2200, 425.6500, 419.4100, 419.8600, 1708500),
   ('TT', '2025-06-20', 422.0000, 426.6400, 417.7200, 419.7000, 2199400),
   ('TT', '2025-06-23', 420.7500, 427.2700, 418.0000, 426.9200, 786400),
@@ -181311,7 +181311,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('TTD', '2025-11-10', 44.0500, 44.8700, 42.0100, 43.2600, 23444600),
   ('TTD', '2025-11-11', 43.3100, 44.4900, 43.0500, 44.2000, 13144600);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('TTD', '2025-11-12', 44.8900, 45.5000, 43.5300, 43.7900, 10335800),
   ('TTD', '2025-11-13', 43.5000, 43.8600, 42.4900, 42.8700, 9301200),
   ('TTD', '2025-11-14', 42.1450, 42.6900, 41.5000, 41.9300, 11493500),
@@ -181813,7 +181813,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('TTWO', '2026-04-09', 201.0100, 201.2100, 197.5900, 198.0500, 1493800),
   ('TTWO', '2026-04-10', 197.4000, 199.2100, 194.5100, 197.0700, 1532900);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('TTWO', '2026-04-13', 197.4800, 202.1900, 196.0100, 201.3600, 2078800),
   ('TTWO', '2026-04-14', 202.5200, 207.8400, 202.2600, 205.1000, 1731000),
   ('TTWO', '2026-04-15', 207.6600, 215.3700, 206.5800, 214.1500, 1951700),
@@ -182315,7 +182315,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('TXT', '2025-02-03', 75.3300, 76.0000, 74.1200, 75.4300, 1097500),
   ('TXT', '2025-02-04', 75.2800, 76.0100, 75.2600, 75.3900, 913100);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('TXT', '2025-02-05', 75.7200, 75.8100, 74.1700, 74.5500, 1495500),
   ('TXT', '2025-02-06', 74.6400, 75.3400, 74.3400, 75.2600, 1116800),
   ('TXT', '2025-02-07', 75.5600, 75.5600, 74.2600, 74.5200, 1110300),
@@ -182817,7 +182817,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('TYL', '2025-07-01', 588.8400, 592.8900, 580.8400, 590.0500, 347400),
   ('TYL', '2025-07-02', 587.3200, 587.3200, 572.2700, 583.0800, 329100);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('TYL', '2025-07-03', 582.7400, 593.3800, 581.2500, 590.0400, 173800),
   ('TYL', '2025-07-07', 590.4800, 595.2100, 586.5900, 589.6900, 235900),
   ('TYL', '2025-07-08', 590.0000, 594.3300, 582.1300, 585.0500, 239000),
@@ -183319,7 +183319,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('UAL', '2025-11-24', 93.2300, 95.9700, 92.8400, 95.6200, 8515900),
   ('UAL', '2025-11-25', 96.1900, 99.8800, 95.9400, 98.9100, 8935600);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('UAL', '2025-11-26', 99.6400, 103.2000, 98.9600, 101.5900, 5216600),
   ('UAL', '2025-11-28', 101.8100, 103.1900, 101.6000, 101.9600, 2253700),
   ('UAL', '2025-12-01', 100.2900, 103.2200, 100.0200, 101.1200, 3709600),
@@ -183821,7 +183821,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('UBER', '2026-04-23', 76.6600, 77.1770, 73.7500, 74.7000, 18671000),
   ('UBER', '2026-04-24', 74.7700, 74.7700, 73.5300, 74.6400, 13007200);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('UBER', '2026-04-27', 74.6750, 76.9500, 74.6700, 76.2700, 14670000),
   ('UBER', '2026-04-28', 75.7000, 76.6600, 74.0900, 74.1100, 14039000),
   ('UBER', '2026-04-29', 73.6700, 74.7300, 72.7800, 74.4700, 11751800),
@@ -184323,7 +184323,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('UHS', '2025-02-18', 182.0600, 183.5500, 181.0100, 183.0400, 590500),
   ('UHS', '2025-02-19', 180.8200, 184.9400, 180.8200, 183.4200, 941100);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('UHS', '2025-02-20', 182.5300, 184.5000, 182.1700, 184.1700, 742600),
   ('UHS', '2025-02-21', 182.8800, 184.0300, 179.0500, 180.0300, 760500),
   ('UHS', '2025-02-24', 181.0500, 181.5100, 177.0700, 181.4600, 726700),
@@ -184825,7 +184825,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('ULTA', '2025-07-16', 476.3200, 485.3400, 473.6400, 485.0800, 613600),
   ('ULTA', '2025-07-17', 485.8800, 492.7100, 484.0400, 490.0700, 572000);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('ULTA', '2025-07-18', 493.8900, 494.5800, 487.1100, 493.3000, 419600),
   ('ULTA', '2025-07-21', 495.1500, 500.9500, 490.1400, 497.4100, 608800),
   ('ULTA', '2025-07-22', 497.6000, 504.8300, 493.8300, 502.7400, 598600),
@@ -185327,7 +185327,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('UNH', '2025-12-09', 323.1600, 326.3600, 322.4800, 323.6000, 4628400),
   ('UNH', '2025-12-10', 322.7500, 328.7300, 319.6000, 328.3700, 5910500);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('UNH', '2025-12-11', 330.3700, 339.2500, 328.7600, 336.7300, 7513200),
   ('UNH', '2025-12-12', 337.5000, 344.9800, 337.3700, 341.8400, 7979000),
   ('UNH', '2025-12-15', 340.9900, 344.9600, 337.0000, 341.1000, 6447200),
@@ -185829,7 +185829,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('UNP', '2026-05-07', 268.1500, 268.8300, 264.1000, 264.8900, 2032500),
   ('UNP', '2026-05-08', 264.1300, 266.2000, 262.9100, 264.6500, 1787800);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('UNP', '2026-05-11', 265.6300, 267.0000, 263.3400, 263.3500, 1609700),
   ('UNP', '2026-05-12', 264.4500, 266.9800, 261.0400, 265.6000, 2542400),
   ('UNP', '2026-05-13', 265.1700, 268.5900, 263.8400, 264.6500, 1866400),
@@ -186331,7 +186331,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('URI', '2025-03-04', 600.3700, 611.9200, 585.2700, 597.9100, 1089400),
   ('URI', '2025-03-05', 600.7500, 636.2000, 600.1400, 633.8900, 1201100);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('URI', '2025-03-06', 624.9300, 635.3500, 613.4400, 625.8800, 1126200),
   ('URI', '2025-03-07', 623.6000, 630.8800, 612.1100, 628.7600, 1000700),
   ('URI', '2025-03-10', 615.7500, 620.5200, 594.0200, 599.7500, 929600),
@@ -186833,7 +186833,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('USB', '2025-07-30', 46.2900, 46.5800, 45.6500, 45.8800, 11488700),
   ('USB', '2025-07-31', 45.7100, 45.9100, 44.8300, 44.9600, 11817100);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('USB', '2025-08-01', 44.3200, 44.5500, 43.4600, 43.9400, 9632900),
   ('USB', '2025-08-04', 44.0700, 44.5000, 43.9900, 44.4200, 6515800),
   ('USB', '2025-08-05', 44.6000, 44.7100, 43.8300, 44.5600, 8020600),
@@ -187335,7 +187335,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('V', '2025-12-23', 352.0000, 356.3800, 352.0000, 353.3800, 3703200),
   ('V', '2025-12-24', 353.3800, 355.9900, 353.0100, 355.1400, 2023600);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('V', '2025-12-26', 355.1000, 356.7300, 353.7100, 355.0000, 2017000),
   ('V', '2025-12-29', 355.4900, 356.5500, 353.8000, 354.6100, 3989900),
   ('V', '2025-12-30', 354.0000, 354.8700, 352.6600, 353.6200, 3366500),
@@ -187837,7 +187837,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('VICI', '2025-11-06', 30.1200, 30.3000, 29.7550, 29.7800, 7974500),
   ('VICI', '2025-11-07', 29.9200, 30.3750, 29.8500, 30.3400, 8660800);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('VICI', '2025-11-10', 30.2300, 30.5870, 30.0700, 30.4300, 9783900),
   ('VICI', '2025-11-11', 30.6400, 30.7600, 30.5100, 30.6300, 4521400),
   ('VICI', '2025-11-12', 30.5600, 30.6600, 30.4000, 30.5800, 11100100),
@@ -188339,7 +188339,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('VLO', '2026-04-07', 245.9100, 254.5500, 245.7100, 251.4900, 3611700),
   ('VLO', '2026-04-08', 235.0000, 241.6500, 231.8900, 239.6400, 5313900);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('VLO', '2026-04-09', 240.0900, 245.5600, 233.1200, 235.1000, 3905400),
   ('VLO', '2026-04-10', 233.8300, 239.0700, 230.2000, 238.8200, 2896900),
   ('VLO', '2026-04-13', 243.1600, 243.3100, 237.7800, 242.0800, 2772500),
@@ -188841,7 +188841,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('VMC', '2025-01-30', 273.5700, 277.1400, 272.8800, 276.3600, 575600),
   ('VMC', '2025-01-31', 276.6900, 277.4000, 273.8300, 274.1500, 719600);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('VMC', '2025-02-03', 270.3200, 272.5000, 267.2700, 271.1600, 961800),
   ('VMC', '2025-02-04', 273.3600, 273.9600, 271.1400, 272.0700, 629600),
   ('VMC', '2025-02-05', 274.2900, 274.6800, 271.4300, 274.3300, 758200),
@@ -189343,7 +189343,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('VRSK', '2025-06-27', 305.2800, 309.0400, 304.6000, 308.6600, 2480400),
   ('VRSK', '2025-06-30', 306.7100, 311.7700, 306.6000, 311.5000, 1054200);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('VRSK', '2025-07-01', 311.3400, 314.8000, 309.9100, 312.9500, 870600),
   ('VRSK', '2025-07-02', 310.2000, 310.2000, 301.0400, 301.2100, 1204200),
   ('VRSK', '2025-07-03', 300.8300, 305.7500, 299.2700, 304.0600, 963600),
@@ -189845,7 +189845,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('VRSN', '2025-11-20', 248.4500, 249.7400, 246.4800, 248.4200, 2417900),
   ('VRSN', '2025-11-21', 248.5900, 254.7400, 246.0700, 251.4200, 1221000);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('VRSN', '2025-11-24', 251.5400, 253.0500, 248.1000, 249.5700, 1428700),
   ('VRSN', '2025-11-25', 250.2200, 257.0900, 248.2200, 255.6800, 701400),
   ('VRSN', '2025-11-26', 255.3000, 255.9900, 251.7900, 252.6700, 680500),
@@ -190347,7 +190347,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('VRT', '2026-04-21', 316.1000, 323.0380, 310.8400, 312.4400, 7285400),
   ('VRT', '2026-04-22', 305.3200, 312.9800, 296.8000, 305.1400, 9835900);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('VRT', '2026-04-23', 304.2000, 325.2500, 304.2000, 321.7500, 7067000),
   ('VRT', '2026-04-24', 328.0000, 330.2950, 316.4000, 323.4600, 5281500),
   ('VRT', '2026-04-27', 325.9900, 328.0500, 307.0710, 322.4300, 5442500),
@@ -190849,7 +190849,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('VST', '2025-02-13', 168.1400, 169.3400, 161.2500, 165.6500, 7820700),
   ('VST', '2025-02-14', 165.6100, 170.4500, 161.5000, 167.6600, 5713300);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('VST', '2025-02-18', 168.8700, 172.7700, 166.8800, 169.2800, 5963700),
   ('VST', '2025-02-19', 168.1000, 173.3200, 167.1400, 169.3500, 6213400),
   ('VST', '2025-02-20', 167.5000, 168.2000, 157.8700, 163.1800, 7134900),
@@ -191351,7 +191351,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('VTR', '2025-07-14', 64.7800, 65.6800, 64.7200, 65.6000, 2582600),
   ('VTR', '2025-07-15', 65.5000, 65.8800, 64.7500, 65.1900, 2718200);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('VTR', '2025-07-16', 65.4500, 65.8700, 64.8000, 65.5000, 2823800),
   ('VTR', '2025-07-17', 65.6900, 65.7100, 65.1200, 65.3700, 2098100),
   ('VTR', '2025-07-18', 65.3700, 66.2600, 65.2100, 65.8000, 2416700),
@@ -191853,7 +191853,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('VTRS', '2025-12-05', 10.8000, 11.0200, 10.8000, 10.9300, 5855800),
   ('VTRS', '2025-12-08', 10.9900, 11.2900, 10.9400, 11.0900, 9337100);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('VTRS', '2025-12-09', 11.1100, 11.3300, 10.9900, 11.1900, 11213000),
   ('VTRS', '2025-12-10', 11.2000, 11.6300, 11.1000, 11.6000, 9779100),
   ('VTRS', '2025-12-11', 11.5800, 11.6200, 11.3100, 11.5900, 6353000),
@@ -192355,7 +192355,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('VZ', '2026-05-05', 47.5400, 47.7900, 47.2000, 47.3400, 15148100),
   ('VZ', '2026-05-06', 47.1700, 47.6100, 46.9100, 47.4400, 19336400);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('VZ', '2026-05-07', 47.2300, 47.6500, 47.0600, 47.0900, 18839600),
   ('VZ', '2026-05-08', 47.2100, 47.4600, 46.9500, 47.2200, 16349800),
   ('VZ', '2026-05-11', 47.5000, 47.9900, 46.9700, 47.2300, 18560100),
@@ -192857,7 +192857,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('WAT', '2025-02-28', 375.5000, 379.8400, 369.4100, 377.3400, 699500),
   ('WAT', '2025-03-03', 378.8100, 379.2900, 369.8800, 371.7900, 487000);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('WAT', '2025-03-04', 368.4000, 373.2400, 361.4500, 368.0500, 610200),
   ('WAT', '2025-03-05', 364.8000, 382.4800, 364.8000, 378.8900, 648200),
   ('WAT', '2025-03-06', 381.8500, 394.6600, 379.8600, 386.3300, 645700),
@@ -193359,7 +193359,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('WBD', '2025-07-28', 13.5400, 13.8700, 13.4900, 13.7000, 97026500),
   ('WBD', '2025-07-29', 13.7600, 13.7600, 13.0500, 13.1200, 67560100);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('WBD', '2025-07-30', 13.1000, 13.4700, 13.0700, 13.2600, 52330000),
   ('WBD', '2025-07-31', 13.2000, 13.2900, 13.0200, 13.1700, 55442000),
   ('WBD', '2025-08-01', 13.0400, 13.0600, 12.5700, 12.8700, 59364100),
@@ -193861,7 +193861,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('WDAY', '2025-12-19', 217.2300, 219.9200, 217.0100, 218.6300, 5534500),
   ('WDAY', '2025-12-22', 218.6300, 220.8800, 217.8600, 217.9900, 2233500);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('WDAY', '2025-12-23', 217.0500, 217.0900, 213.6300, 215.4400, 2150400),
   ('WDAY', '2025-12-24', 215.2900, 218.1500, 214.6400, 216.8500, 766200),
   ('WDAY', '2025-12-26', 217.0000, 220.9300, 216.1800, 220.7000, 1648600),
@@ -194363,7 +194363,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('WDC', '2026-05-19', 441.7000, 464.2300, 434.0000, 455.8000, 5891600),
   ('WDC', '2026-05-20', 469.3800, 469.6500, 456.1800, 459.6200, 5311700);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('WDC', '2026-05-21', 458.9300, 487.2900, 458.8700, 486.4600, 5046800),
   ('WDC', '2026-05-22', 488.6700, 489.9900, 478.5495, 484.2800, 3816774),
   ('WEC', '2024-10-21', 99.9800, 100.3100, 99.1300, 99.4300, 1632400),
@@ -194865,7 +194865,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('WELL', '2025-03-14', 146.0400, 148.2900, 145.3800, 147.8400, 2536200),
   ('WELL', '2025-03-17', 148.1700, 151.7400, 147.2100, 151.2600, 2206400);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('WELL', '2025-03-18', 151.0000, 152.6000, 149.7100, 149.9700, 2838000),
   ('WELL', '2025-03-19', 149.9700, 150.4900, 148.1200, 148.7600, 4881000),
   ('WELL', '2025-03-20', 148.7600, 149.1500, 147.3300, 147.8900, 4751300),
@@ -195367,7 +195367,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('WFC', '2025-08-11', 78.0100, 78.0900, 77.2300, 77.5900, 14408100),
   ('WFC', '2025-08-12', 78.2200, 79.5600, 78.1500, 79.4800, 14365200);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('WFC', '2025-08-13', 79.6800, 79.7200, 77.1000, 77.8900, 14415100),
   ('WFC', '2025-08-14', 78.2800, 79.5800, 77.7100, 79.4100, 16051500),
   ('WFC', '2025-08-15', 79.5400, 79.6500, 77.0100, 77.1000, 15380400),
@@ -195869,7 +195869,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('WM', '2026-01-06', 218.5800, 220.9000, 216.5100, 219.0800, 1818700),
   ('WM', '2026-01-07', 219.9500, 220.3300, 215.9000, 215.9700, 1804000);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('WM', '2026-01-08', 215.1000, 219.1700, 215.1000, 217.8600, 1800300),
   ('WM', '2026-01-09', 219.6000, 222.2700, 218.9300, 220.9100, 1992300),
   ('WM', '2026-01-12', 221.4400, 221.4400, 218.3100, 218.5700, 2019100),
@@ -196371,7 +196371,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('WMT', '2024-10-29', 82.6700, 82.8600, 81.6700, 81.7000, 9682400),
   ('WMT', '2024-10-30', 81.6000, 81.8300, 81.3000, 81.3900, 9268800);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('WMT', '2024-10-31', 81.2900, 82.4400, 81.2200, 81.9500, 15539000),
   ('WMT', '2024-11-01', 82.5300, 82.5300, 81.5400, 82.1900, 12181800),
   ('WMT', '2024-11-04', 82.2000, 82.9100, 82.0000, 82.4500, 11731000),
@@ -196873,7 +196873,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('WRB', '2025-03-28', 70.8300, 76.3800, 70.6500, 71.2700, 8170400),
   ('WRB', '2025-03-31', 71.3600, 72.0900, 70.4700, 71.1600, 3895800);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('WRB', '2025-04-01', 70.8100, 71.5300, 69.9400, 70.2500, 3055800),
   ('WRB', '2025-04-02', 70.0000, 70.3500, 69.1500, 69.7500, 2246100),
   ('WRB', '2025-04-03', 68.8600, 70.8900, 68.8600, 70.2900, 2311100),
@@ -197375,7 +197375,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('WSM', '2025-08-25', 196.1000, 200.6700, 193.9000, 197.9600, 1647000),
   ('WSM', '2025-08-26', 198.7400, 200.4200, 193.8800, 197.9300, 2974300);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('WSM', '2025-08-27', 204.0100, 205.0000, 191.3400, 192.1700, 2773400),
   ('WSM', '2025-08-28', 193.5000, 194.5100, 186.3300, 188.0600, 1694700),
   ('WSM', '2025-08-29', 187.4400, 188.7200, 186.0100, 188.1900, 1613100),
@@ -197877,7 +197877,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('WST', '2026-01-21', 251.6800, 255.8000, 244.7000, 255.1600, 1889400),
   ('WST', '2026-01-22', 256.1800, 258.7400, 247.0300, 247.7800, 1044900);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('WST', '2026-01-23', 246.0000, 246.1300, 232.0600, 236.6600, 1929300),
   ('WST', '2026-01-26', 238.4800, 241.4000, 236.8000, 241.4000, 989100),
   ('WST', '2026-01-27', 238.8900, 243.9100, 238.3200, 240.5300, 935500),
@@ -198379,7 +198379,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('WY', '2024-11-12', 31.1100, 31.4400, 30.6600, 30.6800, 2898700),
   ('WY', '2024-11-13', 30.9800, 31.1600, 30.8000, 30.8900, 2429700);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('WY', '2024-11-14', 30.6600, 31.0300, 30.6600, 30.8600, 2965000),
   ('WY', '2024-11-15', 30.8700, 31.0800, 30.7300, 30.9300, 2916600),
   ('WY', '2024-11-18', 30.8200, 31.1800, 30.7800, 31.0200, 1918400),
@@ -198881,7 +198881,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('WYNN', '2025-04-11', 72.5600, 74.1100, 70.7300, 73.1900, 2710200),
   ('WYNN', '2025-04-14', 74.4100, 74.9700, 71.7700, 73.5400, 2603600);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('WYNN', '2025-04-15', 73.2800, 75.6000, 73.0000, 74.9000, 2027600),
   ('WYNN', '2025-04-16', 74.1300, 74.6700, 72.6500, 73.7300, 1827100),
   ('WYNN', '2025-04-17', 74.3100, 75.1900, 73.6200, 74.7700, 1559500),
@@ -199383,7 +199383,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('XEL', '2025-09-09', 71.4600, 72.2000, 71.2900, 72.0200, 5443400),
   ('XEL', '2025-09-10', 72.0500, 72.6300, 71.7400, 72.3100, 5766800);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('XEL', '2025-09-11', 72.2800, 73.0600, 71.9200, 72.8500, 7890900),
   ('XEL', '2025-09-12', 72.8500, 73.7200, 72.6000, 73.3500, 7080600),
   ('XEL', '2025-09-15', 72.9600, 73.2000, 72.5300, 73.0500, 2756600),
@@ -199885,7 +199885,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('XOM', '2026-02-04', 144.1200, 147.8400, 144.1200, 147.5900, 29426200),
   ('XOM', '2026-02-05', 146.5800, 146.7300, 143.8000, 146.0800, 18431700);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('XOM', '2026-02-06', 146.6200, 149.5700, 146.0900, 149.0500, 17216000),
   ('XOM', '2026-02-09', 149.2600, 151.5500, 148.6300, 151.2100, 21297300),
   ('XOM', '2026-02-10', 151.3500, 151.7800, 149.8200, 151.5900, 15800300),
@@ -200387,7 +200387,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('XYZ', '2024-11-26', 89.8350, 90.7200, 88.5800, 89.0100, 7855300),
   ('XYZ', '2024-11-27', 89.4300, 90.6500, 88.2000, 88.7800, 6646100);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('XYZ', '2024-11-29', 89.4100, 90.0760, 88.4600, 88.5500, 4527400),
   ('XYZ', '2024-12-02', 92.4400, 95.9500, 92.0000, 92.7800, 14027800),
   ('XYZ', '2024-12-03', 91.8500, 93.7800, 90.7600, 93.2000, 8252700),
@@ -200889,7 +200889,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('YUM', '2025-04-28', 147.3100, 148.0700, 146.4200, 147.7500, 2218800),
   ('YUM', '2025-04-29', 146.6000, 148.0300, 145.3700, 147.6900, 2339600);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('YUM', '2025-04-30', 147.4900, 151.5600, 144.8900, 150.4400, 3349500),
   ('YUM', '2025-05-01', 149.0700, 149.4600, 147.0800, 148.6000, 2734600),
   ('YUM', '2025-05-02', 149.4400, 150.5100, 147.4300, 149.1400, 1972000),
@@ -201391,7 +201391,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('ZBH', '2025-09-23', 101.6600, 103.6000, 99.8600, 100.2900, 1429900),
   ('ZBH', '2025-09-24', 99.7200, 100.3000, 98.7500, 98.9800, 1406800);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('ZBH', '2025-09-25', 98.0600, 98.3800, 96.2200, 96.9700, 1060000),
   ('ZBH', '2025-09-26', 97.3100, 98.5200, 97.0000, 98.2400, 884300),
   ('ZBH', '2025-09-29', 98.0600, 98.5200, 96.6000, 98.2800, 929000),
@@ -201893,7 +201893,7 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('ZBRA', '2026-02-19', 251.5100, 254.3300, 247.0600, 251.7400, 636800),
   ('ZBRA', '2026-02-20', 249.9800, 261.8400, 247.5400, 255.4100, 849800);
 
-INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
+INSERT INTO `asset_price_bars` (`ticker`, `date`, `open`, `high`, `low`, `close`, `volume`) VALUES
   ('ZBRA', '2026-02-23', 252.3200, 253.2000, 230.0000, 231.3200, 1195400),
   ('ZBRA', '2026-02-24', 234.9900, 241.2000, 234.0000, 235.8300, 998700),
   ('ZBRA', '2026-02-25', 238.3900, 240.0900, 232.4000, 239.0100, 768000),
@@ -202358,9 +202358,9 @@ INSERT INTO `daily_candles` (`ticker`, `date`, `open`, `high`, `low`, `close`, `
   ('ZTS', '2026-05-22', 80.8700, 82.3300, 80.1300, 81.3200, 6326827);
 
 --
--- Data for `financial_reports` (1386 rows)
+-- Data for `asset_fundamental_reports` (1386 rows)
 --
-INSERT INTO `financial_reports` (`ticker`, `report_date`, `report_type`, `revenue`, `net_income`, `ebit`, `free_cash_flow`, `total_debt`, `total_equity`, `cash_and_equivalents`, `source`, `imported_at`) VALUES
+INSERT INTO `asset_fundamental_reports` (`ticker`, `report_date`, `report_type`, `revenue`, `net_income`, `ebit`, `free_cash_flow`, `total_debt`, `total_equity`, `cash_and_equivalents`, `source`, `imported_at`) VALUES
   ('A', '2025-10-31', 'annual', 6948000000, 1303000000, 1547000000, 1152000000, 3354000000, 6741000000, 1789000000, 'Yahoo-Annual', '2026-05-15 03:03:03'),
   ('A', '2026-01-31', 'ttm', 7065000000, 1290000000, 1541000000, 993000000, 3354000000, 6908000000, 1758000000, 'Yahoo-TTM', '2026-05-15 03:03:03'),
   ('AAPL', '2025-09-30', 'annual', 416161000000, 112010000000, 133050000000, 98767000000, 98657000000, 73733000000, 35934000000, 'Yahoo-Annual', '2026-05-15 03:03:08'),
@@ -202862,7 +202862,7 @@ INSERT INTO `financial_reports` (`ticker`, `report_date`, `report_type`, `revenu
   ('F', '2025-12-31', 'annual', 187267000000, -8182000000, -10497000000, 12467000000, 165738000000, 35952000000, 23356000000, 'Yahoo-Annual', '2026-05-20 03:05:04'),
   ('F', '2025-12-31', 'ttm', 187267000000, -8182000000, -10496000000, 12467000000, 165738000000, 35952000000, 23356000000, 'Yahoo-TTM', '2026-04-25 08:20:40');
 
-INSERT INTO `financial_reports` (`ticker`, `report_date`, `report_type`, `revenue`, `net_income`, `ebit`, `free_cash_flow`, `total_debt`, `total_equity`, `cash_and_equivalents`, `source`, `imported_at`) VALUES
+INSERT INTO `asset_fundamental_reports` (`ticker`, `report_date`, `report_type`, `revenue`, `net_income`, `ebit`, `free_cash_flow`, `total_debt`, `total_equity`, `cash_and_equivalents`, `source`, `imported_at`) VALUES
   ('F', '2026-03-31', 'ttm', 189861000000, -6105000000, -8156000000, 9546000000, 159511000000, 37453000000, 17649000000, 'Yahoo-TTM', '2026-05-20 03:05:04'),
   ('FANG', '2025-12-31', 'annual', 14929000000, 1664000000, 2139000000, -703000000, 14879000000, 36972000000, 104000000, 'Yahoo-Annual', '2026-05-20 03:05:09'),
   ('FANG', '2025-12-31', 'ttm', 14929000000, 1664000000, 2139000000, -703000000, 14879000000, 36972000000, 104000000, 'Yahoo-TTM', '2026-05-07 03:05:19'),
@@ -203364,7 +203364,7 @@ INSERT INTO `financial_reports` (`ticker`, `report_date`, `report_type`, `revenu
   ('PFG', '2025-12-31', 'annual', 15625500000, 1185100000, 1416000000, 4438700000, 3954000000, 11883900000, 4431000000, 'Yahoo-Annual', '2026-05-13 03:03:43'),
   ('PFG', '2025-12-31', 'ttm', 15625500000, 1185100000, 1416000000, 4438700000, 3954000000, 11883900000, 4431000000, 'Yahoo-TTM', '2026-04-22 08:09:32');
 
-INSERT INTO `financial_reports` (`ticker`, `report_date`, `report_type`, `revenue`, `net_income`, `ebit`, `free_cash_flow`, `total_debt`, `total_equity`, `cash_and_equivalents`, `source`, `imported_at`) VALUES
+INSERT INTO `asset_fundamental_reports` (`ticker`, `report_date`, `report_type`, `revenue`, `net_income`, `ebit`, `free_cash_flow`, `total_debt`, `total_equity`, `cash_and_equivalents`, `source`, `imported_at`) VALUES
   ('PFG', '2026-03-31', 'ttm', 15458700000, 1561600000, 1868900000, 3631100000, 3945900000, 11815300000, 4054000000, 'Yahoo-TTM', '2026-05-13 03:03:43'),
   ('PG', '2025-06-30', 'annual', 84284000000, 15974000000, 21074000000, 14044000000, 35463000000, 52012000000, 9556000000, 'Yahoo-Annual', '2026-05-13 03:03:47'),
   ('PG', '2025-12-31', 'ttm', 85259000000, 16453000000, 21483000000, 14848000000, 36639000000, 53041000000, 10825000000, 'Yahoo-TTM', '2026-04-22 08:09:36'),
@@ -203753,9 +203753,9 @@ INSERT INTO `financial_reports` (`ticker`, `report_date`, `report_type`, `revenu
   ('ZTS', '2026-03-31', 'ttm', 9509000000, 2643000000, 3538000000, 2237000000, 9238000000, 3233000000, 1940000000, 'Yahoo-TTM', '2026-05-15 03:02:59');
 
 --
--- Data for `market_cap_snapshots` (1852 rows)
+-- Data for `asset_market_caps` (1852 rows)
 --
-INSERT INTO `market_cap_snapshots` (`ticker`, `date`, `market_cap`, `imported_at`) VALUES
+INSERT INTO `asset_market_caps` (`ticker`, `date`, `market_cap`, `imported_at`) VALUES
   ('A', '2026-04-22', 34273095680, '2026-04-22 19:52:01'),
   ('A', '2026-05-02', 32363614208, '2026-05-02 03:03:12'),
   ('A', '2026-05-15', 32007536640, '2026-05-15 03:03:06'),
@@ -204257,7 +204257,7 @@ INSERT INTO `market_cap_snapshots` (`ticker`, `date`, `market_cap`, `imported_at
   ('CTVA', '2026-04-25', 53574250496, '2026-04-25 08:09:35'),
   ('CTVA', '2026-05-06', 56326811648, '2026-05-06 03:04:31');
 
-INSERT INTO `market_cap_snapshots` (`ticker`, `date`, `market_cap`, `imported_at`) VALUES
+INSERT INTO `asset_market_caps` (`ticker`, `date`, `market_cap`, `imported_at`) VALUES
   ('CTVA', '2026-05-19', 54227922944, '2026-05-19 03:04:37'),
   ('CVNA', '2026-04-22', 88484339712, '2026-04-22 07:53:06'),
   ('CVNA', '2026-04-25', 58495893504, '2026-04-25 08:09:39'),
@@ -204759,7 +204759,7 @@ INSERT INTO `market_cap_snapshots` (`ticker`, `date`, `market_cap`, `imported_at
   ('IQV', '2026-04-25', 27241349120, '2026-04-25 08:29:38'),
   ('IQV', '2026-05-09', 29826699264, '2026-05-09 03:03:06');
 
-INSERT INTO `market_cap_snapshots` (`ticker`, `date`, `market_cap`, `imported_at`) VALUES
+INSERT INTO `asset_market_caps` (`ticker`, `date`, `market_cap`, `imported_at`) VALUES
   ('IQV', '2026-05-22', 28042539008, '2026-05-22 03:03:03'),
   ('IR', '2026-04-22', 33509312512, '2026-04-22 08:01:49'),
   ('IR', '2026-04-25', 33114202112, '2026-04-25 08:29:42'),
@@ -205261,7 +205261,7 @@ INSERT INTO `market_cap_snapshots` (`ticker`, `date`, `market_cap`, `imported_at
   ('QCOM', '2026-05-13', 221666738176, '2026-05-13 03:05:25'),
   ('RCL', '2026-04-22', 73440321536, '2026-04-22 08:11:19');
 
-INSERT INTO `market_cap_snapshots` (`ticker`, `date`, `market_cap`, `imported_at`) VALUES
+INSERT INTO `asset_market_caps` (`ticker`, `date`, `market_cap`, `imported_at`) VALUES
   ('RCL', '2026-04-29', 69225488384, '2026-04-29 03:05:00'),
   ('RCL', '2026-05-13', 69226487808, '2026-05-13 03:05:29'),
   ('REG', '2026-04-22', 14955593728, '2026-04-22 08:11:24'),

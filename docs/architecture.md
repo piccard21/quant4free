@@ -1,75 +1,52 @@
 # Architektur
 
-Siehe README und zukünftige Detaildokumentation.
+Stand: AP14.
 
+Das neue Framework ist der regulaere operative Pfad. Legacy-Code liegt nur noch
+als archivierte Referenz unter `legacy/current_system/`.
 
----
+## Module
 
-# Neue Architektur-Komponenten
+- `data/`: Provider, Sync und Zugriff auf `assets`, `asset_price_bars`,
+  `asset_fundamental_reports`, `asset_market_caps`.
+- `universes/`: Universumsdefinitionen, aktuell ueber aktive Assets.
+- `indicators/`: modulare Indikatorberechnung.
+- `strategies/`: Value/Quality/Momentum-Strategie und Model Portfolio.
+- `evaluation/`: Backtests, Benchmark-Vergleich und `strategy_run_*` Tabellen.
+- `live/`: Model/Shadow/Real Status, Rebalance-Artefakte, Trade Plans, Cash und
+  manuelle Ausfuehrungen auf kanonischen `live_*` Tabellen.
+- `cli/`: Operator-Einstiege fuer Status, Sync, Daily/Monthly, Live-Cash und
+  Live-Trades.
 
-## AP5: Universe- und Benchmark-Konfiguration
+## Kanonische Tabellen
 
-Universen und Benchmarks sind im neuen Framework per Key auswaehlbar, ohne
-Schema-Migration und ohne Aenderung am Legacy-System.
+Rohdaten:
 
-Universen:
+- `assets`
+- `asset_price_bars`
+- `asset_fundamental_reports`
+- `asset_market_caps`
 
-- `sp500_active`: Default-Universum fuer die aktuelle Fixture, basierend auf
-  aktiven Tickern.
-- `active_tickers`: alle Ticker mit `tickers.is_active = 1`.
-- `all_tickers`: alle in den Rohdaten bekannten Ticker.
+Live/Operations:
 
-Benchmarks:
+- `strategy_instances`
+- `strategy_config_snapshots`
+- `portfolio_target_items`
+- `live_rebalance_items`
+- `live_decision_items`
+- `live_trade_plans`
+- `live_trade_plan_items`
+- `live_trade_executions`
+- `live_cash_ledger`
+- `live_cash_balances`
+- `live_positions`
 
-- `spy`: SPDR S&P 500 ETF Trust.
-- `qqq`: Invesco QQQ Trust.
-- `iwm`: iShares Russell 2000 ETF.
-
-Die CLI-Auswahl erfolgt ueber:
+## Operator-Pfad
 
 ```bash
-python -m cli.framework_status --universe sp500_active --benchmark spy
-python -m cli.framework_status --list-configs
+python -m cli.data_status --details
+python -m cli.operator_smoke
+python -m cli.daily_run --dry-run-sync
+python -m cli.monthly_run --persist
+python -m cli.live_status --all
 ```
-
-## setup.sh
-
-Neue Parameter:
-
-- --portfolio-size
-- --max-trades-per-month
-- --max-funding-sell-pct
-
----
-
-## cli/update_settings.py
-
-Neue Runtime-Konfiguration aktiver Strategie-Settings.
-
----
-
-## core/build_trade_plan.py
-
-Neue Features:
-
-- Funding-Sells
-- dynamisches Trade-Limit
-- kontrollierter Portfolio-Aufbau
-
----
-
-## core/build_tradable_shadow.py
-
-Neue Features:
-
-- dynamisches Positionswechsel-Limit
-- kontrolliertes Auffüllen des Portfolios
-
----
-
-## core/build_rebalance.py
-
-Neue Features:
-
-- effektives Rebalance-Limit
-- Auffüll-Logik

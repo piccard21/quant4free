@@ -4,7 +4,7 @@ from datetime import date
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Show AP9 live Model/Shadow/Real portfolio status."
+        description="Show live Model/Shadow/Real portfolio status."
     )
     parser.add_argument(
         "--as-of-date",

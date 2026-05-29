@@ -1,8 +1,13 @@
 # Datenmodell-Plan
 
-Stand: AP8 abgeschlossen.
+Stand: AP14 Audit und Zieltabellen-Vorschlag.
 
-Dieses Dokument beschreibt den Zielzustand des neuen modularen Quant-Frameworks. Es ist noch keine Migration des produktiven Legacy-Schemas. `init.sql` bleibt vorerst kompatibel zum eingefrorenen Legacy-System. Die bereinigte Framework-Fixture liegt in `fixtures/raw_market_data.sql`.
+Dieses Dokument beschreibt den Zielzustand des neuen modularen Quant-Frameworks.
+AP14 ersetzt die bisherige Uebergangsentscheidung, legacy-kompatible Tabellen
+weiterzuverwenden: Der regulaere Betrieb soll nach AP14 ausschliesslich auf
+kanonischen neuen Tabellen laufen. `init.sql` und
+`fixtures/raw_market_data.sql` wurden im AP14-Cutover auf das kanonische Schema
+umgestellt.
 
 ## Leitlinien
 
@@ -13,7 +18,7 @@ Dieses Dokument beschreibt den Zielzustand des neuen modularen Quant-Frameworks.
 - Audit-relevante Entscheidungen, Trades, Cash-Bewegungen und Run-Konfigurationen werden eingefroren.
 - Die erste Umsetzung bleibt auf MySQL und SQLAlchemy-nahe SQL-Zugriffe ausgerichtet.
 
-## Aktueller Legacy-Bestand
+## Aktueller Legacy-Bestand Und AP14-Audit
 
 `init.sql` beschreibt den legacy-kompatiblen Gesamtbestand. Der entfernte
 Full-Dump `stocks_db.sql` enthielt dieselben 18 Tabellen und wurde durch die
@@ -21,31 +26,50 @@ bereinigte Rohdaten-Fixture `fixtures/raw_market_data.sql` ersetzt:
 
 | Bereich | Tabellen | Bewertung |
 |---|---|---|
-| Rohdaten | `tickers`, `daily_candles`, `financial_reports`, `market_cap_snapshots` | Bleiben Kernbestand des neuen Systems. |
-| Berechnete Faktoren | `factor_metrics`, `factor_scores` | Im neuen System zunaechst reproduzierbar berechnen; Speicherung nur optional fuer Run-Audit oder Performance. |
-| Legacy-Settings | `strategy_settings`, `strategy_settings_snapshots` | Wird durch versionierte `strategy_instances` ersetzt. Legacy bleibt bis zur Migration erhalten. |
-| Legacy-Model/Shadow | `portfolio_snapshots`, `rebalance_suggestions`, `decision_log`, `trade_plan_summary`, `trade_plan_snapshots` | Wird in Evaluation-Run-Tabellen und Live-Entscheidungstabellen aufgeteilt. |
-| Real Portfolio | `portfolio_positions`, `portfolio_cash`, `trade_executions`, `cash_ledger` | Bleibt fachlich wichtig, wird spaeter portfolio- und tenant-faehig erweitert. |
+| Rohdaten | `tickers`, `daily_candles`, `financial_reports`, `market_cap_snapshots` | Werden in AP14 in kanonische Asset-/Market-Data-Tabellen migriert. |
+| Berechnete Faktoren | `factor_metrics`, `factor_scores` | Duerfen nicht mehr globale operative Quelle sein; Real-Positionspreise kommen kuenftig aus Preisbars. |
+| Legacy-Settings | `strategy_settings`, `strategy_settings_snapshots` | Werden durch versionierte `strategy_instances` und Run-Konfigurations-Snapshots ersetzt. |
+| Legacy-Model/Shadow | `portfolio_snapshots`, `rebalance_suggestions`, `decision_log`, `trade_plan_summary`, `trade_plan_snapshots` | Werden durch Portfolio-Target-, Rebalance- und Trade-Plan-Tabellen ersetzt. |
+| Real Portfolio | `portfolio_positions`, `portfolio_cash`, `trade_executions`, `cash_ledger` | Werden durch portfolio-faehige Live-Positions-, Cash- und Execution-Tabellen ersetzt. |
 | Research | `performance_snapshots` | Wird durch kompakte Run-Metriken und Equity-Curves ersetzt. |
+
+Der AP14-Audit zeigte vor dem Cutover folgende Tabellenabhaengigkeiten:
+
+| Modul | Aktuelle Tabellen | Nutzung |
+|---|---|---|
+| `data.repository` | `tickers`, `daily_candles`, `financial_reports`, `market_cap_snapshots` | Wurde auf `assets`, `asset_price_bars`, `asset_fundamental_reports`, `asset_market_caps` migriert. |
+| `cli.data_status` | `tickers`, `daily_candles`, `financial_reports` | Wurde auf kanonische Rohdatentabellen migriert. |
+| `live.repository` | `portfolio_snapshots`, `portfolio_positions`, `portfolio_cash`, `factor_metrics` | Wurde auf kanonische Live-Tabellen migriert; Preise kommen aus `asset_price_bars`. |
+| `live.operations` | `strategy_settings`, `strategy_settings_snapshots`, `portfolio_snapshots`, `portfolio_positions`, `portfolio_cash`, `daily_candles`, `rebalance_suggestions`, `decision_log`, `trade_plan_summary`, `trade_plan_snapshots` | Wurde auf kanonische Settings-, Target-, Rebalance-, Decision- und Trade-Plan-Tabellen migriert. |
+| `live.execution` | `strategy_settings`, `strategy_settings_snapshots`, `tickers`, `portfolio_positions`, `portfolio_cash`, `trade_executions`, `cash_ledger`, `trade_plan_snapshots` | Wurde auf kanonische Assets-, Live-Position-, Cash-, Execution- und Trade-Plan-Tabellen migriert. |
+| `evaluation.repository` | `strategy_runs`, `strategy_run_metrics`, `strategy_run_equity_curve`, `strategy_run_trades` | Bereits neuer AP8-Pfad, aber noch ohne Portfolio-/Strategy-Instance-FKs. |
 
 ## Zielbereiche
 
 ### 1. Stammdaten und Rohdaten
 
-Bestehende Tabellen:
+AP14-Zieltabellen:
 
 ```text
-tickers
-daily_candles
-financial_reports
-market_cap_snapshots
+assets
+asset_price_bars
+asset_fundamental_reports
+asset_market_caps
+data_sync_runs
 ```
 
-Diese Tabellen bleiben die erste Datenbasis. Sie werden spaeter nur vorsichtig erweitert, z. B. um Provider-Metadaten, ohne die Fixture-Nutzbarkeit von `fixtures/raw_market_data.sql` zu brechen.
+Zweck:
 
-Offene Entscheidung fuer spaeter:
+| Tabelle | Zweck |
+|---|---|
+| `assets` | Wertpapier-Stammdaten. Ersetzt `tickers`; `symbol` bleibt fachlicher Ticker, aber nicht mehr Tabellenname/PK-Konzept der gesamten DB. |
+| `asset_price_bars` | Tägliche OHLCV-Preisbars. Ersetzt `daily_candles`. |
+| `asset_fundamental_reports` | Annual-/TTM-Fundamentaldaten. Ersetzt `financial_reports`. |
+| `asset_market_caps` | Market-Cap-Zeitreihe. Ersetzt `market_cap_snapshots`. |
+| `data_sync_runs` | Audit fuer Daten-Syncs, Provider, Zeitfenster, Status und Fehlermeldungen. |
 
-- Ob `tickers.is_active` als Legacy-S&P-500-Hilfsspalte erhalten bleibt oder vollstaendig durch `universe_members` ersetzt wird.
+`tickers.is_active` wird nicht in `assets` uebernommen. Aktive
+Universumsmitgliedschaft gehoert in `universe_members`.
 
 ### 2. Mandanten, Portfolios und Kataloge
 
@@ -76,6 +100,9 @@ Minimaler Zweck:
 | `strategy_instances` | Versionierte fachliche Strategie-Konfiguration. |
 
 `strategy_instances` ersetzt langfristig die breite Legacy-Tabelle `strategy_settings`.
+Ab AP14 ist diese Ersetzung nicht mehr langfristig, sondern Cutover-Ziel:
+`strategy_settings` und `strategy_settings_snapshots` sind danach kein
+regulaerer Laufzeitpfad mehr.
 
 Vorgesehene Kernfelder:
 
@@ -117,35 +144,67 @@ Zweck:
 | `strategy_run_trades` | Simulierte Trades, Kosten, Steuern und Gruende. |
 | `strategy_run_holdings` | Optionaler Audit-Snapshot der simulierten Holdings je Stichtag. |
 
-`factor_metrics` und `factor_scores` werden in Evaluation nicht als globale Dauerzustands-Tabellen vorausgesetzt. Fuer den ersten vertikalen Schnitt duerfen sie aus Legacy-Logik gelesen oder temporaer berechnet werden; dauerhafte Speicherung gehoert an einen konkreten `strategy_run_id`, falls Audit oder Performance es erfordern.
+`factor_metrics` und `factor_scores` werden in Evaluation nicht als globale
+Dauerzustands-Tabellen vorausgesetzt. Falls Indikator- oder Rankingwerte
+persistiert werden muessen, gehoeren sie an einen konkreten `strategy_run_id`
+oder `live_rebalance_run_id`, nicht in globale Tabellen.
 
 ### 4. Live-Betrieb
 
-Neue oder weiterentwickelte Live-Tabellen:
+AP14-Zieltabellen:
 
 ```text
-live_decisions
+live_rebalance_runs
+live_rebalance_items
+portfolio_target_snapshots
+portfolio_target_items
 live_trade_plans
 live_trade_plan_items
 live_trade_executions
-cash_ledger
-portfolio_positions
-portfolio_cash_snapshots
+live_cash_ledger
+live_cash_balances
+live_positions
 ```
 
 Zweck:
 
 | Tabelle | Zweck |
 |---|---|
-| `live_decisions` | Auditierbare Model-/Shadow-Entscheidungen je Stichtag. |
-| `live_trade_plans` | Kopf eines konkreten umsetzbaren Trade-Plans. |
-| `live_trade_plan_items` | Einzelne geplante Orders inkl. Skip-Gruenden. |
-| `live_trade_executions` | Manuell erfasste reale Ausfuehrungen. |
-| `cash_ledger` | Cash-Bewegungen als Ledger, nicht nur aktueller Saldo. |
-| `portfolio_positions` | Reale Positionen, spaeter mit `portfolio_id`. |
-| `portfolio_cash_snapshots` | Abgeleitete Cash-Salden fuer Status/Reporting. |
+| `live_rebalance_runs` | Kopf eines operativen Monthly-/Rebalance-Laufs inkl. `portfolio_id`, `strategy_run_id`, `as_of_date`, Konfigurationssnapshot und Status. |
+| `live_rebalance_items` | Ersetzt `rebalance_suggestions` und `decision_log`; enthaelt Aktion, Grund, Scores, Holding-Daten und Umsetzbarkeit pro Asset. |
+| `portfolio_target_snapshots` | Kopf fuer Model- oder Shadow-Zielportfolio je Lauf. |
+| `portfolio_target_items` | Einzelpositionen eines Model-/Shadow-Zielportfolios. Ersetzt `portfolio_snapshots`. |
+| `live_trade_plans` | Kopf eines konkreten kapitalabhaengigen Trade-Plans. Ersetzt `trade_plan_summary`. |
+| `live_trade_plan_items` | Einzelne geplante Orders inkl. Reihenfolge, Cash-Simulation und Skip-Gruenden. Ersetzt `trade_plan_snapshots`. |
+| `live_trade_executions` | Manuell erfasste reale Ausfuehrungen. Ersetzt `trade_executions`. |
+| `live_cash_ledger` | Cash-Bewegungen als Ledger. Ersetzt `cash_ledger`. |
+| `live_cash_balances` | Abgeleitete Cash-Salden fuer Status/Reporting. Ersetzt `portfolio_cash`. |
+| `live_positions` | Reale Positionen je Portfolio und Asset. Ersetzt `portfolio_positions`. |
 
-Bestehende Legacy-Tabellen `trade_executions`, `cash_ledger`, `portfolio_positions` und `portfolio_cash` werden nicht sofort ersetzt. AP1 legt nur die Zieltrennung fest.
+Live-Preise fuer reale Positionen werden aus `asset_price_bars` geladen.
+`factor_metrics.current_price` ist nach AP14 keine operative Preisquelle mehr.
+
+## AP14 Zielmapping
+
+| Legacy-/Uebergangstabelle | Neue kanonische Tabelle(n) | Migration |
+|---|---|---|
+| `tickers` | `assets`, `universe_members` | Stammdaten nach `assets`; aktive S&P-500-Zugehoerigkeit nach `universe_members`. |
+| `daily_candles` | `asset_price_bars` | 1:1 Preisbar-Migration mit kanonischem `ticker`-FK auf `assets`. |
+| `financial_reports` | `asset_fundamental_reports` | 1:1 Report-Migration mit `asset_id`, `report_type`, `report_date`. |
+| `market_cap_snapshots` | `asset_market_caps` | 1:1 Market-Cap-Migration mit kanonischem `ticker`-FK auf `assets`. |
+| `strategy_settings` | `strategy_instances` | Aktive Defaults als versionierte Strategieinstanz mit JSON-Parametern. |
+| `strategy_settings_snapshots` | `strategy_runs.config_snapshot_json`, `live_rebalance_runs.config_snapshot_json` | Settings werden pro Run eingefroren, nicht als eigene Stichtagstabelle. |
+| `portfolio_snapshots` | `portfolio_target_snapshots`, `portfolio_target_items` | `snapshot_type` wird Snapshot-Typ `model`/`shadow`; Items referenzieren Snapshot-Kopf. |
+| `rebalance_suggestions` | `live_rebalance_items` | Aktion, Grund, Zielgewicht und Real-Position-Kontext werden zusammengefuehrt. |
+| `decision_log` | `live_rebalance_items` | Scores, Trend, Holding-Tage und Mindesthaltedauer werden in denselben Item-Datensatz integriert. |
+| `trade_plan_summary` | `live_trade_plans` | Plan-Kopf, Cash-Simulation und Summen. |
+| `trade_plan_snapshots` | `live_trade_plan_items` | Geplante Orders, Reihenfolge, Cash-vor/nach, Skip-Gruende. |
+| `trade_executions` | `live_trade_executions` | Reale Ausfuehrungen mit optionaler Referenz auf `live_trade_plan_items`. |
+| `cash_ledger` | `live_cash_ledger` | Cash-Ledger mit `portfolio_id` und optionalem Execution-FK. |
+| `portfolio_cash` | `live_cash_balances` | Abgeleitete Salden, weiterhin aus Ledger validierbar. |
+| `portfolio_positions` | `live_positions` | Reale Positionen mit Ticker-FK, Durchschnittspreis und offen/geschlossen-Status. |
+| `factor_metrics` | keine globale Tabelle; optional `strategy_run_indicator_values` | Operative Preise aus `asset_price_bars`; persistierte Indikatoren nur run-bezogen. |
+| `factor_scores` | keine globale Tabelle; optional `strategy_run_rankings` | Rankings werden pro Strategie-/Live-Run gespeichert, wenn Audit es erfordert. |
 
 ## Vorgeschlagene Abhaengigkeiten
 
@@ -167,13 +226,13 @@ data_providers
   -> provider_configs
 ```
 
-Rohdaten bleiben ticker-zentriert:
+Rohdaten bleiben Asset-zentriert:
 
 ```text
-tickers
-  -> daily_candles
-  -> financial_reports
-  -> market_cap_snapshots
+assets
+  -> asset_price_bars
+  -> asset_fundamental_reports
+  -> asset_market_caps
 ```
 
 ## Migrationsreihenfolge
@@ -209,7 +268,7 @@ Status: abgeschlossen.
 
 - `universes` und `benchmarks` als Code- oder DB-Katalog einfuehren.
 - S&P-500-Universum zunaechst aus `tickers.is_active = 1` laden.
-- Benchmark `SPY` aus `daily_candles` lesen.
+- Benchmark `SPY` aus `asset_price_bars` lesen.
 
 ### AP6: Indikator-Engine
 
@@ -230,7 +289,7 @@ Status: abgeschlossen.
 - Run-Konfiguration einfrieren.
 - CLI fuer einen reproduzierbaren Backtest bereitstellen.
 - AP8 legt die Evaluationstabellen additiv ueber `cli.backtest_status --persist`
-  an, damit `init.sql` weiter legacy-kompatibel bleiben kann.
+  an.
 
 ### AP9: Live-Migration
 
@@ -240,8 +299,20 @@ Status: abgeschlossen.
   angebunden.
 - Manuelle Trade- und Cash-Erfassung ist ueber `LiveExecutionService`,
   `cli.live_trade` und `cli.live_cash` wieder angebunden.
-- Eine portfolio-/tenant-faehige Live-Schema-Migration bleibt ein spaeterer,
-  separater Schritt.
+- Eine portfolio-/tenant-faehige Live-Schema-Migration bleibt AP14.
+
+### AP14: Legacy-unabhaengiges Schema und operativer Cutover
+
+- `assets`, `asset_price_bars`, `asset_fundamental_reports` und
+  `asset_market_caps` ersetzen die bisherigen Rohdatentabellen.
+- `strategy_instances` und Run-Snapshots ersetzen `strategy_settings` und
+  `strategy_settings_snapshots`.
+- `portfolio_target_*`, `live_rebalance_*`, `live_trade_*`,
+  `live_cash_*` und `live_positions` ersetzen die legacy-kompatiblen
+  operativen Live-Tabellen.
+- Repositories und CLIs werden so migriert, dass eine Smoke-Datenbank ohne
+  Legacy-Tabellen fuer `cli.daily_run`, `cli.monthly_run --persist`,
+  `cli.live_status`, `cli.live_cash` und `cli.live_trade` genuegt.
 
 ## Initialer Schema-Sketch
 
@@ -263,6 +334,16 @@ CREATE TABLE portfolios (
     FOREIGN KEY (tenant_id) REFERENCES tenants(id)
 );
 
+CREATE TABLE assets (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    symbol VARCHAR(32) NOT NULL UNIQUE,
+    name VARCHAR(255) NOT NULL,
+    sector VARCHAR(255),
+    asset_type VARCHAR(32) NOT NULL DEFAULT 'equity',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE universes (
     id INT AUTO_INCREMENT PRIMARY KEY,
     universe_key VARCHAR(100) NOT NULL UNIQUE,
@@ -273,20 +354,20 @@ CREATE TABLE universes (
 
 CREATE TABLE universe_members (
     universe_id INT NOT NULL,
-    ticker VARCHAR(10) NOT NULL,
+    asset_id BIGINT NOT NULL,
     valid_from DATE NOT NULL,
     valid_to DATE NULL,
-    PRIMARY KEY (universe_id, ticker, valid_from),
+    PRIMARY KEY (universe_id, asset_id, valid_from),
     FOREIGN KEY (universe_id) REFERENCES universes(id),
-    FOREIGN KEY (ticker) REFERENCES tickers(ticker)
+    FOREIGN KEY (asset_id) REFERENCES assets(id)
 );
 
 CREATE TABLE benchmarks (
     id INT AUTO_INCREMENT PRIMARY KEY,
     benchmark_key VARCHAR(100) NOT NULL UNIQUE,
-    ticker VARCHAR(10) NOT NULL,
+    asset_id BIGINT NOT NULL,
     name VARCHAR(255) NOT NULL,
-    FOREIGN KEY (ticker) REFERENCES tickers(ticker)
+    FOREIGN KEY (asset_id) REFERENCES assets(id)
 );
 
 CREATE TABLE strategy_instances (

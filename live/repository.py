@@ -12,7 +12,7 @@ from .models import PortfolioTarget, RealPosition
 
 
 class LivePortfolioRepository:
-    """Read legacy-compatible live portfolio tables for AP9 workflows."""
+    """Read canonical live portfolio tables for AP14 workflows."""
 
     def __init__(self, engine: Optional[Engine] = None) -> None:
         self.engine = engine or get_engine()
@@ -23,7 +23,7 @@ class LivePortfolioRepository:
                 text(
                     """
                     SELECT MAX(as_of_date)
-                    FROM portfolio_snapshots
+                    FROM portfolio_target_items
                     WHERE snapshot_type = :snapshot_type
                     """
                 ),
@@ -50,7 +50,7 @@ class LivePortfolioRepository:
                         source_rank,
                         sector,
                         target_weight
-                    FROM portfolio_snapshots
+                    FROM portfolio_target_items
                     WHERE as_of_date = :as_of_date
                       AND snapshot_type = :snapshot_type
                     ORDER BY portfolio_rank, ticker
@@ -81,18 +81,18 @@ class LivePortfolioRepository:
                         p.buy_price,
                         p.opened_at,
                         latest_price.current_price
-                    FROM portfolio_positions p
+                    FROM live_positions p
                     LEFT JOIN (
-                        SELECT fm.ticker, fm.current_price
-                        FROM factor_metrics fm
+                        SELECT bars.ticker, bars.close AS current_price
+                        FROM asset_price_bars bars
                         JOIN (
-                            SELECT ticker, MAX(as_of_date) AS max_as_of_date
-                            FROM factor_metrics
-                            WHERE (:as_of_date IS NULL OR as_of_date <= :as_of_date)
+                            SELECT ticker, MAX(date) AS max_price_date
+                            FROM asset_price_bars
+                            WHERE (:as_of_date IS NULL OR date <= :as_of_date)
                             GROUP BY ticker
                         ) latest
-                            ON latest.ticker = fm.ticker
-                           AND latest.max_as_of_date = fm.as_of_date
+                            ON latest.ticker = bars.ticker
+                           AND latest.max_price_date = bars.date
                     ) latest_price
                         ON latest_price.ticker = p.ticker
                     WHERE p.is_open = 1
@@ -118,7 +118,7 @@ class LivePortfolioRepository:
                 text(
                     """
                     SELECT cash_balance
-                    FROM portfolio_cash
+                    FROM live_cash_balances
                     ORDER BY updated_at DESC, id DESC
                     LIMIT 1
                     """

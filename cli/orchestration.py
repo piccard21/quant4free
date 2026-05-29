@@ -107,7 +107,7 @@ def run_strategy_snapshot(
     require_non_empty(
         "benchmark price rows",
         len(benchmark_prices),
-        hint="verify the selected benchmark has daily_candles rows",
+        hint="verify the selected benchmark has asset_price_bars rows",
     )
 
     indicators = compute_indicators(
@@ -124,7 +124,7 @@ def run_strategy_snapshot(
     require_non_empty(
         "indicator rows",
         len(indicators),
-        hint="verify prices, ttm fundamentals, and market-cap snapshots overlap",
+        hint="verify prices, ttm fundamentals, and asset_market_caps rows overlap",
     )
 
     result = strategy.run(

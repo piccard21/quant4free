@@ -6,25 +6,25 @@ from typing import NoReturn
 
 
 RAW_TABLES = {
-    "tickers",
-    "daily_candles",
-    "financial_reports",
-    "market_cap_snapshots",
+    "assets",
+    "asset_price_bars",
+    "asset_fundamental_reports",
+    "asset_market_caps",
 }
 
 LIVE_TABLES = {
-    "cash_ledger",
-    "decision_log",
-    "factor_metrics",
-    "portfolio_cash",
-    "portfolio_positions",
-    "portfolio_snapshots",
-    "rebalance_suggestions",
-    "strategy_settings",
-    "strategy_settings_snapshots",
-    "trade_executions",
-    "trade_plan_summary",
-    "trade_plan_snapshots",
+    "live_cash_ledger",
+    "live_decision_items",
+    "asset_price_bars",
+    "live_cash_balances",
+    "live_positions",
+    "portfolio_target_items",
+    "live_rebalance_items",
+    "strategy_instances",
+    "strategy_config_snapshots",
+    "live_trade_executions",
+    "live_trade_plans",
+    "live_trade_plan_items",
 }
 
 
@@ -159,7 +159,7 @@ def _missing_table_hint(table_name: str) -> str:
         )
     if table_name in LIVE_TABLES:
         return (
-            "load init.sql or run the legacy setup path to create live tables; "
+            "load init.sql to create the canonical live tables; "
             "fixtures/raw_market_data.sql intentionally does not contain live data"
         )
     return "check init.sql and the configured database schema"

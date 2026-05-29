@@ -31,7 +31,7 @@ class UniverseLoader(Protocol):
 
 
 class ActiveTickerUniverse:
-    """Universe backed by tickers.is_active from the fixture schema."""
+    """Universe backed by active assets from the canonical raw-data schema."""
 
     key = "active_tickers"
 
@@ -61,7 +61,7 @@ UNIVERSE_DEFINITIONS: dict[str, UniverseDefinition] = {
     "active_tickers": UniverseDefinition(
         key="active_tickers",
         name="Active tickers",
-        description="All tickers where tickers.is_active = 1.",
+        description="All tickers where assets.is_active = 1.",
         active_only=True,
     ),
     "all_tickers": UniverseDefinition(

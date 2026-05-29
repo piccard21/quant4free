@@ -3,10 +3,10 @@ from typing import Any
 
 
 RAW_TABLES = {
-    "tickers": None,
-    "daily_candles": "date",
-    "financial_reports": "report_date",
-    "market_cap_snapshots": "date",
+    "assets": None,
+    "asset_price_bars": "date",
+    "asset_fundamental_reports": "report_date",
+    "asset_market_caps": "date",
 }
 
 
@@ -73,7 +73,7 @@ def main() -> None:
                         MAX(report_date) AS max_report_date,
                         MIN(imported_at) AS min_imported_at,
                         MAX(imported_at) AS max_imported_at
-                    FROM financial_reports
+                    FROM asset_fundamental_reports
                     GROUP BY report_type
                     ORDER BY report_type
                     """
@@ -82,14 +82,14 @@ def main() -> None:
                 print(_format_financial_report_status(row))
 
             active_tickers = connection.execute(
-                text("SELECT COUNT(*) FROM tickers WHERE is_active = 1")
+                text("SELECT COUNT(*) FROM assets WHERE is_active = 1")
             ).scalar_one()
             latest_price_rows = connection.execute(
                 text(
                     """
                     SELECT COUNT(*)
-                    FROM daily_candles
-                    WHERE date = (SELECT MAX(date) FROM daily_candles)
+                    FROM asset_price_bars
+                    WHERE date = (SELECT MAX(date) FROM asset_price_bars)
                     """
                 )
             ).scalar_one()
@@ -102,7 +102,7 @@ def main() -> None:
                         COUNT(*) AS row_count,
                         MIN(date) AS min_date,
                         MAX(date) AS max_date
-                    FROM daily_candles
+                    FROM asset_price_bars
                     WHERE ticker = :ticker
                     """
                 ),
@@ -137,9 +137,9 @@ def _format_benchmark_status(ticker: str, row: dict[str, Any]) -> str:
 
 def _format_financial_report_status(row: dict[str, Any]) -> str:
     parts = [
-        f"financial_reports.{row['report_type']}",
+        f"asset_fundamental_reports.{row['report_type']}",
         f"rows={row['row_count']}",
-        f"tickers={row['ticker_count']}",
+        f"assets={row['ticker_count']}",
     ]
     if row.get("min_report_date") is not None and row.get("max_report_date") is not None:
         parts.append(f"report_dates={row['min_report_date']}..{row['max_report_date']}")

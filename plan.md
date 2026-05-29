@@ -2,21 +2,39 @@
 
 ## Umsetzungsstand
 
-Stand: AP13 ist abgeschlossen. Die modulare Persistenz fuer Model, Shadow,
-Rebalance, Decision Log und Trade Plan ist implementiert, lokal getestet und
-gegen eine Docker/MySQL-Smoke-Datenbank mit `init.sql` plus Rohdaten-Fixture
-verifiziert. Der naechste Schritt ist AP14: Crontab-Betrieb fuer Daily und
+Stand: AP14 ist abgeschlossen. Das kanonische Schema ersetzt die
+legacy-kompatiblen Tabellen im regulaeren modularen Betrieb. `init.sql`,
+`fixtures/raw_market_data.sql`, Setup, Rohdaten-Repositories, Live-Repositories,
+Execution, Operations-CLIs und fokussierte Regressionstests laufen auf den
+neuen Tabellen. Der naechste Schritt ist AP15: Crontab-Betrieb fuer Daily und
 Monthly dokumentieren und testen.
 
 Strategische Anpassung:
 
 - Die Weboberflaeche wird nach hinten geschoben.
-- Vorher wird der operative Legacy-Pfad fuer Datenfetch, Daily-/Monthly-Run,
-  operative Persistenz und Scheduling in neue, modulare APs zerlegt.
+- Vor der UI werden die verbleibenden Operator-Themen wie Scheduling in neue,
+  modulare APs zerlegt.
 - Der produktive Monthly-Pfad fuer persistierte Artefakte steht jetzt ueber
-  `cli.monthly_run --persist` auf dem modularen AP13-Pfad bereit.
+  `cli.monthly_run --persist` auf dem kanonischen AP14-Pfad bereit.
 
 Erledigt:
+
+AP14:
+
+- Tabellen-Audit fuer den neuen Code dokumentiert:
+  - `data.repository` nutzt jetzt `assets`, `asset_price_bars`,
+    `asset_fundamental_reports`, `asset_market_caps`.
+  - `live.repository`, `live.operations` und `live.execution` nutzen jetzt die
+    kanonischen Live-/Settings-Tabellen.
+  - `live.repository` liest Real-Positionspreise aus `asset_price_bars`.
+  - `evaluation.repository` ist bereits auf eigenen `strategy_run_*`-Tabellen,
+    aber noch nicht portfolio-/strategy-instance-faehig.
+- `init.sql` erzeugt keine Legacy-Tabellen mehr.
+- `fixtures/raw_market_data.sql` wurde auf kanonische Rohdatentabellen
+  umgestellt.
+- `setup.sh` nutzt keine Legacy-Core-Module mehr.
+- Fokussierte Regressionstests fuer Rohdaten, Live-Status, Live-Operations,
+  Cash/Trades und CLI-Fehler laufen auf dem neuen Schema.
 
 AP13:
 
@@ -970,7 +988,52 @@ Tests/Akzeptanz:
 - Status: abgeschlossen und per lokaler Testsuite sowie Docker/MySQL-Smoke
   verifiziert.
 
-### AP14: Crontab-Betrieb Fuer Daily Und Monthly
+### AP14: Legacy-Unabhaengiges Schema Und Operativer Cutover
+
+Ziel:
+
+- Der neue modulare Pfad nutzt im normalen Betrieb weder Legacy-Python-Code noch
+  legacy-kompatible operative Tabellen als Quelle der Wahrheit.
+
+Umfang:
+
+- Neues kanonisches Schema fuer Rohdaten, Strategie-Laeufe,
+  Model-/Shadow-/Real-Portfolios, Cash, Trades, Rebalance-Entscheidungen und
+  Trade Plans definieren.
+- Entscheiden, ob die bisherigen Rohdatentabellen als neue kanonische Tabellen
+  akzeptiert oder in neue Namen wie `assets`, `asset_price_bars`,
+  `asset_fundamental_reports` und `asset_market_caps` migriert werden.
+- Live-Repositories und Live-Schreibpfade von `portfolio_snapshots`,
+  `portfolio_positions`, `portfolio_cash`, `trade_executions`, `cash_ledger`,
+  `rebalance_suggestions`, `decision_log`, `trade_plan_summary` und
+  `trade_plan_snapshots` auf neue Tabellen umstellen.
+- Preisermittlung fuer Real-Positionen aus Legacy-`factor_metrics` entfernen
+  und auf kanonische Preis-/Indicator-Daten umstellen.
+- `cli.live_status`, `cli.live_cash`, `cli.live_trade` und
+  `cli.monthly_run --persist` auf die neuen Tabellen migrieren.
+- `init.sql` und Fixtures so aktualisieren, dass Smoke- und Regressionstests
+  ohne Legacy-/Live-Altbestand laufen.
+- Operator-Dokumentation von Legacy-CLIs und `PYTHONPATH=/app/legacy/current_system`
+  als Standardpfad bereinigen; Legacy bleibt hoechstens als archivierte
+  Referenz dokumentiert.
+- Nach erfolgreichem Cutover pruefen, ob `legacy/current_system/` im Repo
+  geloescht, ausgelagert oder nur noch als nicht-operatives Archiv behalten
+  wird.
+
+Tests/Akzeptanz:
+
+- Kein neues Top-Level-Modul importiert Legacy-Code oder `shared.settings`.
+- Modularer Smoke-Pfad laeuft gegen eine Datenbank, die nur das neue
+  kanonische Schema enthaelt.
+- `cli.daily_run`, `cli.monthly_run --persist`, `cli.live_status`,
+  `cli.live_cash` und `cli.live_trade` funktionieren ohne Legacy-Tabellen.
+- Regressionstests decken Migration, Live-Status, Cash, Trades und
+  Monthly-Persistenz auf dem neuen Schema ab.
+- Dokumentation nennt Legacy nicht mehr als operativen Standardpfad.
+- Status: abgeschlossen. Fokussierte Tests fuer Rohdaten, Live-Operations,
+  Live-Execution, Live-Status und CLI-Fehler wurden lokal ausgefuehrt.
+
+### AP15: Crontab-Betrieb Fuer Daily Und Monthly
 
 Ziel:
 
@@ -983,8 +1046,8 @@ Umfang:
   - Monthly-Run am Monatsanfang oder bewusst definierten Monatstag
 - `flock` gegen parallele Runs verwenden.
 - Logs nach festen Dateien schreiben.
-- Vorlaeufig koennen die Cron-Eintraege noch den Legacy-Pfad nutzen; nach AP12
-  werden sie auf neue modulare CLIs umgestellt.
+- Cron-Eintraege nutzen nur die neuen modularen CLIs aus AP14; Legacy-Fallbacks
+  werden nicht als Standard-Cronpfad dokumentiert.
 - Operator-Dokumentation fuer manuelles Testen, Logpruefung und Fehlerfall.
 
 Tests/Akzeptanz:
@@ -992,10 +1055,10 @@ Tests/Akzeptanz:
 - Dokumentierter Cron-Befehl kann manuell erfolgreich ausgefuehrt werden.
 - Parallelausfuehrung wird durch Lock verhindert.
 - Logs enthalten Start, Ende und Fehlerdetails.
-- Dokumentation trennt klar zwischen Legacy-Cron-Befehl und spaeterem modularen
-  Cron-Befehl.
+- Dokumentation beschreibt den modularen Cron-Befehl als einzigen regulaeren
+  Betriebsweg.
 
-### AP15: Weboberflaeche Erst Nach Stabiler Kernlogik
+### AP16: Weboberflaeche Erst Nach Stabiler Kernlogik
 
 Ziel:
 
@@ -1028,8 +1091,9 @@ Tests/Akzeptanz:
 12. Modularen Data-Sync als Legacy-Ersatz bauen.
 13. Neue Daily-/Monthly-Orchestrierung ohne Legacy-Imports bereitstellen.
 14. Operative Persistenz fuer Model, Shadow und Trade Plan migrieren.
-15. Crontab-Betrieb fuer Daily und Monthly dokumentieren und testen.
-16. Weboberflaeche erst am Schluss bauen.
+15. Legacy-unabhaengiges Schema und operativen Cutover bauen.
+16. Crontab-Betrieb fuer Daily und Monthly dokumentieren und testen.
+17. Weboberflaeche erst am Schluss bauen.
 
 ## Testing Und Akzeptanz
 
@@ -1038,8 +1102,9 @@ Tests/Akzeptanz:
 - Backtest-Akzeptanz: ein Run erzeugt reproduzierbar Metriken, Equity Curve und simulierte Trades.
 - Live-Akzeptanz: aktives Portfolio zeigt Model, Shadow, Real und Execution Gap.
 - Konfigurations-Akzeptanz: Strategieaenderungen gelten nur ab neuem `valid_from` und zerstoeren keine historischen Ergebnisse.
-- Crontab startet als AP14 auf dem modularen operativen Pfad aus AP11-AP13 und
-  dokumentiert bei Bedarf einen Legacy-Fallback fuer den Fehlerfall.
+- Legacy-Cutover entfernt als AP14 die verbleibenden Abhaengigkeiten von
+  legacy-kompatiblen Tabellen im regulaeren Betrieb.
+- Crontab startet erst als AP15 auf dem modularen operativen Pfad nach AP14.
 - Spaetere Weboberflaeche ist nur Client; Fachlogik bleibt im Backend/Kern.
 
 ## Annahmen Und Defaults

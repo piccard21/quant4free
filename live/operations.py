@@ -67,7 +67,7 @@ class OperationalPersistenceResult:
 
 
 class OperationalRepository:
-    """Read/write legacy-compatible operational artifact tables."""
+    """Read/write canonical operational artifact tables."""
 
     def __init__(self, engine: Optional[Engine] = None) -> None:
         self.engine = engine or get_engine()
@@ -98,7 +98,7 @@ class OperationalRepository:
                         fundamental_refresh_hours,
                         tax_rate,
                         max_funding_sell_pct
-                    FROM strategy_settings
+                    FROM strategy_instances
                     WHERE is_active = 1
                     ORDER BY id DESC
                     LIMIT 1
@@ -107,7 +107,7 @@ class OperationalRepository:
             ).mappings().first()
 
         if row is None:
-            raise ValueError("no active strategy_settings row found")
+            raise ValueError("no active strategy_instances row found")
         settings = OperationalSettings(
             strategy_version=str(row["strategy_version"]),
             value_weight=float(row["value_weight"]),
@@ -141,7 +141,7 @@ class OperationalRepository:
                 text(
                     """
                     SELECT MAX(as_of_date)
-                    FROM portfolio_snapshots
+                    FROM portfolio_target_items
                     WHERE snapshot_type = 'shadow'
                       AND as_of_date < :as_of_date
                     """
@@ -167,7 +167,7 @@ class OperationalRepository:
                         trend_positive,
                         buy_eligible,
                         holding_start_date
-                    FROM portfolio_snapshots
+                    FROM portfolio_target_items
                     WHERE as_of_date = :as_of_date
                       AND snapshot_type = 'shadow'
                     ORDER BY portfolio_rank, ticker
@@ -183,7 +183,7 @@ class OperationalRepository:
                 text(
                     """
                     SELECT ticker, shares, buy_price, opened_at, is_open
-                    FROM portfolio_positions
+                    FROM live_positions
                     WHERE is_open = 1
                     ORDER BY opened_at, ticker
                     """
@@ -197,7 +197,7 @@ class OperationalRepository:
                 text(
                     """
                     SELECT cash_balance
-                    FROM portfolio_cash
+                    FROM live_cash_balances
                     ORDER BY updated_at DESC, id DESC
                     LIMIT 1
                     """
@@ -217,10 +217,10 @@ class OperationalRepository:
             text(
                 """
                 SELECT dc.ticker, dc.close AS current_price
-                FROM daily_candles dc
+                FROM asset_price_bars dc
                 JOIN (
                     SELECT ticker, MAX(date) AS max_date
-                    FROM daily_candles
+                    FROM asset_price_bars
                     WHERE date <= :as_of_date
                       AND ticker IN :tickers
                     GROUP BY ticker
@@ -241,37 +241,37 @@ class OperationalRepository:
 
     def assert_artifacts_are_new(self, as_of_date: date) -> None:
         checks = {
-            "portfolio_snapshots.model": (
+            "portfolio_target_items.model": (
                 """
-                SELECT 1 FROM portfolio_snapshots
+                SELECT 1 FROM portfolio_target_items
                 WHERE as_of_date = :as_of_date AND snapshot_type = 'model'
                 LIMIT 1
                 """
             ),
-            "portfolio_snapshots.shadow": (
+            "portfolio_target_items.shadow": (
                 """
-                SELECT 1 FROM portfolio_snapshots
+                SELECT 1 FROM portfolio_target_items
                 WHERE as_of_date = :as_of_date AND snapshot_type = 'shadow'
                 LIMIT 1
                 """
             ),
-            "strategy_settings_snapshots": (
-                "SELECT 1 FROM strategy_settings_snapshots "
+            "strategy_config_snapshots": (
+                "SELECT 1 FROM strategy_config_snapshots "
                 "WHERE as_of_date = :as_of_date LIMIT 1"
             ),
-            "rebalance_suggestions": (
-                "SELECT 1 FROM rebalance_suggestions "
+            "live_rebalance_items": (
+                "SELECT 1 FROM live_rebalance_items "
                 "WHERE as_of_date = :as_of_date LIMIT 1"
             ),
-            "decision_log": (
-                "SELECT 1 FROM decision_log WHERE as_of_date = :as_of_date LIMIT 1"
+            "live_decision_items": (
+                "SELECT 1 FROM live_decision_items WHERE as_of_date = :as_of_date LIMIT 1"
             ),
-            "trade_plan_summary": (
-                "SELECT 1 FROM trade_plan_summary "
+            "live_trade_plans": (
+                "SELECT 1 FROM live_trade_plans "
                 "WHERE as_of_date = :as_of_date LIMIT 1"
             ),
-            "trade_plan_snapshots": (
-                "SELECT 1 FROM trade_plan_snapshots "
+            "live_trade_plan_items": (
+                "SELECT 1 FROM live_trade_plan_items "
                 "WHERE as_of_date = :as_of_date LIMIT 1"
             ),
         }
@@ -293,17 +293,17 @@ class OperationalRepository:
     ) -> None:
         as_of_date = artifacts.trade_plan_summary["as_of_date"]
         with self.engine.begin() as conn:
-            _insert_rows(conn, "strategy_settings_snapshots", [_settings_payload(as_of_date, settings)])
-            _insert_rows(conn, "portfolio_snapshots", artifacts.model)
-            _insert_rows(conn, "portfolio_snapshots", artifacts.shadow)
-            _insert_rows(conn, "rebalance_suggestions", artifacts.rebalance)
-            _insert_rows(conn, "decision_log", artifacts.decision_log)
-            _insert_rows(conn, "trade_plan_summary", [artifacts.trade_plan_summary])
-            _insert_rows(conn, "trade_plan_snapshots", artifacts.trade_plan)
+            _insert_rows(conn, "strategy_config_snapshots", [_settings_payload(as_of_date, settings)])
+            _insert_rows(conn, "portfolio_target_items", artifacts.model)
+            _insert_rows(conn, "portfolio_target_items", artifacts.shadow)
+            _insert_rows(conn, "live_rebalance_items", artifacts.rebalance)
+            _insert_rows(conn, "live_decision_items", artifacts.decision_log)
+            _insert_rows(conn, "live_trade_plans", [artifacts.trade_plan_summary])
+            _insert_rows(conn, "live_trade_plan_items", artifacts.trade_plan)
 
 
 class OperationalPersistenceService:
-    """Build and optionally persist AP13 monthly operational artifacts."""
+    """Build and optionally persist monthly operational artifacts."""
 
     def __init__(self, repository: Optional[OperationalRepository] = None) -> None:
         self.repository = repository or OperationalRepository()

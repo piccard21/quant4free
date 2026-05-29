@@ -162,16 +162,16 @@ class DataSyncTests(unittest.TestCase):
 
         with engine.connect() as connection:
             ticker = connection.execute(
-                text("SELECT name, sector, last_fundamental_update FROM tickers")
+                text("SELECT name, sector, last_fundamental_update FROM assets")
             ).mappings().one()
             candle = connection.execute(
-                text("SELECT close, volume FROM daily_candles")
+                text("SELECT close, volume FROM asset_price_bars")
             ).mappings().one()
             report_count = connection.execute(
-                text("SELECT COUNT(*) FROM financial_reports")
+                text("SELECT COUNT(*) FROM asset_fundamental_reports")
             ).scalar_one()
             market_cap = connection.execute(
-                text("SELECT market_cap FROM market_cap_snapshots")
+                text("SELECT market_cap FROM asset_market_caps")
             ).scalar_one()
 
         self.assertEqual(ticker["name"], "New Name")
@@ -188,7 +188,7 @@ def _create_raw_tables(engine) -> None:
         connection.execute(
             text(
                 """
-                CREATE TABLE tickers (
+                CREATE TABLE assets (
                     ticker VARCHAR(10) PRIMARY KEY,
                     name VARCHAR(255) NOT NULL,
                     sector VARCHAR(255),
@@ -204,7 +204,7 @@ def _create_raw_tables(engine) -> None:
         connection.execute(
             text(
                 """
-                CREATE TABLE daily_candles (
+                CREATE TABLE asset_price_bars (
                     ticker VARCHAR(10) NOT NULL,
                     date DATE NOT NULL,
                     open NUMERIC,
@@ -220,7 +220,7 @@ def _create_raw_tables(engine) -> None:
         connection.execute(
             text(
                 """
-                CREATE TABLE financial_reports (
+                CREATE TABLE asset_fundamental_reports (
                     ticker VARCHAR(10) NOT NULL,
                     report_date DATE NOT NULL,
                     report_type VARCHAR(20) NOT NULL,
@@ -241,7 +241,7 @@ def _create_raw_tables(engine) -> None:
         connection.execute(
             text(
                 """
-                CREATE TABLE market_cap_snapshots (
+                CREATE TABLE asset_market_caps (
                     ticker VARCHAR(10) NOT NULL,
                     date DATE NOT NULL,
                     market_cap INTEGER,

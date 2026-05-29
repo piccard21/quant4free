@@ -106,7 +106,7 @@ def test_repository_persists_operational_artifacts_and_rejects_duplicate_date():
         as_of_date=as_of_date,
         settings=settings,
     )
-    decision_log = build_decision_log(rebalance, pd.DataFrame([_ranking("AAA", 1)]), settings)
+    live_decision_items = build_decision_log(rebalance, pd.DataFrame([_ranking("AAA", 1)]), settings)
     trade_plan, summary = build_trade_plan(
         as_of_date=as_of_date,
         rebalance=rebalance,
@@ -119,7 +119,7 @@ def test_repository_persists_operational_artifacts_and_rejects_duplicate_date():
         model=model,
         shadow=shadow,
         rebalance=rebalance,
-        decision_log=decision_log,
+        decision_log=live_decision_items,
         trade_plan=trade_plan,
         trade_plan_summary=summary,
     )
@@ -128,10 +128,10 @@ def test_repository_persists_operational_artifacts_and_rejects_duplicate_date():
     repository.save_artifacts(settings, artifacts)
 
     with engine.connect() as conn:
-        assert conn.execute(text("SELECT COUNT(*) FROM portfolio_snapshots")).scalar_one() == 2
-        assert conn.execute(text("SELECT COUNT(*) FROM rebalance_suggestions")).scalar_one() == 1
-        assert conn.execute(text("SELECT COUNT(*) FROM decision_log")).scalar_one() == 1
-        assert conn.execute(text("SELECT COUNT(*) FROM trade_plan_snapshots")).scalar_one() == 1
+        assert conn.execute(text("SELECT COUNT(*) FROM portfolio_target_items")).scalar_one() == 2
+        assert conn.execute(text("SELECT COUNT(*) FROM live_rebalance_items")).scalar_one() == 1
+        assert conn.execute(text("SELECT COUNT(*) FROM live_decision_items")).scalar_one() == 1
+        assert conn.execute(text("SELECT COUNT(*) FROM live_trade_plan_items")).scalar_one() == 1
 
     with pytest.raises(ValueError, match="operational artifacts already exist"):
         repository.assert_artifacts_are_new(as_of_date)
@@ -213,7 +213,7 @@ def _build_engine():
         conn.execute(
             text(
                 """
-                CREATE TABLE strategy_settings_snapshots (
+                CREATE TABLE strategy_config_snapshots (
                     as_of_date DATE PRIMARY KEY,
                     strategy_version TEXT,
                     value_weight REAL,
@@ -243,7 +243,7 @@ def _build_engine():
         conn.execute(
             text(
                 """
-                CREATE TABLE portfolio_snapshots (
+                CREATE TABLE portfolio_target_items (
                     as_of_date DATE,
                     snapshot_type TEXT,
                     ticker TEXT,
@@ -267,7 +267,7 @@ def _build_engine():
         conn.execute(
             text(
                 """
-                CREATE TABLE rebalance_suggestions (
+                CREATE TABLE live_rebalance_items (
                     as_of_date DATE,
                     ticker TEXT,
                     sector TEXT,
@@ -288,7 +288,7 @@ def _build_engine():
         conn.execute(
             text(
                 """
-                CREATE TABLE decision_log (
+                CREATE TABLE live_decision_items (
                     as_of_date DATE,
                     ticker TEXT,
                     action TEXT,
@@ -311,7 +311,7 @@ def _build_engine():
         conn.execute(
             text(
                 """
-                CREATE TABLE trade_plan_summary (
+                CREATE TABLE live_trade_plans (
                     as_of_date DATE PRIMARY KEY,
                     portfolio_value_before REAL,
                     invested_value_before REAL,
@@ -335,7 +335,7 @@ def _build_engine():
         conn.execute(
             text(
                 """
-                CREATE TABLE trade_plan_snapshots (
+                CREATE TABLE live_trade_plan_items (
                     as_of_date DATE,
                     ticker TEXT,
                     action TEXT,
