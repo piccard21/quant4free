@@ -10,6 +10,8 @@ MIN_HOLDING_MONTHS=""
 MAX_FUNDING_SELL_PCT=""
 MYSQL_ROOT_PASSWORD="${MYSQL_ROOT_PASSWORD:-}"
 DB_NAME="${DB_NAME:-stocks_db}"
+CLI_MYSQL_ROOT_PASSWORD=""
+CLI_DB_NAME=""
 NO_BUILD="0"
 LOAD_FIXTURE="0"
 
@@ -74,10 +76,12 @@ while [[ $# -gt 0 ]]; do
       ;;
     --mysql-root-password)
       MYSQL_ROOT_PASSWORD="$2"
+      CLI_MYSQL_ROOT_PASSWORD="$2"
       shift 2
       ;;
     --db-name)
       DB_NAME="$2"
+      CLI_DB_NAME="$2"
       shift 2
       ;;
     --load-fixture)
@@ -107,8 +111,12 @@ if [[ -f .env ]]; then
   set +a
 fi
 
+[[ -n "$CLI_MYSQL_ROOT_PASSWORD" ]] && MYSQL_ROOT_PASSWORD="$CLI_MYSQL_ROOT_PASSWORD"
+[[ -n "$CLI_DB_NAME" ]] && DB_NAME="$CLI_DB_NAME"
+
 MYSQL_ROOT_PASSWORD="${MYSQL_ROOT_PASSWORD:-}"
 DB_NAME="${DB_NAME:-stocks_db}"
+export MYSQL_ROOT_PASSWORD DB_NAME
 
 require_cmd() {
   if ! command -v "$1" >/dev/null 2>&1; then
@@ -168,18 +176,17 @@ run() {
 }
 
 mysql_exec() {
-  docker compose exec -T -e MYSQL_PWD="${MYSQL_ROOT_PASSWORD}" db mysql -uroot -e "$1"
+  docker compose exec -T -e MYSQL_PWD="${MYSQL_ROOT_PASSWORD}" db mysql -uroot -h127.0.0.1 -e "$1"
 }
 
 mysql_file() {
-  docker compose exec -T -e MYSQL_PWD="${MYSQL_ROOT_PASSWORD}" db mysql -uroot "${DB_NAME}" < "$1"
+  docker compose exec -T -e MYSQL_PWD="${MYSQL_ROOT_PASSWORD}" db mysql -uroot -h127.0.0.1 "${DB_NAME}" < "$1"
 }
 
 wait_for_db() {
   echo "[INFO] waiting for MySQL..."
   for _ in {1..60}; do
-    status="$(docker inspect --format='{{.State.Health.Status}}' sp500_db 2>/dev/null || true)"
-    if [[ "$status" == "healthy" ]]; then
+    if docker compose exec -T -e MYSQL_PWD="${MYSQL_ROOT_PASSWORD}" db mysqladmin ping -uroot -h127.0.0.1 --silent >/dev/null 2>&1; then
       echo "[INFO] MySQL ready"
       return
     fi
@@ -241,7 +248,7 @@ clear_live_state() {
 verify_canonical_schema() {
   mysql_exec "
     USE ${DB_NAME};
-    SELECT 'assets' AS table_name, COUNT(*) AS rows FROM assets
+    SELECT 'assets' AS table_name, COUNT(*) AS row_count FROM assets
     UNION ALL SELECT 'asset_price_bars', COUNT(*) FROM asset_price_bars
     UNION ALL SELECT 'asset_fundamental_reports', COUNT(*) FROM asset_fundamental_reports
     UNION ALL SELECT 'asset_market_caps', COUNT(*) FROM asset_market_caps
