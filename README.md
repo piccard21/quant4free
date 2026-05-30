@@ -718,6 +718,25 @@ oder Monthly-Runs ein echter Data-Sync laufen.
 
 ## Lokalen Operator-Test Schritt Fuer Schritt
 
+Fuer die Entwicklung gibt es einen automatisierten Checklauf:
+
+```bash
+scripts/dev_check.sh
+```
+
+Der Default laeuft im Docker-App-Container und prueft `compileall` sowie die
+Pytest-Suite. Fuer einen isolierten End-to-End-Smoke mit eigener Testdatenbank:
+
+```bash
+scripts/dev_check.sh --smoke
+```
+
+Mit echten Smoke-Trade-Buchungen in dieser isolierten Testdatenbank:
+
+```bash
+scripts/dev_check.sh --smoke --execute-smoke-trades
+```
+
 Nach dem initialen Setup kann der aktuelle Stand ohne externe API-Aufrufe
 getestet werden:
 

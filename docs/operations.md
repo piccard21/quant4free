@@ -34,6 +34,26 @@ Datenbank nicht neu auf.
 
 ## Status Und Smoke
 
+Automatisierter Entwicklungscheck:
+
+```bash
+scripts/dev_check.sh
+```
+
+Der schnelle Default laeuft im Docker-App-Container und prueft `compileall`
+sowie die Pytest-Suite. Der isolierte End-to-End-Smoke nutzt eine eigene
+Testdatenbank:
+
+```bash
+scripts/dev_check.sh --smoke
+```
+
+Echte Smoke-Trade-Buchungen nur in der isolierten Testdatenbank:
+
+```bash
+scripts/dev_check.sh --smoke --execute-smoke-trades
+```
+
 ```bash
 docker compose run --rm app python -m cli.data_status --details
 docker compose run --rm app python -m cli.operator_smoke --ranking-limit 5 --trade-limit 5
