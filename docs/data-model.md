@@ -1,6 +1,6 @@
 # Datenmodell-Plan
 
-Stand: AP14 Audit und Zieltabellen-Vorschlag.
+Stand: AP20.
 
 Dieses Dokument beschreibt den Zielzustand des neuen modularen Quant-Frameworks.
 AP14 ersetzt die bisherige Uebergangsentscheidung, legacy-kompatible Tabellen
@@ -8,6 +8,17 @@ weiterzuverwenden: Der regulaere Betrieb soll nach AP14 ausschliesslich auf
 kanonischen neuen Tabellen laufen. `init.sql` und
 `fixtures/raw_market_data.sql` wurden im AP14-Cutover auf das kanonische Schema
 umgestellt.
+
+AP18 ergaenzt das fachliche Zielbild fuer mehrere Assetklassen, Universen und
+Daten-Capabilities. AP19 ergaenzt die Provider-/API-Achse: Universen,
+Capabilities und konkrete Datenquellen werden getrennt modelliert, damit z. B.
+Yahoo Finance, Binance, SimFin, CSV oder kommerzielle APIs austauschbar
+angebunden werden koennen. Die detaillierte Capability-Matrix und
+Migrationslinie stehen in [docs/data-capabilities.md](data-capabilities.md);
+das Provider-Binding-Modell steht in
+[docs/provider-api-model.md](provider-api-model.md). AP20 setzt diese
+Capability-/Provider-Pruefung in Python um, fuehrt aber weiterhin keine
+Schemaaenderung ein.
 
 ## Leitlinien
 
@@ -17,6 +28,16 @@ umgestellt.
 - Billig reproduzierbare Zwischenwerte werden nicht dauerhaft gespeichert.
 - Audit-relevante Entscheidungen, Trades, Cash-Bewegungen und Run-Konfigurationen werden eingefroren.
 - Die erste Umsetzung bleibt auf MySQL und SQLAlchemy-nahe SQL-Zugriffe ausgerichtet.
+- Assets werden fachlich als allgemeiner Asset-Katalog verstanden, nicht als
+  reine Aktien-/S&P-Tickerliste.
+- Universen beschreiben Asset-Mitgliedschaften; sie implizieren nicht
+  automatisch, dass bestimmte Datenarten verfuegbar sind.
+- Strategien, Indikatoren, Benchmarks und Live-Workflows sollen ihre
+  benoetigten Daten-Capabilities explizit deklarieren.
+- Provider/API-Bindings sollen pro Datenrolle explizit werden; ein Universum
+  impliziert nicht automatisch Yahoo Finance, Binance oder eine andere API.
+- Provider-Wechsel sind nur gueltig, wenn Capabilities, Identifier-Abdeckung,
+  Granularitaet, Freshness und Mindestfelder kompatibel bleiben.
 
 ## Aktueller Legacy-Bestand Und AP14-Audit
 
@@ -71,6 +92,20 @@ Zweck:
 `tickers.is_active` wird nicht in `assets` uebernommen. Aktive
 Universumsmitgliedschaft gehoert in `universe_members`.
 
+AP18-Zielpraezisierung:
+
+- `assets` bleibt der zentrale Asset-Katalog, soll spaeter aber Assetklassen
+  wie `equity`, `etf`, `crypto`, `cash`, `fx` oder `future` tragen koennen.
+- `asset_price_bars` bleibt die generische Quelle fuer taegliche OHLCV-Daten,
+  sofern eine Assetklasse solche Preisbars besitzt.
+- `asset_fundamental_reports` ist aktienspezifisch und darf nicht als
+  Pflichtdatenquelle fuer alle Assetklassen interpretiert werden.
+- `asset_market_caps` ist eine optionale Zeitreihe, die bei Aktien und Krypto
+  sinnvoll sein kann, aber nicht fuer jede Assetklasse vorausgesetzt wird.
+- Neue assetklassenspezifische Tabellen, z. B. fuer Krypto-Netzwerkdaten oder
+  ETF-Holdings, sollen als eigene Capabilities modelliert werden statt die
+  Aktien-Fundamentaltabelle zu ueberladen.
+
 ### 2. Mandanten, Portfolios und Kataloge
 
 Neue Katalog- und Konfigurationstabellen:
@@ -103,6 +138,32 @@ Minimaler Zweck:
 Ab AP14 ist diese Ersetzung nicht mehr langfristig, sondern Cutover-Ziel:
 `strategy_settings` und `strategy_settings_snapshots` sind danach kein
 regulaerer Laufzeitpfad mehr.
+
+AP18-Zielpraezisierung fuer Universen:
+
+- Ein Universum ist eine Auswahl von Assets zu einem Stichtag.
+- Assetklasse, Waehrung, Liquiditaet, Mindesthistorie und Datenabdeckung sind
+  Universe-Policy- oder Capability-Pruefungen, nicht implizite Eigenschaften
+  des Universumsnamens.
+- Die aktuelle `sp500_active`-Konfiguration bleibt ein Aktienuniversum und
+  benoetigt fuer die Default-Strategie Preise, Fundamentaldaten, Market Caps
+  und Sector-Klassifikation.
+- Ein spaeteres Krypto-Universum darf gueltig sein, obwohl
+  `asset_fundamental_reports` leer bleibt, solange die gewaehlte Strategie
+  keine Aktienfundamentals verlangt.
+
+AP19-Zielpraezisierung fuer Provider:
+
+- `data_providers` beschreibt konkrete externe oder interne Quellen, z. B.
+  `yfinance`, `binance_spot`, `simfin`, `csv` oder einen kommerziellen
+  Anbieter.
+- `provider_configs` beschreibt fachliche Konfigurationen und Source-Rollen,
+  aber keine Secrets; Tokens und Passwoerter bleiben in `.env` oder in einem
+  Secret-Store.
+- Membership, Preise, Fundamentals, Market Caps, Klassifikation und
+  Benchmark-Preise koennen aus unterschiedlichen Providern stammen.
+- Asset-Identifier muessen langfristig provider-spezifisch abbildbar sein,
+  weil Provider unterschiedliche Symbole verwenden.
 
 Vorgesehene Kernfelder:
 
@@ -235,6 +296,22 @@ assets
   -> asset_market_caps
 ```
 
+AP18 ergaenzt logisch, noch ohne Schemaumsetzung:
+
+```text
+assets
+  -> asset_class
+  -> data_capabilities by asset class/provider
+
+universes
+  -> universe_members
+  -> universe_policy
+
+strategies/indicators/benchmarks/live workflows
+  -> required_capabilities
+  -> capability validation before run (AP20: shared.capabilities)
+```
+
 ## Migrationsreihenfolge
 
 ### AP2: Minimaler Datenzugriff
@@ -313,6 +390,40 @@ Status: abgeschlossen.
 - Repositories und CLIs werden so migriert, dass eine Smoke-Datenbank ohne
   Legacy-Tabellen fuer `cli.daily_run`, `cli.monthly_run --persist`,
   `cli.live_status`, `cli.live_cash` und `cli.live_trade` genuegt.
+
+### AP18: Assetklassen, Universen und Daten-Capabilities
+
+Status: abgeschlossen als Dokumentations-/Design-AP.
+
+- `assets` ist fachlich als allgemeiner Asset-Katalog eingeordnet.
+- Assetklassen und typische Datenarten sind dokumentiert.
+- Universen sind als historisierbare Asset-Auswahl beschrieben, getrennt von
+  Strategie- und Datenanforderungen.
+- Data-Capabilities wie `prices.daily_ohlcv`,
+  `fundamentals.equity_reports`, `market_caps`,
+  `classification.equity_sector`, `live.cash`, `live.positions` und spaetere
+  Krypto-/ETF-spezifische Capabilities sind definiert.
+- Die aktuelle Value/Quality/Momentum-Strategie ist als Aktienstrategie
+  klassifiziert, weil sie Fundamentaldaten, Market Caps und Sector-Daten
+  benoetigt.
+- Eine spaetere Capability-Pruefung vor Strategieausfuehrungen ist als
+  Migrationslinie beschrieben.
+- Keine Schema- oder Codeaenderungen wurden in AP18 umgesetzt.
+
+### AP19: Provider-, API- und Source-Binding-Modell
+
+Status: abgeschlossen als Dokumentations-/Design-AP.
+
+- Universen, Provider, Provider-Konfigurationen, Source-Rollen und
+  Capabilities sind fachlich getrennt.
+- Provider-Bindings werden pro Datenrolle beschrieben, z. B. Membership,
+  Preise, Fundamentals, Market Caps, Klassifikation und Benchmark-Preise.
+- Yahoo Finance ist nur ein moeglicher Equity-Provider; Binance kann z. B.
+  ein Krypto-Provider sein; kommerzielle Anbieter koennen Membership,
+  Preis- oder Fundamentaldaten liefern.
+- Provider-spezifische Identifier werden als spaeterer notwendiger
+  Mapping-Bereich dokumentiert.
+- Keine Schema- oder Codeaenderungen wurden in AP19 umgesetzt.
 
 ## Initialer Schema-Sketch
 
@@ -409,3 +520,5 @@ CREATE TABLE strategy_runs (
 - Entscheiden, ob `data_providers`/`provider_configs` in AP2 schon als Tabellen noetig sind oder vorerst Code-Konfiguration bleiben.
 - Entscheiden, ob `factor_metrics`/`factor_scores` fuer Performance als Run-bezogene Tabellen wieder eingefuehrt werden.
 - Vor jeder echten Migration Backup- und Restore-Pfad fuer `init.sql` und die aktuelle Fixture testen.
+- Fuer einen Implementierungs-AP nach AP18 entscheiden, ob Capabilities zuerst
+  als Python-Contracts oder direkt als Tabellen modelliert werden.

@@ -9,7 +9,7 @@ from data.models import Ticker
 
 
 class FakeProvider:
-    key = "fake"
+    key = "mysql_fixture"
 
     def __init__(self, benchmark_prices=None):
         self._benchmark_prices = benchmark_prices

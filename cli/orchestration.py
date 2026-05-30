@@ -53,6 +53,7 @@ def run_strategy_snapshot(
 ) -> StrategyRunArtifacts:
     from evaluation import create_benchmark
     from indicators import compute_indicators, create_indicators
+    from shared import CapabilityValidationError, validate_strategy_run_capabilities
     from strategies import StrategyContext, create_default_strategy
     from universes import create_universe
 
@@ -68,6 +69,21 @@ def run_strategy_snapshot(
         raise CliUsageError(
             str(exc),
             hint="use cli.framework_status --list-configs",
+        ) from exc
+    try:
+        validate_strategy_run_capabilities(
+            strategy_key=strategy.key,
+            universe_key=universe.key,
+            benchmark_key=benchmark.spec.key,
+            provider_key=provider.key,
+        )
+    except CapabilityValidationError as exc:
+        raise CliUsageError(
+            str(exc),
+            hint=(
+                "verify universe, benchmark, strategy, and provider source "
+                "bindings"
+            ),
         ) from exc
 
     members = universe.load_members(config.as_of_date)

@@ -45,13 +45,21 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
+    from cli.errors import CliUsageError
+
     try:
         from live import LiveExecutionService, TradeExecutionRequest
+        from shared import CapabilityValidationError, validate_live_capabilities
     except ModuleNotFoundError as exc:
         raise SystemExit(
             f"missing Python dependency: {exc.name}; "
             "install requirements with .venv/bin/python -m pip install -r requirements.txt"
         ) from exc
+
+    try:
+        validate_live_capabilities(live_workflow_key="live_trade")
+    except CapabilityValidationError as exc:
+        raise CliUsageError(str(exc)) from exc
 
     result = LiveExecutionService().execute_trade(
         TradeExecutionRequest(

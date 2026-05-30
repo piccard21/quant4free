@@ -44,6 +44,7 @@ def main() -> None:
     try:
         from data import FixtureDataProvider
         from indicators import compute_indicators, create_indicators
+        from shared import CapabilityValidationError, validate_indicator_run_capabilities
         from universes import create_universe
     except ModuleNotFoundError as exc:
         raise SystemExit(
@@ -55,7 +56,12 @@ def main() -> None:
     try:
         universe = create_universe(args.universe, provider)
         indicators = create_indicators(args.indicators)
-    except ValueError as exc:
+        validate_indicator_run_capabilities(
+            indicator_keys=[indicator.key for indicator in indicators],
+            universe_key=universe.key,
+            provider_key=provider.key,
+        )
+    except (CapabilityValidationError, ValueError) as exc:
         raise SystemExit(str(exc)) from exc
 
     members = universe.load_members(args.as_of_date)

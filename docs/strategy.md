@@ -23,6 +23,38 @@ Aktuelle Subscores:
 Das Ergebnis ist ein Ranking mit `composite_score`, Faktor-Subscores, `rank`
 und einem gleichgewichteten `model_weight` fuer die Top-Positionen.
 
+AP18-Einordnung:
+
+- Die Strategie ist fachlich eine Aktienstrategie.
+- Sie benoetigt die Data-Capabilities `prices.daily_ohlcv`,
+  `fundamentals.equity_reports`, `market_caps` und
+  `classification.equity_sector`.
+- Sie ist nicht unveraendert fuer reine Krypto-, Cash-, FX- oder
+  Futures-Universen geeignet, weil diese keine Aktienfundamentals liefern.
+- Eine spaetere Capability-Pruefung soll vor dem Lauf klar abbrechen, wenn ein
+  Universum die erforderlichen Pflichtdaten nicht liefern kann.
+
+AP19-Einordnung:
+
+- Die Strategie darf fachlich nicht direkt an Yahoo Finance, SimFin oder einen
+  anderen Provider gekoppelt werden.
+- Provider sind fuer Source-Rollen austauschbar, solange sie die benoetigten
+  Capabilities, normalisierten Felder, Granularitaet, Freshness und
+  Identifier-Abdeckung fuer das gewaehlte Universum liefern.
+- Ein Krypto-Provider wie Binance ist fuer diese Strategie nicht ausreichend,
+  solange `fundamentals.equity_reports` und `classification.equity_sector`
+  fehlen.
+
+AP20-Einordnung:
+
+- Die Requirements fuer `value_quality_momentum` und die genutzten Indikatoren
+  sind in `shared.capabilities` deklariert.
+- Der read-only Checker erlaubt den aktuellen `sp500_active` + `spy` +
+  `mysql_fixture`-Pfad und lehnt inkompatible Universums-/Provider-
+  Kombinationen vor dem Datenlauf ab.
+- Die Strategie bleibt selbst provideragnostisch; die Validierung sitzt vor
+  Strategieausfuehrung und CLI-Orchestrierung.
+
 Smoke-Check:
 
 ```bash

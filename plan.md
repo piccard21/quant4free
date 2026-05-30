@@ -2,23 +2,151 @@
 
 ## Umsetzungsstand
 
-Stand: AP16 ist abgeschlossen. Das kanonische AP14-Schema ist der regulaere
+Stand: AP20 ist abgeschlossen. Das kanonische AP14-Schema ist der regulaere
 modulare Betriebspfad, AP15 dokumentiert den Host-Crontab-Betrieb fuer Daily
 und Monthly, und AP16 ergaenzt einen read-only Performance-Report fuer Real
-Portfolio, Shadow Portfolio und Benchmark. Die Weboberflaeche bleibt auf AP17
-verschoben und soll nur Client dieser Kernlogik sein.
+Portfolio, Shadow Portfolio und Benchmark. AP17 ergaenzt eine isolierte
+MySQL-Testdatenbank samt DB-Integrationsregression fuer den kanonischen
+MySQL-Pfad. AP18 dokumentiert das Datenmodell fuer mehrere Assetklassen,
+Universen und optionale Datenarten explizit. AP19 trennt Universen,
+Provider/APIs, Source-Rollen, Identifier und Capability-Bindings fachlich. AP20
+setzt dieses Design als read-only Capability- und Provider-Check fuer den
+bestehenden Pfad um.
 
 Strategische Anpassung:
 
-- Die Weboberflaeche wird nach hinten geschoben.
-- Vor der UI werden die verbleibenden Operator-Themen wie Scheduling in neue,
-  modulare APs zerlegt.
-- Vor der UI wird ein Live-Performance-Report fuer Real vs. Shadow vs.
-  Benchmark als eigener AP ergaenzt.
+- Die Weboberflaeche wird vorerst aus dem AP-Plan entfernt.
+- Infrastruktur- und Qualitaetsthemen werden vor neuen Oberflaechenbausteinen
+  als eigene modulare APs behandelt.
+- Reproduzierbare DB-Verifikation gegen das kanonische MySQL-Schema ist seit
+  AP17 ueber den isolierten `db_test`-Pfad verfuegbar.
+- Das Asset-/Universe-/Data-Capability-Modell ist seit AP18 dokumentiert, damit
+  z. B. Krypto-Universen ohne Fundamentaldaten und spaetere Universen mit
+  eigenen Zusatzdaten sauber modelliert werden koennen.
+- Das Provider-/API-Binding-Modell ist seit AP19 dokumentiert, damit Yahoo
+  Finance nur ein moeglicher Equity-Provider ist, Binance z. B. als
+  Krypto-Provider modelliert werden kann und kommerzielle Anbieter fuer
+  S&P-/Nasdaq-/Fundamental-Daten austauschbar bleiben.
 - Der produktive Monthly-Pfad fuer persistierte Artefakte steht jetzt ueber
   `cli.monthly_run --persist` auf dem kanonischen AP14-Pfad bereit.
 
+Naechster AP:
+
+AP21:
+
+- Asset-Katalog und Identifier-Basis fuer mehrere Assetklassen konkretisieren.
+- Entscheiden, ob `assets` direkt um Assetklasse, Canonical Symbol,
+  Provider-Symbole und Markt-/Waehrungsfelder erweitert wird oder ob zuerst
+  separate Identifier-Tabellen eingefuehrt werden.
+- Den AP20-Checker so vorbereiten, dass er echte Asset-Metadaten und
+  Provider-Identifier statt nur Code-Profile pruefen kann.
+- Migration, Fixture und DB-Integrationstests fuer die gewaehlte
+  Identifier-/Asset-Metadata-Linie planen und umsetzen.
+
 Erledigt:
+
+AP20:
+
+- `shared.capabilities` mit Capability-Konstanten, Source-Rollen,
+  Universe-Profilen, Provider-Capabilities, Default-Bindings und Requirements
+  fuer Strategie, Indikatoren, Benchmarks und Live-Workflows angelegt.
+- Read-only Checker fuer Strategie-, Indikator- und Live-Workflows
+  implementiert.
+- Der aktuelle Default-Pfad `sp500_active` plus
+  `value_quality_momentum` plus `spy` und `mysql_fixture` bleibt gueltig.
+- Negative Capability-/Provider-Faelle fuer Krypto-Universum, falsches
+  Fundamentals-Binding und fehlende Source-Rolle abgedeckt.
+- Checker in `cli.orchestration`, `cli.indicator_status`,
+  `cli.strategy_status`, `cli.backtest_status`, `cli.operator_smoke`,
+  `cli.live_status`, `cli.live_performance`, `cli.live_cash` und
+  `cli.live_trade` eingebunden.
+- Keine Schemaaenderung und keine neue externe API-Abhaengigkeit.
+- Tests:
+  - `tests/test_capabilities.py`
+  - `tests/test_orchestration.py`
+- Verifikation:
+  - `.venv/bin/python -m pytest tests/test_capabilities.py tests/test_orchestration.py`
+  - `.venv/bin/python -m compileall shared cli tests`
+
+AP19:
+
+- Provider-, API- und Source-Binding-Modell in
+  `docs/provider-api-model.md` dokumentiert.
+- Universum, Provider, Provider-Konfiguration, Source-Rollen und Capabilities
+  explizit getrennt.
+- Source-of-Truth je Datenart beschrieben:
+  - Membership
+  - Preise
+  - Fundamentals
+  - Market Caps
+  - Klassifikation
+  - Benchmark-Preise
+- Provider-Capability-Metadaten beschrieben, z. B. `provider_key`,
+  `source_role`, `capability_key`, `asset_classes`, `markets`, `granularity`,
+  `required_fields`, `identifier_scheme`, `coverage_policy` und
+  `freshness_policy`.
+- Identifier- und Symbolmodell fuer spaetere Provider-spezifische IDs
+  beschrieben.
+- Austauschbarkeitsregeln fuer Provider dokumentiert.
+- AP20 so angepasst, dass der kommende Checker Provider-/Source-Bindings
+  mitprueft und nicht nur Datenarten.
+- Keine Schema- oder Codeaenderungen vorgenommen.
+- Verifikation:
+  - `.venv/bin/python -m pytest tests -m "not integration"`
+  - `.venv/bin/python -m compileall data universes indicators strategies simulation evaluation live cli shared tests`
+
+AP18:
+
+- Asset-, Universums- und Datenartenmodell fuer mehrere Assetklassen in
+  `docs/data-capabilities.md` dokumentiert.
+- `assets` fachlich von einer Aktien-/S&P-Tickerliste zu einem allgemeinen
+  Asset-Katalog weiterentwickelt, ohne das Schema zu aendern.
+- Universen als Auswahl von Assets modelliert, nicht als implizite Annahme
+  ueber vorhandene Datenarten.
+- Datenarten als Capabilities getrennt:
+  - generische Preisbars fuer Assets mit OHLCV-Daten
+  - aktienspezifische Fundamentaldaten
+  - Market-Cap-Zeitreihen
+  - Sector-/Klassifikationsdaten
+  - Live-Cash und Live-Positionen
+  - spaetere assetklassenspezifische Zusatzdaten, z. B. Krypto-Netzwerkdaten
+- Strategie- und Indikatoranforderungen als Data-Capabilities beschrieben,
+  z. B. `prices.daily_ohlcv`, `fundamentals.equity_reports`, `market_caps`,
+  `classification.equity_sector`, `live.cash`, `live.positions`,
+  `crypto.network_metrics`.
+- Value/Quality/Momentum als Aktienstrategie eingeordnet.
+- Capability-Validierungsablauf vor Strategieausfuehrungen dokumentiert.
+- Keine Schema- oder Codeaenderungen vorgenommen.
+- Verifikation:
+  - `.venv/bin/python -m pytest tests -m "not integration"`
+  - `.venv/bin/python -m compileall data universes indicators strategies simulation evaluation live cli shared tests`
+
+AP17:
+
+- Isolierten Compose-MySQL-Dienst `db_test` mit eigenem Volume
+  `db_test_data` angelegt.
+- pytest-Marker `integration` und Collection-Guard eingefuehrt, damit der
+  Default-Testlauf keine DB-Integrationstests ausfuehrt.
+- `tests/integration/` mit Session-Fixtures angelegt:
+  - Testdatenbankname muss `test` enthalten.
+  - Testdatenbank darf nicht `DB_NAME` entsprechen.
+  - Fixture laedt `fixtures/raw_market_data.sql` und `init.sql`.
+  - Fixture loescht am Ende nur die isolierte Testdatenbank.
+- Integrationstests fuer echten MySQL-Pfad ergaenzt:
+  - kanonische Tabellen und Fixture-Verfuegbarkeit
+  - `RawDataRepository` Upserts und Latest-Queries
+  - `OperationalRepository` Persistenz fuer Model/Shadow/Rebalance/Decision/
+    Trade-Plan-Artefakte
+  - `LiveExecutionService` Cash-Dry-Run ohne Writes
+  - `cli.data_status --details` gegen die Testdatenbank
+- `scripts/db_integration_tests.sh` als Standard-Runner fuer die isolierte
+  DB-Verifikation hinzugefuegt.
+- `scripts/dev_check.sh` auf schnelle Tests mit `-m "not integration"`
+  umgestellt.
+- Verifikation:
+  - `.venv/bin/python -m pytest tests -m "not integration"`
+  - `.venv/bin/python -m compileall data universes indicators strategies simulation evaluation live cli shared tests`
+  - `scripts/db_integration_tests.sh`
 
 AP16:
 
@@ -1152,22 +1280,185 @@ Verifikation:
 - `.venv/bin/python -m compileall data universes indicators strategies simulation evaluation live cli shared`
 - `.venv/bin/python -m cli.live_performance --help`
 
-### AP17: Weboberflaeche Erst Nach Stabiler Kernlogik
+### AP17: Isolierte Testdatenbank Und DB-Integrationsregression
 
 Ziel:
 
-- Eine UI erst bauen, wenn Datenmodell, Evaluation und Live-Workflows stabil sind.
+- Eine dedizierte Testdatenbank und eine reproduzierbare DB-Verifikation fuer
+  den kanonischen modularen MySQL-Pfad einfuehren, ohne Entwicklungs- oder
+  operative Datenbanken zu beruehren.
 
 Umfang:
 
-- FastAPI oder vergleichbare schlanke API pruefen.
-- UI nur als Client der Kernlogik bauen.
-- Keine Fachlogik in die UI verschieben.
+- Separate MySQL-Testdatenbank definieren, z. B. fuer lokale Entwicklung,
+  Regression und CI.
+- Testschichten klar trennen:
+  - schnelle Unit-Tests ohne echte MySQL-Abhaengigkeit
+  - DB-Integrations-/Regressionstests gegen echtes MySQL
+- pytest-Fixtures fuer Schema-Initialisierung, Fixture-Loading und Isolierung
+  der Testdatenbank bereitstellen.
+- Relevante Repository-, Persistenz- und CLI-Pfade mit echter MySQL-Verifikation
+  absichern.
+- Dokumentierte Standardbefehle fuer schnellen lokalen Testlauf und
+  vollstaendige DB-Verifikation bereitstellen.
 
 Tests/Akzeptanz:
 
-- API-Endpunkte liefern dieselben Ergebnisse wie CLI-Reports.
-- UI kann Runs, Portfolios und Status anzeigen, ohne Berechnungslogik zu duplizieren.
+- `python -m pytest tests -m "not integration"` bleibt schnell und ohne echte
+  MySQL-Testdatenbank nutzbar.
+- `scripts/db_integration_tests.sh` laeuft reproduzierbar gegen die isolierte
+  MySQL-Testdatenbank `quant4free_test` auf dem Compose-Service `db_test`.
+- DB-nahe Tests verifizieren mindestens Schema, Repository-Zugriffe, Persistenz
+  und relevante CLI-Pfade gegen echtes MySQL-Verhalten.
+- Die normale Entwicklungsdatenbank und operative Daten werden von
+  Testlaeufen nicht veraendert.
+
+Status: abgeschlossen in AP17.
+
+### AP18: Assetklassen, Universen Und Daten-Capabilities
+
+Ziel:
+
+- Das Datenmodell so beschreiben und vorbereiten, dass neue Universen mit
+  unterschiedlichen Datenarten sauber abgebildet werden koennen, z. B. Aktien
+  mit Fundamentaldaten, Krypto nur mit Kerzen oder spaetere Assetklassen mit
+  eigenen Zusatzdaten.
+
+Umfang:
+
+- `assets` als allgemeinen Asset-Katalog beschreiben, nicht als reine
+  S&P-/Aktien-Tickerliste.
+- Universen als historisierte Asset-Auswahl modellieren:
+  `universes` und `universe_members`.
+- Datenarten fachlich trennen:
+  - Preisbars als generische Zeitreihe fuer handelbare Assets
+  - Fundamentaldaten als aktienspezifische Datenart
+  - Market Caps als eigene Zeitreihe
+  - neue assetklassenspezifische Tabellen fuer Zusatzdaten, falls notwendig
+- Provider- und Strategie-Capabilities dokumentieren, z. B. `prices`,
+  `fundamentals`, `market_caps`, `crypto_metrics`.
+- Validierungsregeln entwerfen, damit eine Strategie nur mit Universen laeuft,
+  deren Assetklassen und Datenarten ihre Anforderungen erfuellen.
+- Migrationspfad vom aktuellen ticker-basierten Schema zu stabileren
+  Asset-Schluesseln beschreiben.
+
+Tests/Akzeptanz:
+
+- Dokumentation beantwortet explizit, welche Datenarten zu welcher Assetklasse,
+  welchem Universum und welcher Strategie gehoeren.
+- Der Entwurf zeigt mindestens zwei Faelle:
+  - Aktienuniversum mit Preisen, Fundamentaldaten und Market Caps
+  - Krypto-Universum mit Preisen, aber ohne Fundamentaldaten
+- Es ist klar definiert, wann neue Zusatzdaten eine eigene Tabelle bekommen und
+  wie Strategien diese Daten als Capability deklarieren.
+- AP18 bleibt Entwurfs- und Dokumentationsarbeit; Schema- und Codeaenderungen
+  erfolgen in spaeteren Implementierungs-APs.
+
+Status: abgeschlossen in AP18.
+
+Verifikation:
+
+- `.venv/bin/python -m pytest tests -m "not integration"`
+- `.venv/bin/python -m compileall data universes indicators strategies simulation evaluation live cli shared tests`
+
+### AP19: Provider-, API- und Source-Binding-Planung
+
+Ziel:
+
+- AP18 so schaerfen, dass Universen, Daten-Capabilities und konkrete
+  API-/Provider-Quellen sauber getrennt sind.
+
+Umfang:
+
+- Universum, Provider, Provider-Konfiguration, Source-Rollen und Capabilities
+  fachlich trennen.
+- Source-of-Truth je Datenart beschreiben:
+  - Membership
+  - Preise
+  - Fundamentals
+  - Market Caps
+  - Klassifikation
+  - Benchmark-Preise
+- Provider-Capabilities definieren, inklusive Assetklassen, Maerkten,
+  Granularitaet, Mindestfeldern, Freshness, Coverage und Identifier-Schema.
+- Austauschbarkeitsregeln fuer Provider dokumentieren, damit z. B.
+  Yahoo Finance, Binance, SimFin, CSV oder kommerzielle Anbieter sauber
+  verglichen werden koennen.
+- Identifier- und Symbolmodell fuer provider-spezifische Symbole vorbereiten.
+- Den folgenden Implementierungs-AP so anpassen, dass er Provider-Bindings
+  mitprueft und nicht nur abstrakte Datenarten.
+
+Tests/Akzeptanz:
+
+- Dokumentation zeigt, dass ein Universum keine API ist.
+- Es ist klar, wie S&P-/Nasdaq-/Equity-Provider, Binance/Krypto-Provider und
+  kommerzielle Fundamental-Provider modelliert werden.
+- Es ist klar, wann ein Providerwechsel fachlich gueltig ist.
+- AP19 bleibt Entwurfs- und Dokumentationsarbeit; Schema- und Codeaenderungen
+  erfolgen in spaeteren Implementierungs-APs.
+
+Status: abgeschlossen in AP19.
+
+Verifikation:
+
+- `.venv/bin/python -m pytest tests -m "not integration"`
+- `.venv/bin/python -m compileall data universes indicators strategies simulation evaluation live cli shared tests`
+
+### AP20: Read-only Capability- und Provider-Check
+
+Ziel:
+
+- Das AP18/AP19-Design als erste technische Validierung umsetzen, ohne das
+  kanonische AP14-Schema zu migrieren.
+
+Umfang:
+
+- Capability-Schluessel fuer die bestehenden Datenarten definieren.
+- Provider-, Source-Rollen- und Default-Binding-Definitionen fuer den heutigen
+  Pfad definieren.
+- Anforderungen der aktuellen Strategie, Indikatoren, Benchmarks und
+  Live-Reports deklarieren.
+- Einen read-only Checker bauen, der Universum, Provider-Bindings, vorhandene
+  Daten und Anforderungen vor Strategieausfuehrungen validieren kann.
+- Den heutigen Default-Pfad `sp500_active` plus `value_quality_momentum`
+  mit seinen Default-Bindings unveraendert erlauben.
+- Inkompatible Universums-, Provider- oder Capability-Kombinationen mit klaren
+  Operator-Fehlern abbrechen.
+
+Tests/Akzeptanz:
+
+- Default-Capability-/Provider-Pruefung fuer S&P 500
+  Value/Quality/Momentum ist gruen.
+- Negative Tests zeigen fehlende Pflichtdaten, inkompatible Assetklassen,
+  unpassende Provider-Bindings oder fehlende Source-Rollen.
+- Keine Schemaaenderung und keine neue externe API-Abhaengigkeit.
+
+Status: abgeschlossen in AP20.
+
+Verifikation:
+
+- `.venv/bin/python -m pytest tests/test_capabilities.py tests/test_orchestration.py`
+- `.venv/bin/python -m compileall shared cli tests`
+
+### AP21: Asset-Katalog und Provider-Identifier-Basis
+
+Ziel:
+
+- Den AP20-Checker von code-nahen Profilen in Richtung echter Asset-Metadaten
+  und Provider-Identifier-Abdeckung weiterentwickeln.
+
+Umfang:
+
+- Zielstruktur fuer `assets.asset_class`, Canonical-/Display-Symbole,
+  Provider-Symbole, Markt und Quote-Waehrung konkretisieren.
+- Entscheiden, ob Provider-Identifier direkt an `assets` oder in separaten
+  Mapping-Tabellen modelliert werden.
+- Fixture, Migration und DB-Integrationstests fuer die gewaehlte Linie
+  vorbereiten.
+- Sicherstellen, dass der bestehende AP14/AP20-Default-Pfad unveraendert
+  lauffaehig bleibt.
+
+Status: naechster Schritt.
 
 ## Roadmap
 
@@ -1188,7 +1479,12 @@ Tests/Akzeptanz:
 15. Legacy-unabhaengiges Schema und operativen Cutover bauen.
 16. Crontab-Betrieb fuer Daily und Monthly dokumentieren und testen.
 17. Live-/Shadow-/Benchmark-Performance-Reporting bauen.
-18. Weboberflaeche erst am Schluss bauen.
+18. Isolierte Testdatenbank und DB-Integrationsregression einfuehren.
+19. Assetklassen, Universen und Daten-Capabilities fuer neue Datenarten
+    modellieren.
+20. Provider-/API-Bindings und Source-of-Truth je Datenart planen.
+21. Read-only Capability- und Provider-Check fuer bestehende Strategie- und Datenpfade
+    einfuehren.
 
 ## Testing Und Akzeptanz
 
@@ -1204,13 +1500,22 @@ Tests/Akzeptanz:
 - Crontab startet seit AP15 auf dem modularen operativen Pfad nach AP14.
 - Performance-Reporting fuer Real vs. Shadow vs. Benchmark ist seit AP16
   read-only verfuegbar.
-- Spaetere Weboberflaeche ist nur Client; Fachlogik bleibt im Backend/Kern.
+- DB-Integrationsregression gegen echtes MySQL ist seit AP17 ueber eine
+  isolierte Testdatenbank umgesetzt.
+- Multi-Asset-Erweiterungen muessen Universen, Assetklassen und verfuegbare
+  Datenarten explizit trennen; Krypto darf z. B. ohne Fundamentaldaten
+  modellierbar sein. AP18 dokumentiert dieses Zielbild.
+- Der naechste technische Schritt ist ein read-only Capability- und
+  Provider-Check, der den aktuellen Default-Pfad nicht veraendert.
 
 ## Annahmen Und Defaults
 
 - Start mit `portfolio_id`; echte Mandantenfaehigkeit mit `tenant_id` wird vorbereitet, aber nicht als erster Zwang umgesetzt.
 - MySQL bleibt zunaechst bestehen.
 - `fixtures/raw_market_data.sql` wird nicht als neues `init.sql` verwendet, sondern als bereinigte Test-/Demo-Fixture.
-- Erste Provider sind bestehende DB/Fixture-Daten und yfinance; weitere APIs kommen ueber Adapter.
+- Erste Provider sind bestehende DB/Fixture-Daten und yfinance; weitere APIs
+  kommen ueber Adapter und explizite Source-Bindings.
 - Erste Strategie bleibt Value/Quality/Momentum, wird aber in die neue modulare Strategieform ueberfuehrt.
-- Weboberflaeche kommt zuletzt, bevorzugt schlank ueber FastAPI plus einfache UI, sobald Kern, Workflows und Performance-Reporting stabil sind.
+- Neue Oberflaechenbausteine sind derzeit nicht Teil des aktiven AP-Plans; der
+  naechste Fokus liegt auf einem read-only Capability- und Provider-Check fuer
+  den bestehenden AP14/AP17-Pfad.

@@ -1,6 +1,6 @@
 # Operations Guide
 
-Stand: AP16.
+Stand: AP17.
 
 Der regulaere Betrieb nutzt nur noch die modularen CLIs und das kanonische
 Schema aus `init.sql`. Legacy-CLIs sind kein Operator-Standardpfad mehr.
@@ -225,8 +225,18 @@ scripts/dev_check.sh
 ```
 
 Der schnelle Default laeuft im Docker-App-Container und prueft `compileall`
-sowie die Pytest-Suite. Der isolierte End-to-End-Smoke nutzt eine eigene
-Testdatenbank:
+sowie die schnelle Pytest-Suite ohne DB-Integration. Die DB-Integrationstests
+laufen gegen den isolierten Compose-Service `db_test`:
+
+```bash
+scripts/db_integration_tests.sh
+```
+
+Der Runner verwendet standardmaessig `quant4free_test` auf `db_test`, laedt
+Fixture und Schema pro Testsession neu und loescht nur diese Testdatenbank.
+Die normale Entwicklungsdatenbank `db` wird nicht beruehrt.
+
+Der isolierte End-to-End-Smoke nutzt ebenfalls eine eigene Testdatenbank:
 
 ```bash
 scripts/dev_check.sh --smoke
@@ -246,7 +256,8 @@ docker compose run --rm app python -m cli.live_performance --curve-limit 5
 ```
 
 `cli.operator_smoke` prueft DB-Ping, kanonische Rohdatentabellen, Universum,
-Benchmark, Strategie-Ranking und Benchmark-Backtest.
+Benchmark, AP20-Capability-/Provider-Bindings, Strategie-Ranking und
+Benchmark-Backtest.
 
 Mit der AP15-Fixture und den Default-Parametern aus der README sind im
 Live-Status als Fixture-Beispiel diese fehlenden Real-Positionen bzw.

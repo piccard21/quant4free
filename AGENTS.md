@@ -103,8 +103,54 @@ smoke trade execution.
 AP16 is complete: `live.performance` and `cli.live_performance` provide
 read-only Real vs. Shadow vs. benchmark reporting, initially SPY, with a
 portfolio value curve, returns, outperformance, drawdown, diagnostics, and
-fixture-backed regression coverage. The web UI is deferred to AP17 and should
-only be built after this reporting layer.
+fixture-backed regression coverage.
+
+AP17 is complete: an isolated `db_test` MySQL Compose service, pytest
+`integration` marker, guarded MySQL fixtures, and
+`scripts/db_integration_tests.sh` now verify the canonical modular path against
+real MySQL without touching the normal development or operational database.
+Fast tests are kept separate with `python -m pytest tests -m "not integration"`.
+
+AP18 is complete as a documentation/design AP: asset classes, universes, and
+data capabilities are modeled explicitly in `docs/data-capabilities.md`,
+`docs/data-model.md`, `docs/architecture.md`, and `docs/strategy.md`.
+`assets` is now documented as a future general asset catalog, universes are
+asset selections rather than implicit data assumptions, and strategy/
+indicator/benchmark/live requirements should be expressed as capabilities such
+as `prices.daily_ohlcv`, `fundamentals.equity_reports`, `market_caps`,
+`classification.equity_sector`, `live.cash`, and `live.positions`. AP18 made no
+schema or code changes. Verification for AP18:
+`.venv/bin/python -m pytest tests -m "not integration"` and
+`.venv/bin/python -m compileall data universes indicators strategies simulation evaluation live cli shared tests`.
+
+AP19 is complete as a documentation/design AP: provider/API binding is modeled
+in `docs/provider-api-model.md` and cross-referenced from
+`docs/data-capabilities.md`, `docs/data-model.md`, `docs/architecture.md`, and
+`docs/strategy.md`. Universes, provider configs, source roles, capabilities,
+identifier mapping, source-of-truth per data type, and provider replacement
+rules are separated explicitly. Yahoo Finance is documented as one possible
+equity provider, Binance as a possible crypto provider, and commercial
+S&P/Nasdaq/fundamental providers as future interchangeable sources. AP19 made
+no schema or code changes. Verification for AP19:
+`.venv/bin/python -m pytest tests -m "not integration"` and
+`.venv/bin/python -m compileall data universes indicators strategies simulation evaluation live cli shared tests`.
+
+AP20 is complete: `shared.capabilities` adds read-only capability keys,
+source-role bindings, provider capability definitions, current universe
+profiles, and requirements for the Value/Quality/Momentum strategy,
+indicators, benchmarks, and live workflows. The checker is wired into
+`cli.orchestration`, strategy/indicator/backtest/operator smoke CLIs, and
+live status/performance/cash/trade CLIs. The current `sp500_active` +
+`value_quality_momentum` + `spy` + `mysql_fixture` path remains valid, while
+negative tests cover incompatible crypto universes, invalid provider bindings,
+and missing source roles. AP20 made no schema changes and added no external API
+dependency. Verification for AP20:
+`.venv/bin/python -m pytest tests/test_capabilities.py tests/test_orchestration.py`
+and `.venv/bin/python -m compileall shared cli tests`.
+
+AP21 is planned next: concretize the asset catalog and provider identifier
+basis for multiple asset classes so the AP20 checker can move from code-only
+profiles toward real asset metadata and provider identifier coverage.
 
 ## Build, Test, and Development Commands
 
@@ -135,7 +181,13 @@ docker compose run --rm app python -m compileall data universes indicators strat
 Run regression tests:
 
 ```bash
-python -m pytest tests
+python -m pytest tests -m "not integration"
+```
+
+Run DB integration tests against the isolated MySQL test service:
+
+```bash
+scripts/db_integration_tests.sh
 ```
 
 Run current modular smoke CLIs:
@@ -169,11 +221,15 @@ recompute.
 ## Testing Guidelines
 
 Pytest regression tests now live under `tests/` and should be named
-`test_<module>.py`. For changes, at minimum run `python -m pytest tests`,
-`compileall`, and a relevant pipeline/status command against a local Docker
-database when the change touches database-backed behavior. Prefer using
-`fixtures/raw_market_data.sql` as the fixture to avoid unnecessary API calls and
-to keep trades, cash balances, and portfolio history out of regression data.
+`test_<module>.py`. Fast tests must not require MySQL and should pass with
+`python -m pytest tests -m "not integration"`. DB-backed regressions belong in
+`tests/integration/`, must be marked `integration`, and must use the isolated
+test database path from `scripts/db_integration_tests.sh`. For changes, at
+minimum run the fast pytest command, `compileall`, and the DB integration runner
+when the change touches schema, persistence, repositories, or DB-backed CLIs.
+Prefer using `fixtures/raw_market_data.sql` as the fixture to avoid unnecessary
+API calls and to keep real trades, cash balances, and portfolio history out of
+regression data.
 
 ## Commit & Pull Request Guidelines
 

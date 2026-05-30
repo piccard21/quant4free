@@ -29,9 +29,14 @@ def main() -> None:
     from cli.errors import CliUsageError
     from evaluation import get_benchmark_spec
     from live import LivePerformanceRepository, LivePerformanceService
+    from shared import validate_live_capabilities
 
     try:
         benchmark = get_benchmark_spec(args.benchmark)
+        validate_live_capabilities(
+            live_workflow_key="live_performance",
+            benchmark_key=benchmark.key,
+        )
     except ValueError as exc:
         raise CliUsageError(str(exc)) from exc
 

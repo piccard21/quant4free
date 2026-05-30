@@ -44,6 +44,7 @@ def main() -> None:
         from data import FixtureDataProvider
         from evaluation import BacktestConfig, EvaluationRepository, create_benchmark
         from evaluation import run_backtest
+        from shared import CapabilityValidationError, validate_strategy_run_capabilities
         from strategies import create_default_strategy
         from universes import create_universe
     except ModuleNotFoundError as exc:
@@ -64,7 +65,13 @@ def main() -> None:
             },
             portfolio_size=args.portfolio_size,
         )
-    except ValueError as exc:
+        validate_strategy_run_capabilities(
+            strategy_key=strategy.key,
+            universe_key=universe.key,
+            benchmark_key=benchmark.spec.key,
+            provider_key=provider.key,
+        )
+    except (CapabilityValidationError, ValueError) as exc:
         raise SystemExit(str(exc)) from exc
 
     members = universe.load_members(args.end_date)

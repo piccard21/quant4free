@@ -17,6 +17,24 @@ services:
       timeout: 5s
       retries: 10
 
+  db_test:
+    image: mysql:8.0
+    container_name: quant4free_test_db
+    profiles: ["test"]
+    restart: unless-stopped
+    environment:
+      - MYSQL_DATABASE=${Q4F_TEST_DB_NAME:-quant4free_test}
+      - MYSQL_ROOT_PASSWORD=${Q4F_TEST_MYSQL_ROOT_PASSWORD:-q4f_test_password}
+    ports:
+      - "3307:3306"
+    volumes:
+      - db_test_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${Q4F_TEST_MYSQL_ROOT_PASSWORD:-q4f_test_password}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   phpmyadmin:
     image: phpmyadmin:latest
     container_name: sp500_pma
@@ -51,3 +69,4 @@ services:
 
 volumes:
   db_data:
+  db_test_data:

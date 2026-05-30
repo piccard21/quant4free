@@ -83,6 +83,8 @@ Dokumentationsregel:
 - [Strategie-Dokumentation](docs/strategy.md)
 - [Architektur-Dokumentation](docs/architecture.md)
 - [Datenmodell-Plan](docs/data-model.md)
+- [Assetklassen & Daten-Capabilities](docs/data-capabilities.md)
+- [Provider-/API-Modell](docs/provider-api-model.md)
 - [Troubleshooting Guide](docs/troubleshooting.md)
 
 ## VI. Git & Versionierung
@@ -183,9 +185,55 @@ Benchmark, initial `SPY`. Der Report erzeugt eine Wertreihe, Rendite,
 Outperformance, Drawdown und Diagnosen aus kanonischen Live- und Preistabellen,
 ohne Performance-Logik in eine spaetere UI zu verschieben.
 
-Die UI wird bewusst nach hinten geschoben. Als naechste technische APs werden
-zuerst die Kernlogik und Operatorablaeufe stabil gehalten; die Weboberflaeche
-bleibt danach geplant.
+AP17 ist abgeschlossen: Fuer DB-nahe Regressionen gibt es jetzt einen
+isolierten MySQL-Testdienst `db_test`, einen pytest-`integration`-Marker,
+geschuetzte Fixtures fuer Schema-Initialisierung und Fixture-Loading sowie
+`scripts/db_integration_tests.sh`. Der schnelle Testlauf bleibt von echter
+MySQL-Verifikation getrennt. DB-Integrationstests legen ausschliesslich die
+isolierte Testdatenbank neu an und beruehren nicht die normale Entwicklungs-
+oder Betriebsdatenbank.
+
+AP18 ist abgeschlossen: Assetklassen, Universen und Daten-Capabilities sind
+fachlich dokumentiert. `assets` ist kuenftig als allgemeiner Asset-Katalog zu
+verstehen, Universen sind Asset-Auswahlen statt impliziter Datenannahmen, und
+Strategien/Indikatoren/Benchmarks/Live-Workflows sollen ihre benoetigten
+Capabilities wie `prices.daily_ohlcv`, `fundamentals.equity_reports`,
+`market_caps`, `classification.equity_sector`, `live.cash` und
+`live.positions` explizit deklarieren. Die aktuelle
+Value/Quality/Momentum-Strategie ist als Aktienstrategie eingeordnet. AP18 war
+ein Design- und Dokumentations-AP ohne Schema- oder Codeaenderungen.
+Verifiziert wurde mit `.venv/bin/python -m pytest tests -m "not integration"`
+und `.venv/bin/python -m compileall data universes indicators strategies simulation evaluation live cli shared tests`.
+
+AP19 ist abgeschlossen: Das Provider-/API-Modell ist als eigener
+Planungs-AP dokumentiert. Universen, Provider, Provider-Konfigurationen,
+Source-Rollen und Capabilities sind getrennt beschrieben, damit Yahoo Finance
+nur ein moeglicher Equity-Provider ist, Binance z. B. ein Krypto-Provider sein
+kann und kommerzielle S&P-/Nasdaq-/Fundamental-Anbieter austauschbar
+modelliert werden koennen. AP19 war ein Design- und Dokumentations-AP ohne
+Schema- oder Codeaenderungen. Verifiziert wurde mit
+`.venv/bin/python -m pytest tests -m "not integration"` und
+`.venv/bin/python -m compileall data universes indicators strategies simulation evaluation live cli shared tests`.
+
+AP20 ist abgeschlossen: `shared.capabilities` bildet Capability-Schluessel,
+Source-Rollen, Provider-Capabilities, Universe-Profile, Default-Bindings und
+Requirements fuer Strategie, Indikatoren, Benchmarks und Live-Workflows als
+schemafreie Python-Definitionen ab. Der read-only Checker validiert den
+heutigen `sp500_active` + `value_quality_momentum` + `spy` +
+`mysql_fixture`-Pfad als gueltig und bricht inkompatible Kombinationen wie
+Equity-Strategie auf Krypto-Universum, falsche Fundamentals-Provider oder
+fehlende Source-Rollen frueh mit klaren Operator-Fehlern ab. Eingebunden ist
+der Check in die gemeinsame Strategie-Orchestrierung, Strategie-/Indikator-/
+Backtest-/Operator-Smoke-CLIs und die Live-Status-/Performance-/Cash-/
+Trade-CLIs. AP20 aendert kein Schema und bindet keine neue externe API an.
+Verifiziert wurde mit
+`.venv/bin/python -m pytest tests/test_capabilities.py tests/test_orchestration.py`
+und `.venv/bin/python -m compileall shared cli tests`.
+
+Als naechster technischer AP ist AP21 geplant: der Asset-Katalog und die
+Provider-Identifier-Basis sollen fuer mehrere Assetklassen konkretisiert
+werden, damit der AP20-Checker spaeter echte Asset-Metadaten und
+Provider-Identifier statt nur Code-Profile pruefen kann.
 
 Der Umbau erfolgt ab hier schrittweise. AP4 ist bewusst ein Infrastruktur-
 Schritt, weil AP3 unter Windows mit WSL Toolchain-Probleme gezeigt hat:
@@ -203,7 +251,16 @@ Schritt, weil AP3 unter Windows mit WSL Toolchain-Probleme gezeigt hat:
 11. Legacy-unabhaengiges kanonisches Schema und operativen Cutover bauen. Erledigt in AP14.
 12. Crontab-Betrieb fuer Daily und Monthly dokumentieren und testen. Erledigt in AP15.
 13. Live-/Shadow-/Benchmark-Performance-Reporting bauen. Erledigt in AP16.
-14. Weboberflaeche erst danach bauen. Naechster Schritt AP17.
+14. Isolierte Testdatenbank und DB-Integrationsregression einfuehren.
+    Erledigt in AP17.
+15. Assetklassen, Universen und Daten-Capabilities fuer neue Datenarten
+    modellieren. Erledigt in AP18.
+16. Provider-/API-Bindings und Source-of-Truth je Datenart planen.
+    Erledigt in AP19.
+17. Read-only Capability- und Provider-Checks fuer Strategie-, Indikator-,
+    Benchmark- und Live-Anforderungen einfuehren. Erledigt in AP20.
+18. Asset-Katalog und Provider-Identifier-Basis fuer mehrere Assetklassen
+    konkretisieren. Naechster Schritt AP21.
 
 Der Arbeitsplan steht in [plan.md](plan.md).
 
@@ -674,7 +731,7 @@ python3 -m venv .venv
 Beispiel fuer Host-Nutzung:
 
 ```bash
-.venv/bin/python -m pytest tests
+.venv/bin/python -m pytest tests -m "not integration"
 ```
 
 Die lokale venv nutzt standardmaessig `DB_HOST=localhost`, waehrend der Docker-
@@ -735,7 +792,19 @@ scripts/dev_check.sh
 ```
 
 Der Default laeuft im Docker-App-Container und prueft `compileall` sowie die
-Pytest-Suite. Fuer einen isolierten End-to-End-Smoke mit eigener Testdatenbank:
+schnelle Pytest-Suite ohne DB-Integration. Fuer DB-Integrationsregressionen
+gegen den isolierten MySQL-Testdienst:
+
+```bash
+scripts/db_integration_tests.sh
+```
+
+Der DB-Test-Runner startet den Compose-Service `db_test`, nutzt standardmaessig
+die Datenbank `quant4free_test`, laedt `fixtures/raw_market_data.sql` und
+`init.sql` ueber pytest-Fixtures und loescht danach nur diese Testdatenbank.
+Die normale `db`-Entwicklungsdatenbank wird dabei nicht verwendet.
+
+Fuer einen isolierten End-to-End-Smoke mit eigener Testdatenbank:
 
 ```bash
 scripts/dev_check.sh --smoke

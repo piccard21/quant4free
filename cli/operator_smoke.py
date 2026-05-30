@@ -53,6 +53,7 @@ def main() -> None:
     from data import FixtureDataProvider
     from evaluation import BacktestConfig, create_benchmark, run_backtest
     from indicators import compute_indicators, create_indicators
+    from shared import CapabilityValidationError, validate_strategy_run_capabilities
     from shared.db import get_engine, load_database_config, ping_database
     from sqlalchemy import text
     from strategies import StrategyContext, create_default_strategy
@@ -83,7 +84,13 @@ def main() -> None:
             },
             portfolio_size=args.portfolio_size,
         )
-    except ValueError as exc:
+        validate_strategy_run_capabilities(
+            strategy_key=strategy.key,
+            universe_key=universe.key,
+            benchmark_key=benchmark.spec.key,
+            provider_key=provider.key,
+        )
+    except (CapabilityValidationError, ValueError) as exc:
         raise CliUsageError(str(exc), hint="use cli.framework_status --list-configs") from exc
 
     members = universe.load_members(args.end_date)

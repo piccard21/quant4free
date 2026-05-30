@@ -23,7 +23,7 @@ Options:
 
 Default checks are fast and run in the app container:
   - compileall for modular packages
-  - pytest tests
+  - pytest tests -m "not integration"
 
 Smoke mode delegates to scripts/client_smoke.sh and never uses the configured
 DB_NAME as its smoke database.
@@ -84,7 +84,7 @@ fi
 run docker compose run -T --rm app python -m compileall \
   data universes indicators strategies simulation evaluation live cli shared tests
 
-run docker compose run -T --rm app python -m pytest tests
+run docker compose run -T --rm app python -m pytest tests -m "not integration"
 
 if [[ "${RUN_SMOKE}" == "1" ]]; then
   smoke_args=(--db-name "${SMOKE_DB}")

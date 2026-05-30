@@ -192,7 +192,11 @@ Planning update after AP10:
 - AP14 is the legacy-independent canonical schema and live cutover.
 - AP15 is the simple host-crontab operating path for daily and monthly runs.
 - AP16 is live performance reporting for Real vs. Shadow vs. benchmark.
-- AP17 is the deferred web interface.
+- AP17 is the next infrastructure step: an isolated MySQL test database plus
+  DB integration/regression coverage for the canonical modular path.
+- AP18 is complete as a design/documentation AP for asset classes, universes,
+  and data capabilities so different universes can require different data
+  types, e.g. equities with fundamentals and crypto with prices only.
 
 AP11 is complete. Current AP11 findings:
 
@@ -311,5 +315,85 @@ AP16 is complete:
   - `.venv/bin/python -m compileall data universes indicators strategies simulation evaluation live cli shared`
   - `.venv/bin/python -m cli.live_performance --help`
 
-Next step: AP17, build the deferred web UI as a client of the now-stable core
-reporting and operator logic.
+AP17 is complete:
+
+- Added isolated Compose MySQL service `db_test` with separate
+  `db_test_data` volume.
+- Added pytest `integration` marker and collection guard so default pytest runs
+  do not touch MySQL integration tests.
+- Added `tests/integration/` fixtures that create, load, and drop only a
+  database whose name contains `test` and differs from `DB_NAME`.
+- Added MySQL integration coverage for canonical schema/fixture availability,
+  raw repository upserts/latest queries, operational artifact persistence,
+  live cash dry-run behavior, and a DB-backed CLI status path.
+- Added `scripts/db_integration_tests.sh` for Docker-local DB verification.
+- Verification:
+  - `.venv/bin/python -m pytest tests -m "not integration"`
+  - `.venv/bin/python -m compileall data universes indicators strategies simulation evaluation live cli shared tests`
+  - `scripts/db_integration_tests.sh`
+
+AP18 is complete:
+
+- Added `docs/data-capabilities.md` as the main AP18 design document.
+- Documented `assets` as the future general asset catalog rather than a pure
+  S&P/equity ticker list.
+- Separated asset classes, universe membership, universe policies, and
+  strategy/data requirements.
+- Defined Data-Capability keys including `prices.daily_ohlcv`,
+  `fundamentals.equity_reports`, `market_caps`,
+  `classification.equity_sector`, `live.cash`, `live.positions`, and future
+  Krypto-/ETF-specific capabilities.
+- Classified `value_quality_momentum` as an equity strategy because it requires
+  equity fundamentals, market caps, sector classification, and daily prices.
+- Documented the future validation flow before strategy runs.
+- Synchronized status in `AGENTS.md`, `README.md`, `plan.md`,
+  `docs/data-model.md`, `docs/architecture.md`, and `docs/strategy.md`.
+- AP18 intentionally made no schema or code changes.
+- Verification:
+  - `.venv/bin/python -m pytest tests -m "not integration"`
+  - `.venv/bin/python -m compileall data universes indicators strategies simulation evaluation live cli shared tests`
+
+AP19 is complete:
+
+- Added `docs/provider-api-model.md` as the AP19 design document.
+- Separated universes, providers, provider configs, source roles,
+  capabilities, and provider-specific identifiers.
+- Documented source-of-truth bindings for membership, prices, fundamentals,
+  market caps, classification, and benchmark prices.
+- Documented provider-capability metadata and provider replacement rules so
+  Yahoo Finance, Binance, SimFin, CSV, and commercial providers can be modeled
+  without treating a universe as an API.
+- Updated AP20 to implement a read-only capability and provider checker, not
+  only a data-capability checker.
+- Synchronized status in `AGENTS.md`, `README.md`, `plan.md`,
+  `docs/data-capabilities.md`, `docs/data-model.md`,
+  `docs/architecture.md`, and `docs/strategy.md`.
+- AP19 intentionally made no schema or code changes.
+- Verification:
+  - `.venv/bin/python -m pytest tests -m "not integration"`
+  - `.venv/bin/python -m compileall data universes indicators strategies simulation evaluation live cli shared tests`
+
+## AP20 Session Notes
+
+- Added `shared.capabilities` with schema-free capability keys, source roles,
+  provider capabilities, default source bindings, universe profiles, and
+  requirements for strategy, indicator, benchmark, and live workflows.
+- Implemented read-only validation for strategy, indicator, and live
+  capability checks.
+- Wired the checker into `cli.orchestration`, `cli.indicator_status`,
+  `cli.strategy_status`, `cli.backtest_status`, `cli.operator_smoke`,
+  `cli.live_status`, `cli.live_performance`, `cli.live_cash`, and
+  `cli.live_trade`.
+- Kept the current `sp500_active` + `value_quality_momentum` + `spy` +
+  `mysql_fixture` path green.
+- Added negative tests for an incompatible Krypto universe, a provider binding
+  that cannot satisfy fundamentals, and a missing source role.
+- AP20 intentionally made no schema change and added no external API
+  dependency.
+- Verification:
+  - `.venv/bin/python -m pytest tests/test_capabilities.py tests/test_orchestration.py`
+  - `.venv/bin/python -m compileall shared cli tests`
+
+Next step: AP21, concretize asset catalog metadata and provider identifier
+coverage so the AP20 checker can validate real asset/provider metadata instead
+of only code-level profiles.
