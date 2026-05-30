@@ -5,6 +5,184 @@ Stand: AP16.
 Der regulaere Betrieb nutzt nur noch die modularen CLIs und das kanonische
 Schema aus `init.sql`. Legacy-CLIs sind kein Operator-Standardpfad mehr.
 
+## Day-to-day Einstieg
+
+Dieses Kapitel ist der kuerzeste Einstieg fuer den regulaeren Betrieb.
+
+Die operative Pipeline ist:
+
+```text
+neue Marktdaten holen
+-> taeglichen Strategie-Stand berechnen
+-> monatlich neue Zielportfolios und Trade-Plan erzeugen
+-> Ist-Zustand gegen Shadow/Model pruefen
+-> Kaeufe/Verkaeufe manuell buchen
+-> Real Portfolio gegen Shadow und Benchmark vergleichen
+```
+
+Die drei Portfolio-Sichten sind:
+
+- `Model`: das reine Strategie-Ergebnis fuer den Stichtag.
+- `Shadow`: das tradierbare Zielportfolio nach Halte- und Trade-Regeln.
+- `Real`: das tatsaechlich manuell gebuchte Portfolio.
+
+Fuer den Alltag sind diese Befehle die wichtigsten:
+
+- `python -m cli.daily_run`
+  Holt neue Daten und berechnet den aktuellen Strategie-Stand fuer den Tag.
+- `python -m cli.monthly_run --persist`
+  Friert zum Monatslauf Model, Shadow, Rebalance, Decisions und Trade-Plan ein.
+- `python -m cli.live_status --all --limit 10`
+  Zeigt, wo Real gegen Shadow/Model abweicht.
+- `python -m cli.live_performance --curve-limit 5`
+  Zeigt Real vs. Shadow vs. Benchmark ueber die Zeit.
+- `python -m cli.live_cash --type deposit|withdrawal ...`
+  Bucht Ein- oder Auszahlungen.
+- `python -m cli.live_trade ...`
+  Bucht einen manuellen Kauf oder Verkauf.
+
+Wenn nur ein schneller Tagesablauf noetig ist, ist die Reihenfolge meist:
+
+1. `python -m cli.daily_run`
+2. `python -m cli.live_status --limit 10`
+3. Falls Monatsanfang oder Rebalance-Tag: `python -m cli.monthly_run --persist`
+4. Danach geplante Trades mit `python -m cli.live_trade ...` buchen
+5. Zum Schluss `python -m cli.live_performance --curve-limit 5`
+
+## Was Daily Und Monthly Machen
+
+`daily_run` ist der Tageslauf:
+
+- aktualisiert Rohdaten ueber den modularen Sync
+- berechnet Indikatoren neu
+- laesst die Strategie gegen den neuesten Handelstag laufen
+- zeigt das aktuelle Model Portfolio
+- ist der passende manuelle Befehl, wenn man denselben Ablauf wie den Daily-Cron starten will
+
+`monthly_run` ist der Monatslauf:
+
+- nutzt den neuesten verfuegbaren Handelstag oder `--as-of-date`
+- erzeugt das Model Portfolio fuer den Monatsstichtag
+- erzeugt das tradierbare Shadow Portfolio
+- erzeugt Rebalance- und Decision-Artefakte
+- erzeugt den Trade-Plan fuer manuelle Ausfuehrung
+- schreibt diese Artefakte nur mit `--persist` dauerhaft in die Datenbank
+
+Merksatz:
+
+- `daily_run` beantwortet: "Wie sieht die Strategie heute aus?"
+- `monthly_run --persist` beantwortet: "Was ist mein offizieller Monatsstand und was soll ich handeln?"
+
+## Wichtigste Befehle
+
+### Daten holen
+
+Regulaerer Tagesbefehl:
+
+```bash
+docker compose run --rm app python -m cli.daily_run
+```
+
+Nur pruefen, was synchronisiert wuerde:
+
+```bash
+docker compose run --rm app python -m cli.daily_run --dry-run-sync --model-limit 5
+docker compose run --rm app python -m cli.sync_data --dry-run
+```
+
+Gezielt nur Preise oder Fundamentals pruefen:
+
+```bash
+docker compose run --rm app python -m cli.sync_prices --dry-run --plan-limit 5
+docker compose run --rm app python -m cli.sync_fundamentals --dry-run --plan-limit 5
+```
+
+### Aktuellen Stand sehen
+
+Kurzstatus der Portfolios:
+
+```bash
+docker compose run --rm app python -m cli.live_status --limit 10
+```
+
+Voller Status inklusive ausgerichteter Zeilen:
+
+```bash
+docker compose run --rm app python -m cli.live_status --all --limit 10
+```
+
+Portfolio gegen Markt vergleichen:
+
+```bash
+docker compose run --rm app python -m cli.live_performance --curve-limit 5
+```
+
+Wenn nur ein kompakter Systemcheck noetig ist:
+
+```bash
+docker compose run --rm app python -m cli.operator_smoke --ranking-limit 5 --trade-limit 5
+```
+
+### Monatsstand erzeugen
+
+Nur ansehen, noch nichts schreiben:
+
+```bash
+docker compose run --rm app python -m cli.monthly_run --model-limit 7
+```
+
+Offiziellen Monatsstand mit Trade-Plan schreiben:
+
+```bash
+docker compose run --rm app python -m cli.monthly_run --persist --model-limit 7
+```
+
+### Kauf, Verkauf, Cash
+
+Cash einzahlen:
+
+```bash
+docker compose run --rm app python -m cli.live_cash --type deposit --amount 1000 --as-of-date 2026-05-22
+```
+
+Cash-Abgang als Test:
+
+```bash
+docker compose run --rm app python -m cli.live_cash --type withdrawal --amount 250 --as-of-date 2026-05-22 --dry-run
+```
+
+Kauf oder Verkauf manuell buchen:
+
+```bash
+docker compose run --rm app python -m cli.live_trade --help
+```
+
+Der normale Weg ist:
+
+1. `monthly_run --persist` erzeugt den Trade-Plan
+2. `live_status` zeigt die Luecken zwischen Shadow und Real
+3. `live_trade` bucht die manuelle Umsetzung
+4. `live_performance` zeigt danach den Vergleich gegen Shadow und Benchmark
+
+## Status-System
+
+`cli.live_status` ist der schnellste Befehl fuer den operativen Ist-Zustand.
+
+Er zeigt:
+
+- wie viele Positionen in `Model`, `Shadow` und `Real` liegen
+- wie viel Cash im Real Portfolio vorhanden ist
+- investierten und gesamten Portfoliowert
+- welche Titel im Real Portfolio fehlen, zusaetzlich vorhanden sind oder vom Shadow abweichen
+
+Praktische Kurzform:
+
+```bash
+docker compose run --rm app python -m cli.live_status --limit 10
+```
+
+Wenn nur die Problemstellen wichtig sind, reicht diese Kurzform meist aus.
+
 ## Setup
 
 Frische Datenbank mit kanonischem Schema:
@@ -124,6 +302,37 @@ fortgeschrieben. Der Benchmark wird auf denselben Startwert normalisiert. Die
 Option `--base-value` setzt optional die gemeinsame Normierungsbasis aller
 Wertreihen. Die CLI gibt Rendite, Benchmark-Rendite, Outperformance,
 Max Drawdown, Diagnosezaehler und den Tail der Wertreihe aus.
+
+## Operator Shortcuts
+
+Wer die langen Docker-Befehle nicht jedes Mal tippen will, kann sich lokal
+diese Shell-Shortcuts setzen:
+
+```bash
+alias qrun='docker compose run --rm app python -m'
+alias qdaily='docker compose run --rm app python -m cli.daily_run'
+alias qmonth='docker compose run --rm app python -m cli.monthly_run'
+alias qstatus='docker compose run --rm app python -m cli.live_status --limit 10'
+alias qperf='docker compose run --rm app python -m cli.live_performance --curve-limit 5'
+```
+
+Dann werden die wichtigsten Alltagsbefehle kurz:
+
+```bash
+qdaily
+qstatus
+qmonth --persist --model-limit 7
+qperf
+qrun cli.live_cash --type deposit --amount 1000 --as-of-date 2026-05-22
+```
+
+## Best Practices
+
+- Vor manuellen Trades immer zuerst `cli.monthly_run --persist` und danach `cli.live_status` laufen lassen.
+- `cli.live_trade` moeglichst mit Werten aus `live_trade_plan_items` fuettern statt freie Zahlen zu raten.
+- Nach Cash-Buchungen oder Trades den Ist-Zustand direkt mit `cli.live_status --limit 10` pruefen.
+- Fuer den Marktvergleich `cli.live_performance` als Abschlussbefehl verwenden.
+- Fuer den regulaeren Betrieb dieselben Befehle wie im Cronpfad nutzen, damit manueller Lauf und Scheduler nicht auseinanderlaufen.
 
 ## Host Crontab
 

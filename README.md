@@ -70,6 +70,7 @@ Dokumentationsregel:
 
 ## IV. Operativer Betrieb
 - [Operations Guide](docs/operations.md)
+- [Day-to-day Einstieg](docs/operations.md#day-to-day-einstieg)
 - [Daily Operations](docs/operations.md#daily-operations)
 - [Monthly Operations](docs/operations.md#monthly-operations)
 - [Status-System](docs/operations.md#status-system)
