@@ -176,6 +176,12 @@ ausfuehrbar. `scripts/client_smoke.sh` prueft einen frischen isolierten Client
 mit Fixture, AP14-Schema, Startkapital, Monthly-Persistenz, Trade-Plan,
 Live-Status, Cash-Dry-Run und optionaler Smoke-Trade-Buchung.
 
+AP16 ist abgeschlossen: `live.performance` und `cli.live_performance` liefern
+einen read-only Performance-Report fuer Real Portfolio, Shadow Portfolio und
+Benchmark, initial `SPY`. Der Report erzeugt eine Wertreihe, Rendite,
+Outperformance, Drawdown und Diagnosen aus kanonischen Live- und Preistabellen,
+ohne Performance-Logik in eine spaetere UI zu verschieben.
+
 Die UI wird bewusst nach hinten geschoben. Als naechste technische APs werden
 zuerst die Kernlogik und Operatorablaeufe stabil gehalten; die Weboberflaeche
 bleibt danach geplant.
@@ -195,7 +201,8 @@ Schritt, weil AP3 unter Windows mit WSL Toolchain-Probleme gezeigt hat:
 10. Model-/Shadow-/Trade-Plan-Persistenz migrieren. Erledigt in AP13.
 11. Legacy-unabhaengiges kanonisches Schema und operativen Cutover bauen. Erledigt in AP14.
 12. Crontab-Betrieb fuer Daily und Monthly dokumentieren und testen. Erledigt in AP15.
-13. Weboberflaeche erst danach bauen. Naechster Schritt AP16.
+13. Live-/Shadow-/Benchmark-Performance-Reporting bauen. Erledigt in AP16.
+14. Weboberflaeche erst danach bauen. Naechster Schritt AP17.
 
 Der Arbeitsplan steht in [plan.md](plan.md).
 
@@ -235,6 +242,7 @@ docker compose run --rm app python -m cli.sync_fundamentals --dry-run --plan-lim
 docker compose run --rm app python -m cli.sync_data --dry-run
 docker compose run --rm app python -m cli.daily_run --dry-run-sync --model-limit 5
 docker compose run --rm app python -m cli.monthly_run --model-limit 5
+docker compose run --rm app python -m cli.live_performance --curve-limit 5
 ```
 
 Bereinigte Rohdaten-Fixture-Daten aus `fixtures/raw_market_data.sql` koennen
@@ -262,6 +270,7 @@ AP14-Live-Status und Write-CLIs laufen gegen die kanonischen Live-Tabellen:
 
 ```bash
 docker compose run --rm app python -m cli.live_status
+docker compose run --rm app python -m cli.live_performance --curve-limit 5
 docker compose run --rm app python -m cli.live_cash --type deposit --amount 1000 --as-of-date 2026-04-30 --dry-run
 docker compose run --rm app python -m cli.live_trade --help
 ```
@@ -804,7 +813,14 @@ zu raten:
 
 ```bash
 docker compose run --rm app python -m cli.live_cash --type deposit --amount 1000 --as-of-date 2026-05-22 --dry-run
+```
 
+Der folgende Bash-Block liest automatisch die erste ausfuehrbare BUY-Zeile aus
+`live_trade_plan_items` und speichert `as_of_date`, `ticker`, `planned_shares`,
+`estimated_price` und `fee` in Shell-Variablen. Diese Variablen werden danach
+im `cli.live_trade --dry-run` verwendet:
+
+```bash
 read -r TRADE_AS_OF_DATE TRADE_TICKER TRADE_SHARES TRADE_PRICE TRADE_FEE < <(
   docker compose exec -T db sh -lc 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -B -N -e "
     SELECT as_of_date, ticker, planned_shares, estimated_price, fee

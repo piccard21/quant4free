@@ -98,8 +98,13 @@ documented and backed by `scripts/cron_daily.sh`, `scripts/cron_monthly.sh`,
 fixed `flock` locks, fixed log paths, and `scripts/client_smoke.sh` for a fresh
 isolated client smoke covering initialization, start capital, monthly
 persistence, trade-plan validation, live status, cash dry-run, and optional
-smoke trade execution. AP16 is next: build a web UI only after the core
-operator path remains stable.
+smoke trade execution.
+
+AP16 is complete: `live.performance` and `cli.live_performance` provide
+read-only Real vs. Shadow vs. benchmark reporting, initially SPY, with a
+portfolio value curve, returns, outperformance, drawdown, diagnostics, and
+fixture-backed regression coverage. The web UI is deferred to AP17 and should
+only be built after this reporting layer.
 
 ## Build, Test, and Development Commands
 
@@ -140,6 +145,7 @@ python -m cli.indicator_status
 python -m cli.strategy_status
 python -m cli.backtest_status
 python -m cli.live_status
+python -m cli.live_performance --help
 python -m cli.live_cash --help
 python -m cli.live_trade --help
 python -m cli.operator_smoke

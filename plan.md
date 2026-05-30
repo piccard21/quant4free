@@ -2,22 +2,44 @@
 
 ## Umsetzungsstand
 
-Stand: AP15 ist abgeschlossen. Das kanonische AP14-Schema ist der regulaere
-modulare Betriebspfad, und AP15 dokumentiert den Host-Crontab-Betrieb fuer
-Daily und Monthly mit festen `flock`-Locks, Logdateien und Host-Skripten. Ein
-frischer isolierter Client-Smoke prueft Initialisierung, Startkapital,
-Monthly-Persistenz, Trade-Plan, Live-Status, Cash-Dry-Run und Smoke-Trades.
-Der naechste Schritt ist AP16: Weboberflaeche erst nach stabiler Kernlogik.
+Stand: AP16 ist abgeschlossen. Das kanonische AP14-Schema ist der regulaere
+modulare Betriebspfad, AP15 dokumentiert den Host-Crontab-Betrieb fuer Daily
+und Monthly, und AP16 ergaenzt einen read-only Performance-Report fuer Real
+Portfolio, Shadow Portfolio und Benchmark. Die Weboberflaeche bleibt auf AP17
+verschoben und soll nur Client dieser Kernlogik sein.
 
 Strategische Anpassung:
 
 - Die Weboberflaeche wird nach hinten geschoben.
 - Vor der UI werden die verbleibenden Operator-Themen wie Scheduling in neue,
   modulare APs zerlegt.
+- Vor der UI wird ein Live-Performance-Report fuer Real vs. Shadow vs.
+  Benchmark als eigener AP ergaenzt.
 - Der produktive Monthly-Pfad fuer persistierte Artefakte steht jetzt ueber
   `cli.monthly_run --persist` auf dem kanonischen AP14-Pfad bereit.
 
 Erledigt:
+
+AP16:
+
+- `live.performance` angelegt:
+  - `LivePerformanceRepository` liest Shadow Targets, Real-Positionen,
+    Cash-Balances und Preisbars aus den kanonischen Tabellen.
+  - `LivePerformanceService` berechnet Real-, Shadow- und Benchmark-Wertreihe,
+    Rendite, Benchmark-Rendite, Outperformance und Drawdown.
+  - Shadow wird als target-weight Portfolio aus `portfolio_target_items` mit
+    `snapshot_type='shadow'` fortgeschrieben und bei neuen Snapshots
+    rebalanciert.
+  - Benchmark, initial `SPY`, wird aus `asset_price_bars` auf denselben
+    Startwert normalisiert.
+- `cli.live_performance` als Operator-Report bereitgestellt.
+- AP16 bleibt read-only; `performance_snapshots` wird nicht als Pflicht-Persistenz
+  fuer den regulaeren Report verwendet.
+- Verifikation:
+  - `.venv/bin/python -m pytest tests/test_live_performance.py`
+  - `.venv/bin/python -m pytest tests`
+  - `.venv/bin/python -m compileall data universes indicators strategies simulation evaluation live cli shared`
+  - `.venv/bin/python -m cli.live_performance --help`
 
 AP15:
 
@@ -1092,7 +1114,45 @@ Tests/Akzeptanz:
 - Dokumentation beschreibt den modularen Cron-Befehl als einzigen regulaeren
   Betriebsweg.
 
-### AP16: Weboberflaeche Erst Nach Stabiler Kernlogik
+### AP16: Live-/Shadow-/Benchmark-Performance-Reporting
+
+Status: abgeschlossen.
+
+Ziel:
+
+- Eine belastbare Performance-Sicht fuer den operativen Pfad schaffen, bevor
+  eine UI gebaut wird.
+- Real Portfolio, Shadow Portfolio und Benchmark vergleichbar bewerten.
+
+Umfang:
+
+- Live-Performance-Repository/Service entwerfen.
+- Real Portfolio aus `live_positions`, `live_cash_balances` und historischen
+  Preisen bewerten.
+- Shadow Portfolio aus `portfolio_target_items` und historischen Preisen
+  bewerten.
+- Benchmark, initial `SPY`, aus `asset_price_bars` normalisiert vergleichen.
+- CLI `cli.live_performance` bereitstellen.
+- Ergebnisse fuer AP16 read-only berechnen; Persistenz in
+  `performance_snapshots` bleibt optional fuer eine spaetere AP.
+
+Tests/Akzeptanz:
+
+- Report zeigt Real-, Shadow- und Benchmark-Wertreihe fuer einen Zeitraum.
+- Report zeigt Rendite, Outperformance und Drawdown fuer Real und Shadow gegen
+  Benchmark.
+- Fixture-basierter Smoke laeuft ohne externe API-Zugriffe.
+- Die Werte sind reproduzierbar und koennen spaeter von einer UI verwendet
+  werden, ohne Berechnungslogik zu duplizieren.
+
+Verifikation:
+
+- `.venv/bin/python -m pytest tests/test_live_performance.py`
+- `.venv/bin/python -m pytest tests`
+- `.venv/bin/python -m compileall data universes indicators strategies simulation evaluation live cli shared`
+- `.venv/bin/python -m cli.live_performance --help`
+
+### AP17: Weboberflaeche Erst Nach Stabiler Kernlogik
 
 Ziel:
 
@@ -1127,7 +1187,8 @@ Tests/Akzeptanz:
 14. Operative Persistenz fuer Model, Shadow und Trade Plan migrieren.
 15. Legacy-unabhaengiges Schema und operativen Cutover bauen.
 16. Crontab-Betrieb fuer Daily und Monthly dokumentieren und testen.
-17. Weboberflaeche erst am Schluss bauen.
+17. Live-/Shadow-/Benchmark-Performance-Reporting bauen.
+18. Weboberflaeche erst am Schluss bauen.
 
 ## Testing Und Akzeptanz
 
@@ -1135,10 +1196,14 @@ Tests/Akzeptanz:
 - Erste Akzeptanz: dieselben Rohdaten koennen fuer mehrere Strategien, Universen und Benchmarks genutzt werden.
 - Backtest-Akzeptanz: ein Run erzeugt reproduzierbar Metriken, Equity Curve und simulierte Trades.
 - Live-Akzeptanz: aktives Portfolio zeigt Model, Shadow, Real und Execution Gap.
+- Performance-Akzeptanz: operativer Report vergleicht Real, Shadow und
+  Benchmark reproduzierbar ueber eine Zeitreihe.
 - Konfigurations-Akzeptanz: Strategieaenderungen gelten nur ab neuem `valid_from` und zerstoeren keine historischen Ergebnisse.
 - Legacy-Cutover entfernt als AP14 die verbleibenden Abhaengigkeiten von
   legacy-kompatiblen Tabellen im regulaeren Betrieb.
 - Crontab startet seit AP15 auf dem modularen operativen Pfad nach AP14.
+- Performance-Reporting fuer Real vs. Shadow vs. Benchmark ist seit AP16
+  read-only verfuegbar.
 - Spaetere Weboberflaeche ist nur Client; Fachlogik bleibt im Backend/Kern.
 
 ## Annahmen Und Defaults
@@ -1148,4 +1213,4 @@ Tests/Akzeptanz:
 - `fixtures/raw_market_data.sql` wird nicht als neues `init.sql` verwendet, sondern als bereinigte Test-/Demo-Fixture.
 - Erste Provider sind bestehende DB/Fixture-Daten und yfinance; weitere APIs kommen ueber Adapter.
 - Erste Strategie bleibt Value/Quality/Momentum, wird aber in die neue modulare Strategieform ueberfuehrt.
-- Weboberflaeche kommt zuletzt, bevorzugt schlank ueber FastAPI plus einfache UI, sobald Kern und Workflows stabil sind.
+- Weboberflaeche kommt zuletzt, bevorzugt schlank ueber FastAPI plus einfache UI, sobald Kern, Workflows und Performance-Reporting stabil sind.

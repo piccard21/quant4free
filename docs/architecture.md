@@ -1,6 +1,6 @@
 # Architektur
 
-Stand: AP14.
+Stand: AP16.
 
 Das neue Framework ist der regulaere operative Pfad. Legacy-Code liegt nur noch
 als archivierte Referenz unter `legacy/current_system/`.
@@ -13,10 +13,11 @@ als archivierte Referenz unter `legacy/current_system/`.
 - `indicators/`: modulare Indikatorberechnung.
 - `strategies/`: Value/Quality/Momentum-Strategie und Model Portfolio.
 - `evaluation/`: Backtests, Benchmark-Vergleich und `strategy_run_*` Tabellen.
-- `live/`: Model/Shadow/Real Status, Rebalance-Artefakte, Trade Plans, Cash und
-  manuelle Ausfuehrungen auf kanonischen `live_*` Tabellen.
+- `live/`: Model/Shadow/Real Status, Rebalance-Artefakte, Trade Plans, Cash,
+  manuelle Ausfuehrungen und Real/Shadow/Benchmark-Performance auf
+  kanonischen Live- und Preistabellen.
 - `cli/`: Operator-Einstiege fuer Status, Sync, Daily/Monthly, Live-Cash und
-  Live-Trades.
+  Live-Trades sowie Live-Performance.
 
 ## Kanonische Tabellen
 
@@ -49,4 +50,5 @@ python -m cli.operator_smoke
 python -m cli.daily_run --dry-run-sync
 python -m cli.monthly_run --persist
 python -m cli.live_status --all
+python -m cli.live_performance
 ```

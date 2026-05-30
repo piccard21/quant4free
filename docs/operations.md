@@ -1,6 +1,6 @@
 # Operations Guide
 
-Stand: AP15.
+Stand: AP16.
 
 Der regulaere Betrieb nutzt nur noch die modularen CLIs und das kanonische
 Schema aus `init.sql`. Legacy-CLIs sind kein Operator-Standardpfad mehr.
@@ -58,6 +58,7 @@ scripts/dev_check.sh --smoke --execute-smoke-trades
 docker compose run --rm app python -m cli.data_status --details
 docker compose run --rm app python -m cli.operator_smoke --ranking-limit 5 --trade-limit 5
 docker compose run --rm app python -m cli.live_status --all --limit 10
+docker compose run --rm app python -m cli.live_performance --curve-limit 5
 ```
 
 `cli.operator_smoke` prueft DB-Ping, kanonische Rohdatentabellen, Universum,
@@ -98,6 +99,31 @@ Ohne echte Trade-Buchungen:
 ```bash
 scripts/client_smoke.sh --db-name ap15_client_smoke --skip-trade-execution
 ```
+
+## Performance
+
+AP16 stellt den operativen Performance-Report als read-only CLI bereit:
+
+```bash
+docker compose run --rm app python -m cli.live_performance --curve-limit 10
+```
+
+Der Report vergleicht Real Portfolio, Shadow Portfolio und Benchmark. Der
+Benchmark wird ueber `--benchmark` gewaehlt und ist standardmaessig `spy`. Wenn
+kein Zeitraum angegeben wird, endet der Report am letzten verfuegbaren
+Benchmark-Preis und startet 365 Tage davor:
+
+```bash
+docker compose run --rm app python -m cli.live_performance --benchmark spy --start-date 2026-01-02 --end-date 2026-05-22
+```
+
+Real wird aus `live_positions`, `live_cash_balances` und historischen
+`asset_price_bars` bewertet. Shadow wird als target-weight Portfolio aus den
+persistierten `portfolio_target_items` mit `snapshot_type='shadow'`
+fortgeschrieben. Der Benchmark wird auf denselben Startwert normalisiert. Die
+Option `--base-value` setzt optional die gemeinsame Normierungsbasis aller
+Wertreihen. Die CLI gibt Rendite, Benchmark-Rendite, Outperformance,
+Max Drawdown, Diagnosezaehler und den Tail der Wertreihe aus.
 
 ## Host Crontab
 
@@ -208,6 +234,11 @@ fortgeschrieben.
 ## Trade Execution
 
 BUY dry-run:
+
+Der folgende Bash-Block liest automatisch die erste ausfuehrbare BUY-Zeile aus
+`live_trade_plan_items` und speichert `as_of_date`, `ticker`, `planned_shares`,
+`estimated_price` und `fee` in Shell-Variablen. Diese Variablen werden danach
+im `cli.live_trade --dry-run` verwendet.
 
 ```bash
 read -r TRADE_AS_OF_DATE TRADE_TICKER TRADE_SHARES TRADE_PRICE TRADE_FEE < <(

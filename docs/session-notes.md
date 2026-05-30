@@ -191,7 +191,8 @@ Planning update after AP10:
   rebalance output, decision log, and trade plan.
 - AP14 is the legacy-independent canonical schema and live cutover.
 - AP15 is the simple host-crontab operating path for daily and monthly runs.
-- AP16 is the deferred web interface.
+- AP16 is live performance reporting for Real vs. Shadow vs. benchmark.
+- AP17 is the deferred web interface.
 
 AP11 is complete. Current AP11 findings:
 
@@ -294,4 +295,21 @@ AP15 is complete:
   - `DB_NAME=ap15_client_smoke flock -n var/lock/daily_run.lock scripts/cron_daily.sh --dry-run-sync --model-limit 1 >> var/log/daily_run.log 2>&1`
   - `DB_NAME=ap15_client_smoke flock -n var/lock/monthly_run.lock scripts/cron_monthly.sh --as-of-date 2026-05-21 >> var/log/monthly_run.log 2>&1`
 
-Next step: AP16, keep the web UI behind the now-tested modular operator path.
+AP16 is complete:
+
+- Added `live.performance` with a read-only repository/service for Real vs.
+  Shadow vs. benchmark performance.
+- Added `cli.live_performance` with default `spy` benchmark, optional date
+  range, optional base value, metrics, diagnostics, and curve tail output.
+- Shadow performance is calculated from persisted `portfolio_target_items`
+  shadow snapshots and historical prices; Real uses `live_positions`,
+  `live_cash_balances`, and historical prices.
+- AP16 intentionally does not require writes to `performance_snapshots`.
+- Verification:
+  - `.venv/bin/python -m pytest tests/test_live_performance.py`
+  - `.venv/bin/python -m pytest tests`
+  - `.venv/bin/python -m compileall data universes indicators strategies simulation evaluation live cli shared`
+  - `.venv/bin/python -m cli.live_performance --help`
+
+Next step: AP17, build the deferred web UI as a client of the now-stable core
+reporting and operator logic.

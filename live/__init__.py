@@ -16,6 +16,12 @@ from .operations import (
     OperationalRepository,
     OperationalSettings,
 )
+from .performance import (
+    LivePerformanceReport,
+    LivePerformanceRepository,
+    LivePerformanceService,
+    PerformanceMetrics,
+)
 from .repository import LivePortfolioRepository
 from .status import build_live_status
 
@@ -23,6 +29,9 @@ __all__ = [
     "CashMovementRequest",
     "CashMovementResult",
     "ExecutionGap",
+    "LivePerformanceReport",
+    "LivePerformanceRepository",
+    "LivePerformanceService",
     "LiveExecutionService",
     "LivePortfolioRepository",
     "LivePortfolioStatus",
@@ -31,6 +40,7 @@ __all__ = [
     "OperationalPersistenceService",
     "OperationalRepository",
     "OperationalSettings",
+    "PerformanceMetrics",
     "PortfolioTarget",
     "RealPosition",
     "TradeExecutionRequest",
