@@ -9,6 +9,12 @@ Schema aus `init.sql`. Legacy-CLIs sind kein Operator-Standardpfad mehr.
 
 Dieses Kapitel ist der kuerzeste Einstieg fuer den regulaeren Betrieb.
 
+Merkkarte:
+
+- `Status = jetzt`
+- `Performance = Verlauf`
+- `Monthly = offizieller Rebalance-Stand`
+
 Die operative Pipeline ist:
 
 ```text
