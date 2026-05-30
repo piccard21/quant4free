@@ -64,6 +64,50 @@ Session trotz passender Gruppe keinen Zugriff bekommt, die Shell neu starten
 oder den Host-Docker-Dienst bzw. die WSL-/VM-Integration korrigieren. Erst wenn
 `docker compose ps` ohne `sudo` funktioniert, AP4 fortsetzen.
 
+## phpMyAdmin Login funktioniert nicht
+
+Symptom:
+
+```text
+Access denied for user 'root'@'localhost'
+```
+
+Typische Ursachen:
+
+- Im phpMyAdmin-Login wurde als Server `localhost` statt `db` verwendet.
+- `MYSQL_ROOT_PASSWORD` wurde in `.env` geaendert, aber die MySQL-Datenbank
+  lief bereits mit einem bestehenden Docker-Volume.
+
+Pruefen:
+
+```bash
+docker compose exec db mysql -uroot -p'AKTUELLES_PASSWORT' -e "SELECT 1;"
+```
+
+Wenn der Login fehlschlaegt, ist das Passwort in der laufenden Datenbank nicht
+das Passwort aus der aktuellen `.env`.
+
+Behebung fuer frischen Neuaufbau:
+
+```bash
+./setup.sh init --start-capital 10000 --load-fixture
+```
+
+Alternativ mit manuellem Volume-Reset:
+
+```bash
+docker compose down -v --remove-orphans
+docker compose up -d db phpmyadmin
+```
+
+phpMyAdmin-Login danach:
+
+```text
+Server: db
+Benutzer: root
+Passwort: aktives MySQL-Root-Passwort
+```
+
 ## AP4: pip kann Requirements nicht installieren
 
 Symptom:

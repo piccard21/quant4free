@@ -624,25 +624,34 @@ Bei produktiver Nutzung die Passwoerter in `.env` anpassen. Wenn das
 Passwort geaendert wird, muss `DB_PASSWORD` zum `MYSQL_ROOT_PASSWORD` passen,
 solange `DB_USER=root` genutzt wird.
 
-## Docker Images bauen
+Wichtig fuer bestehende Docker-Volumes: Eine spaetere Aenderung von
+`MYSQL_ROOT_PASSWORD` in `.env` aendert nicht rueckwirkend das Root-Passwort in
+einer bereits initialisierten MySQL-Datenbank. Dafuer ist ein frischer Init mit
+Volume-Reset noetig, zum Beispiel ueber `./setup.sh init ...` oder
+`docker compose down -v --remove-orphans`.
+
+## Docker-Only Pfad
 
 ```bash
 docker compose build
 ```
 
-Damit wird das Docker-App-Image gebaut. Innerhalb des Containers werden dabei
-Python und die Abhaengigkeiten aus `requirements.txt` installiert.
+Damit wird das Docker-App-Image gebaut. Innerhalb des Containers werden Python
+und die Abhaengigkeiten aus `requirements.txt` installiert.
 
-Das baut noch keine lokale `.venv` auf dem Host.
+Dieser Pfad reicht aus, wenn du das System nur ueber Docker-Kommandos wie
+`docker compose run --rm app ...` testen oder betreiben willst.
 
 Im Docker-Image enthalten:
 
 - Python
 - Abhaengigkeiten aus `requirements.txt`
 
-## Lokale Linux-venv fuer AP4
+## Optional: Lokale Linux-venv fuer Host-Entwicklung
 
-Die lokale `.venv` auf dem Host entsteht erst in diesem naechsten Schritt:
+Die lokale `.venv` auf dem Host ist ein separater optionaler Pfad. Sie ist nur
+noetig, wenn du Tests oder CLIs direkt auf dem Host statt im Container
+ausfuehren willst.
 
 ```bash
 python3 -m venv .venv
@@ -652,8 +661,14 @@ python3 -m venv .venv
 .venv/bin/python -m compileall data universes indicators strategies simulation evaluation live cli shared
 ```
 
-Die lokale venv nutzt standardmaessig `DB_HOST=localhost`, waehrend Docker
-Compose den App-Container explizit mit `DB_HOST=db` startet.
+Beispiel fuer Host-Nutzung:
+
+```bash
+.venv/bin/python -m pytest tests
+```
+
+Die lokale venv nutzt standardmaessig `DB_HOST=localhost`, waehrend der Docker-
+App-Container explizit mit `DB_HOST=db` startet.
 
 ## Datenbank starten
 
@@ -661,11 +676,23 @@ Compose den App-Container explizit mit `DB_HOST=db` startet.
 docker compose up -d db phpmyadmin
 ```
 
+phpMyAdmin ist danach ueber Port `8080` erreichbar. Im Login-Dialog gilt:
+
+- Server: `db`
+- Benutzer: `root`
+- Passwort: das aktuell aktive MySQL-Root-Passwort
+
+`localhost` ist dort falsch, weil phpMyAdmin im eigenen Container laeuft und
+MySQL intern ueber den Docker-Service `db` erreicht.
+
 ## Initiales Setup
 
 Fuer einen lokalen Test mit Fixture-Daten den AP15-Pfad einmal frisch
 initialisieren. Das Kommando setzt Docker-Container und Datenbank-Volume zurueck
 und fragt deshalb interaktiv nach `yes`.
+
+Dieser Schritt ist auch noetig, wenn `.env` geaendert wurde und das neue
+`MYSQL_ROOT_PASSWORD` wirklich in der laufenden MySQL-Instanz gelten soll.
 
 Das Setup unterstützt jetzt zusätzlich:
 

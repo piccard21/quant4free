@@ -13,6 +13,10 @@ Frische Datenbank mit kanonischem Schema:
 ./setup.sh init --start-capital 10000 --load-fixture
 ```
 
+`setup.sh init` loescht das Docker-DB-Volume und initialisiert MySQL neu. Das
+ist der regulaere Weg, wenn sich `MYSQL_ROOT_PASSWORD` in `.env` geaendert hat
+und das neue Passwort auch in der laufenden Datenbank aktiv werden soll.
+
 Ohne Fixture werden nur Schema, Default-Strategie und Cash angelegt:
 
 ```bash
@@ -24,6 +28,9 @@ Live-/Operational-State zuruecksetzen, Rohdaten behalten:
 ```bash
 ./setup.sh rebuild --start-capital 10000
 ```
+
+`setup.sh rebuild` setzt kein MySQL-Root-Passwort zurueck und baut die
+Datenbank nicht neu auf.
 
 ## Status Und Smoke
 
