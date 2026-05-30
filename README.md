@@ -604,6 +604,26 @@ git clone <REPOSITORY_URL>
 cd <REPOSITORY_NAME>
 ```
 
+## Umgebung konfigurieren
+
+Vor Docker-Start und Setup die Beispielumgebung kopieren:
+
+```bash
+cp .env.example .env
+```
+
+Die Default-Werte sind fuer die lokale Docker-Entwicklung vorbereitet:
+
+```text
+MYSQL_ROOT_PASSWORD=mypassword
+DB_NAME=stocks_db
+DB_HOST=localhost
+```
+
+Bei produktiver Nutzung die Passwoerter in `.env` anpassen. Wenn das
+Passwort geaendert wird, muss `DB_PASSWORD` zum `MYSQL_ROOT_PASSWORD` passen,
+solange `DB_USER=root` genutzt wird.
+
 ## Docker Images bauen
 
 ```bash
@@ -637,6 +657,10 @@ docker compose up -d db phpmyadmin
 
 ## Initiales Setup
 
+Fuer einen lokalen Test mit Fixture-Daten den AP15-Pfad einmal frisch
+initialisieren. Das Kommando setzt Docker-Container und Datenbank-Volume zurueck
+und fragt deshalb interaktiv nach `yes`.
+
 Das Setup unterstützt jetzt zusätzlich:
 
 - `--portfolio-size`
@@ -648,10 +672,79 @@ Damit kann die Zielgröße und Turnover-Control bereits beim ersten Setup defini
 ```bash
 ./setup.sh init \
   --start-capital 10000 \
-  --portfolio-size 10 \
-  --max-trades-per-month 2 \
-  --max-funding-sell-pct 0.20
+  --portfolio-size 7 \
+  --max-trades-per-month 4 \
+  --max-sector-positions 3 \
+  --min-holding-months 2 \
+  --max-funding-sell-pct 0.35 \
+  --load-fixture
 ```
+
+Ohne Fixture-Daten wird die Rohdatenbank leer angelegt; dann muss vor Strategie-
+oder Monthly-Runs ein echter Data-Sync laufen.
+
+## Lokalen Operator-Test Schritt Fuer Schritt
+
+Nach dem initialen Setup kann der aktuelle Stand ohne externe API-Aufrufe
+getestet werden:
+
+```bash
+docker compose ps
+docker compose run --rm app python -m cli.data_status --details
+docker compose run --rm app python -m cli.operator_smoke --ranking-limit 5 --trade-limit 5
+docker compose run --rm app python -m cli.live_status --all --limit 10
+```
+
+Einen Monthly-Run erst read-only pruefen:
+
+```bash
+docker compose run --rm app python -m cli.monthly_run --model-limit 7
+```
+
+Danach die operativen Artefakte persistieren. Dafuer genau eine der beiden
+Varianten verwenden, weil ein zweiter Persist-Run fuer denselben Stichtag
+kontrolliert abgelehnt wird.
+
+Variante A: direkt ueber die CLI:
+
+```bash
+docker compose run --rm app python -m cli.monthly_run --persist --model-limit 7
+docker compose run --rm app python -m cli.live_status --all --limit 10
+```
+
+Variante B: ueber das Monthly-Cron-Skript mit Lock und Log:
+
+```bash
+mkdir -p var/log var/lock
+flock -n var/lock/monthly_run.lock scripts/cron_monthly.sh >> var/log/monthly_run.log 2>&1
+tail -100 var/log/monthly_run.log
+docker compose run --rm app python -m cli.live_status --all --limit 10
+```
+
+Cash- und Trade-Ausfuehrung nur als Dry-Run testen:
+
+```bash
+docker compose run --rm app python -m cli.live_cash --type deposit --amount 1000 --as-of-date 2026-05-22 --dry-run
+docker compose run --rm app python -m cli.live_trade --execution-type BUY --ticker AAPL --shares 1 --price 190 --fee 1 --as-of-date 2026-05-22 --dry-run
+```
+
+Das Daily-Cron-Skript manuell mit Lock und Log laufen lassen:
+
+```bash
+mkdir -p var/log var/lock
+flock -n var/lock/daily_run.lock scripts/cron_daily.sh --dry-run-sync --model-limit 7 >> var/log/daily_run.log 2>&1
+tail -100 var/log/daily_run.log
+```
+
+Den isolierten AP15-Client-Smoke optional gegen eine eigene Testdatenbank
+ausfuehren:
+
+```bash
+scripts/client_smoke.sh --db-name ap15_client_smoke --mysql-root-password mypassword
+```
+
+Erst wenn diese manuellen Laeufe passen, die echten Host-Crontab-Eintraege aus
+[docs/operations.md](docs/operations.md) setzen.
 
 
 
