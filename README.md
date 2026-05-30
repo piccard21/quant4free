@@ -630,13 +630,19 @@ solange `DB_USER=root` genutzt wird.
 docker compose build
 ```
 
-Dabei werden automatisch installiert:
+Damit wird das Docker-App-Image gebaut. Innerhalb des Containers werden dabei
+Python und die Abhaengigkeiten aus `requirements.txt` installiert.
+
+Das baut noch keine lokale `.venv` auf dem Host.
+
+Im Docker-Image enthalten:
 
 - Python
-- `requirements.txt`
-- alle Dependencies
+- Abhaengigkeiten aus `requirements.txt`
 
 ## Lokale Linux-venv fuer AP4
+
+Die lokale `.venv` auf dem Host entsteht erst in diesem naechsten Schritt:
 
 ```bash
 python3 -m venv .venv
