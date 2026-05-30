@@ -263,7 +263,7 @@ AP14-Live-Status und Write-CLIs laufen gegen die kanonischen Live-Tabellen:
 ```bash
 docker compose run --rm app python -m cli.live_status
 docker compose run --rm app python -m cli.live_cash --type deposit --amount 1000 --as-of-date 2026-04-30 --dry-run
-docker compose run --rm app python -m cli.live_trade --as-of-date 2026-04-30 --ticker AAPL --execution-type BUY --shares 1 --price 100 --fee 1 --dry-run
+docker compose run --rm app python -m cli.live_trade --help
 ```
 
 Programmatisch kann der AP7/AP8-Zugriff so verwendet werden:
@@ -747,6 +747,23 @@ docker compose run --rm app python -m cli.operator_smoke --ranking-limit 5 --tra
 docker compose run --rm app python -m cli.live_status --all --limit 10
 ```
 
+Mit der AP15-Fixture und den Default-Parametern aus dieser Anleitung ist als
+Beispielergebnis im Live-Status zu erwarten, dass die Real-Positionen noch
+fehlen und diese Shadow-/Kaufkandidaten auftauchen:
+
+```text
+APA
+CB
+CF
+INCY
+NEM
+TRV
+```
+
+Das sind Fixture-Testdaten fuer die Systempruefung, keine aktuellen
+Anlageempfehlungen. Wenn Fixture, Strategieparameter oder Stichtag geaendert
+werden, kann die Liste abweichen.
+
 Einen Monthly-Run erst read-only pruefen:
 
 ```bash
@@ -773,11 +790,40 @@ tail -100 var/log/monthly_run.log
 docker compose run --rm app python -m cli.live_status --all --limit 10
 ```
 
-Cash- und Trade-Ausfuehrung nur als Dry-Run testen:
+Den erzeugten Trade-Plan in der Datenbank ansehen:
+
+```sql
+SELECT as_of_date, execution_order, action, ticker, planned_shares, estimated_price, fee, is_executable
+FROM live_trade_plan_items
+ORDER BY as_of_date DESC, execution_order, ticker;
+```
+
+Cash- und Trade-Ausfuehrung nur als Dry-Run testen. Fuer den Trade-Test eine
+Zeile aus `live_trade_plan_items` verwenden, statt einen freien Beispielticker
+zu raten:
 
 ```bash
 docker compose run --rm app python -m cli.live_cash --type deposit --amount 1000 --as-of-date 2026-05-22 --dry-run
-docker compose run --rm app python -m cli.live_trade --execution-type BUY --ticker AAPL --shares 1 --price 190 --fee 1 --as-of-date 2026-05-22 --dry-run
+
+read -r TRADE_AS_OF_DATE TRADE_TICKER TRADE_SHARES TRADE_PRICE TRADE_FEE < <(
+  docker compose exec -T db sh -lc 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -B -N -e "
+    SELECT as_of_date, ticker, planned_shares, estimated_price, fee
+    FROM live_trade_plan_items
+    WHERE action = '\''BUY'\'' AND is_executable = 1
+    ORDER BY as_of_date DESC, execution_order, ticker
+    LIMIT 1;
+  "'
+)
+
+docker compose run --rm app python -m cli.live_trade \
+  --execution-type BUY \
+  --ticker "${TRADE_TICKER}" \
+  --shares "${TRADE_SHARES}" \
+  --price "${TRADE_PRICE}" \
+  --fee "${TRADE_FEE}" \
+  --as-of-date "${TRADE_AS_OF_DATE}" \
+  --trade-plan-action BUY \
+  --dry-run
 ```
 
 Das Daily-Cron-Skript manuell mit Lock und Log laufen lassen:

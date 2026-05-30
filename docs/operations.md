@@ -63,6 +63,23 @@ docker compose run --rm app python -m cli.live_status --all --limit 10
 `cli.operator_smoke` prueft DB-Ping, kanonische Rohdatentabellen, Universum,
 Benchmark, Strategie-Ranking und Benchmark-Backtest.
 
+Mit der AP15-Fixture und den Default-Parametern aus der README sind im
+Live-Status als Fixture-Beispiel diese fehlenden Real-Positionen bzw.
+Kaufkandidaten zu erwarten:
+
+```text
+APA
+CB
+CF
+INCY
+NEM
+TRV
+```
+
+Diese Liste ist nur ein reproduzierbares Testsignal fuer die Fixture. Sie ist
+keine aktuelle Anlageempfehlung und kann sich mit anderer Fixture, anderem
+Stichtag oder anderen Strategieparametern aendern.
+
 Frischer Client-Smoke gegen eine isolierte Testdatenbank:
 
 ```bash
@@ -193,19 +210,41 @@ fortgeschrieben.
 BUY dry-run:
 
 ```bash
-docker compose run --rm app python -m cli.live_trade --execution-type BUY --ticker AAPL --shares 1 --price 190 --fee 1 --as-of-date 2026-05-22 --dry-run
+read -r TRADE_AS_OF_DATE TRADE_TICKER TRADE_SHARES TRADE_PRICE TRADE_FEE < <(
+  docker compose exec -T db sh -lc 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -B -N -e "
+    SELECT as_of_date, ticker, planned_shares, estimated_price, fee
+    FROM live_trade_plan_items
+    WHERE action = '\''BUY'\'' AND is_executable = 1
+    ORDER BY as_of_date DESC, execution_order, ticker
+    LIMIT 1;
+  "'
+)
+
+docker compose run --rm app python -m cli.live_trade \
+  --execution-type BUY \
+  --ticker "${TRADE_TICKER}" \
+  --shares "${TRADE_SHARES}" \
+  --price "${TRADE_PRICE}" \
+  --fee "${TRADE_FEE}" \
+  --as-of-date "${TRADE_AS_OF_DATE}" \
+  --trade-plan-action BUY \
+  --dry-run
 ```
 
-SELL erfassen:
+Die Werte fuer `shares`, `price`, `fee` und `as-of-date` aus dem persistierten
+Trade-Plan nehmen:
 
-```bash
-docker compose run --rm app python -m cli.live_trade --execution-type SELL --ticker AAPL --shares 1 --price 200 --fee 1 --as-of-date 2026-05-22
+```sql
+SELECT as_of_date, execution_order, action, ticker, planned_shares, estimated_price, fee, is_executable
+FROM live_trade_plan_items
+WHERE action = 'BUY'
+ORDER BY as_of_date DESC, execution_order, ticker;
 ```
 
-Trade-Plan-Bezug validieren:
+SELL erfassen, wenn vorher eine reale Position gebucht wurde:
 
 ```bash
-docker compose run --rm app python -m cli.live_trade --execution-type BUY --ticker AAPL --shares 1 --price 190 --fee 1 --as-of-date 2026-05-22 --trade-plan-action BUY --dry-run
+docker compose run --rm app python -m cli.live_trade --execution-type SELL --ticker "${TRADE_TICKER}" --shares 1 --price 200 --fee 1 --as-of-date "${TRADE_AS_OF_DATE}"
 ```
 
 ## Canonical Tables
