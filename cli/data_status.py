@@ -1,4 +1,5 @@
 import argparse
+from datetime import datetime, timedelta
 from typing import Any
 
 
@@ -27,6 +28,46 @@ def parse_args() -> argparse.Namespace:
         "--benchmark-ticker",
         default="SPY",
         help="Ticker used to check benchmark price availability.",
+    )
+    parser.add_argument(
+        "--sync-limit",
+        type=int,
+        default=5,
+        help="Number of recent data_sync_runs rows to show with --details.",
+    )
+    parser.add_argument(
+        "--sync-type",
+        choices=["membership", "prices", "fundamentals"],
+        default=None,
+        help="Filter detailed sync-run output by sync type.",
+    )
+    parser.add_argument(
+        "--sync-status",
+        choices=["started", "ok", "failed"],
+        default=None,
+        help="Filter detailed sync-run output by status.",
+    )
+    parser.add_argument(
+        "--provider",
+        default=None,
+        help="Filter detailed sync-run output by provider key.",
+    )
+    parser.add_argument(
+        "--source-role",
+        default=None,
+        help="Filter detailed sync-run output by source role.",
+    )
+    parser.add_argument(
+        "--since-days",
+        type=int,
+        default=None,
+        help="Filter detailed sync-run output to runs started in the last N days.",
+    )
+    parser.add_argument(
+        "--stale-started-minutes",
+        type=int,
+        default=120,
+        help="Minutes after which a started sync run is reported as stale.",
     )
     return parser.parse_args()
 
@@ -150,28 +191,17 @@ def main() -> None:
                     f"scheme={row['identifier_scheme']} "
                     f"rows={row['row_count']}"
                 )
-            for row in connection.execute(
-                text(
-                    """
-                    SELECT
-                        id,
-                        sync_type,
-                        provider_key,
-                        mode,
-                        status,
-                        started_at,
-                        finished_at,
-                        planned_items,
-                        processed_items,
-                        upserted_rows,
-                        error_message
-                    FROM data_sync_runs
-                    ORDER BY started_at DESC, id DESC
-                    LIMIT 5
-                    """
-                )
-            ).mappings():
+            sync_statement, sync_params = _data_sync_runs_query(args, text)
+            for row in connection.execute(sync_statement, sync_params).mappings():
                 print(_format_data_sync_run(row))
+            diagnostics = connection.execute(
+                _data_sync_diagnostics_query(text),
+                {
+                    "stale_started_at": datetime.now()
+                    - timedelta(minutes=args.stale_started_minutes),
+                },
+            ).mappings().one()
+            print(_format_data_sync_diagnostics(diagnostics))
             benchmark = connection.execute(
                 text(
                     """
@@ -232,6 +262,7 @@ def _format_data_sync_run(row: dict[str, Any]) -> str:
         f"sync_run={row['id']}",
         f"type={row['sync_type']}",
         f"provider={row['provider_key']}",
+        f"source_role={row['source_role']}",
         f"mode={row['mode']}",
         f"status={row['status']}",
         f"started={row['started_at']}",
@@ -244,6 +275,82 @@ def _format_data_sync_run(row: dict[str, Any]) -> str:
     if row.get("error_message"):
         parts.append(f"error={row['error_message']}")
     return " ".join(parts)
+
+
+def _data_sync_runs_query(args: argparse.Namespace, text_fn):
+    clauses = []
+    params: dict[str, Any] = {"limit": max(args.sync_limit, 0)}
+    if args.sync_type:
+        clauses.append("sync_type = :sync_type")
+        params["sync_type"] = args.sync_type
+    if args.sync_status:
+        clauses.append("status = :sync_status")
+        params["sync_status"] = args.sync_status
+    if args.provider:
+        clauses.append("provider_key = :provider")
+        params["provider"] = args.provider
+    if args.source_role:
+        clauses.append("source_role = :source_role")
+        params["source_role"] = args.source_role
+    if args.since_days is not None:
+        clauses.append("started_at >= :started_since")
+        params["started_since"] = datetime.now() - timedelta(days=args.since_days)
+    where_sql = ""
+    if clauses:
+        where_sql = "WHERE " + " AND ".join(clauses)
+    return (
+        text_fn(
+            f"""
+            SELECT
+                id,
+                sync_type,
+                provider_key,
+                source_role,
+                mode,
+                status,
+                started_at,
+                finished_at,
+                planned_items,
+                processed_items,
+                upserted_rows,
+                error_message
+            FROM data_sync_runs
+            {where_sql}
+            ORDER BY started_at DESC, id DESC
+            LIMIT :limit
+            """
+        ),
+        params,
+    )
+
+
+def _data_sync_diagnostics_query(text_fn):
+    return text_fn(
+        """
+        SELECT
+            SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) AS failed_runs,
+            SUM(
+                CASE
+                    WHEN status = 'started' AND started_at < :stale_started_at
+                    THEN 1
+                    ELSE 0
+                END
+            ) AS stale_started_runs,
+            MAX(CASE WHEN status = 'ok' THEN started_at ELSE NULL END) AS latest_ok,
+            MAX(CASE WHEN status = 'failed' THEN started_at ELSE NULL END) AS latest_failed
+        FROM data_sync_runs
+        """
+    )
+
+
+def _format_data_sync_diagnostics(row: dict[str, Any]) -> str:
+    return (
+        "sync_diagnostics "
+        f"failed_runs={row['failed_runs'] or 0} "
+        f"stale_started_runs={row['stale_started_runs'] or 0} "
+        f"latest_ok={row['latest_ok']} "
+        f"latest_failed={row['latest_failed']}"
+    )
 
 
 if __name__ == "__main__":

@@ -2,7 +2,7 @@
 
 ## Umsetzungsstand
 
-Stand: AP24 ist abgeschlossen. Das kanonische AP14-Schema ist der regulaere
+Stand: AP25 ist abgeschlossen. Das kanonische AP14-Schema ist der regulaere
 modulare Betriebspfad, AP15 dokumentiert den Host-Crontab-Betrieb fuer Daily
 und Monthly, und AP16 ergaenzt einen read-only Performance-Report fuer Real
 Portfolio, Shadow Portfolio und Benchmark. AP17 ergaenzt eine isolierte
@@ -15,7 +15,9 @@ bestehenden Pfad um. AP21 konkretisiert den Asset-Katalog und Provider-
 Identifier, AP22 nutzt Provider-Symbole im Sync, und AP23 verlagert
 Universe-Identitaet sowie historisierte Mitgliedschaft in kanonische
 DB-Tabellen. AP24 ergaenzt einen kanonischen Data-Sync-Audit-Trail fuer Preis-,
-Fundamental- und Membership-Syncs.
+Fundamental- und Membership-Syncs. AP25 macht diesen Trail fuer Operatoren
+filterbar und haertet den Yahoo/yfinance-Sync ueber konfigurierbare
+Request-Policies.
 
 Strategische Anpassung:
 
@@ -36,17 +38,32 @@ Strategische Anpassung:
 
 Naechster AP:
 
-AP25:
+AP26:
 
-- Sync-Audit-Bedienung und Betriebshaertung ausbauen.
-- Naheliegende Punkte sind dedizierte Filter-/Statusausgaben, Retention-/
-  Retry-Regeln und klarere Operator-Diagnosen auf Basis von `data_sync_runs`.
-- Fuer den aktuellen Yahoo-/yfinance-Pfad konfigurierbare Batch-Groessen,
-  Throttling, Backoff und einen einfachen Circuit-Breaker vorsehen, damit
-  Preis- und Fundamental-Syncs nicht durch zu aggressive Request-Muster
-  in Rate-Limits oder temporäre Sperren laufen.
+- Daten-Freshness- und Qualitaetsdiagnosen fuer Rohpreise, Fundamentals,
+  Market Caps und Provider-Identifier-Abdeckung ausbauen.
+- Ziel ist, fehlende Daten, stale Daten und Provider-Sync-Fehler vor Strategie-
+  oder Live-Laeufen getrennt sichtbar zu machen.
 
 Erledigt:
+
+AP25:
+
+- `cli.data_status --details` filtert `data_sync_runs` nach Sync-Typ, Status,
+  Provider, Source-Rolle, Zeitraum und Limit.
+- Die Statusausgabe zeigt Diagnosezaehler fuer failed Runs, stale gestartete
+  Runs sowie den letzten erfolgreichen und letzten fehlgeschlagenen Sync.
+- Preis- und Fundamental-Syncs nutzen `SyncRequestPolicy` mit Batch-Groessen,
+  Throttle-Pausen, Retry mit exponentiellem Backoff und Circuit-Breaker.
+- `cli.sync_prices`, `cli.sync_fundamentals` und `cli.sync_data` exponieren
+  diese Policy-Schalter fuer konservative Yahoo/yfinance-Laeufe.
+- Retention bleibt konservativ und manuell: Audit-Zeilen werden nicht
+  automatisch geloescht.
+- Verifikation:
+  - `.venv/bin/python -m pytest tests/test_data_sync.py`
+  - `.venv/bin/python -m pytest tests -m "not integration"`
+  - `.venv/bin/python -m compileall data universes indicators strategies simulation evaluation live cli shared tests`
+  - `scripts/db_integration_tests.sh`
 
 AP24:
 
@@ -1613,6 +1630,7 @@ Verifikation:
 - `.venv/bin/python -m pytest tests/test_data_sync.py`
 - `.venv/bin/python -m pytest tests -m "not integration"`
 - `.venv/bin/python -m compileall data universes indicators strategies simulation evaluation live cli shared tests`
+- `scripts/db_integration_tests.sh`
 
 ### AP25: Sync-Audit-Bedienung und Betriebshaertung
 
@@ -1620,18 +1638,34 @@ Ziel:
 
 - Den AP24-Audit-Trail fuer den laufenden Betrieb besser nutzbar machen.
 
-Moeglicher Umfang:
+Umfang:
 
 - Dedizierte Sync-Statusausgaben mit Filtern fuer Provider, Sync-Typ, Status
   und Zeitraum.
-- Retention- und Retry-Regeln fuer fehlgeschlagene oder haengende Sync-Runs
-  definieren.
-- Operator-Diagnosen und Troubleshooting auf Basis von `data_sync_runs`
-  erweitern.
+- Retention- und Retry-Regeln definieren: Runs werden aus Audit-Gruenden nicht
+  automatisch geloescht; Retry/Backoff ist pro Provider-Request
+  konfigurierbar.
+- Operator-Diagnosen fuer fehlgeschlagene und stale gestartete Sync-Runs auf
+  Basis von `data_sync_runs` erweitern.
 - Den aktuellen Yahoo-/yfinance-Sync konservativ haerten:
   Preis-Init in kleinen Batches, Daily nicht aggressiv parallelisieren,
-  Fundamentals sequentiell lassen, Sleeps/Jitter sowie Retry mit Backoff und
+  Fundamentals sequentiell lassen, Sleeps sowie Retry mit Backoff und
   Circuit-Breaker fuer wiederholte Provider-Fehler einbauen.
+
+Status: abgeschlossen in AP25.
+
+Verifikation:
+
+- `.venv/bin/python -m pytest tests/test_data_sync.py`
+- `.venv/bin/python -m pytest tests -m "not integration"`
+- `.venv/bin/python -m compileall data universes indicators strategies simulation evaluation live cli shared tests`
+
+### AP26: Daten-Freshness- und Qualitaetsdiagnosen
+
+Ziel:
+
+- Fehlende Daten, stale Daten und Provider-Identifier-Luecken vor Strategie-
+  oder Live-Laeufen klarer sichtbar machen.
 
 Status: naechster Schritt.
 
@@ -1665,6 +1699,7 @@ Status: naechster Schritt.
 24. DB-Universen und historisierte Mitgliedschaften einfuehren.
 25. Data-Sync-Audit-Trail einfuehren.
 26. Sync-Audit-Bedienung und Betriebshaertung ausbauen.
+27. Daten-Freshness- und Qualitaetsdiagnosen ausbauen.
 
 ## Testing Und Akzeptanz
 
@@ -1685,8 +1720,8 @@ Status: naechster Schritt.
 - Multi-Asset-Erweiterungen muessen Universen, Assetklassen und verfuegbare
   Datenarten explizit trennen; Krypto darf z. B. ohne Fundamentaldaten
   modellierbar sein. AP18 dokumentiert dieses Zielbild.
-- Der naechste technische Schritt ist Sync-Audit-Bedienung und
-  Betriebshaertung auf Basis von `data_sync_runs`.
+- Der naechste technische Schritt ist Daten-Freshness- und
+  Qualitaetsdiagnostik fuer Rohdaten und Provider-Identifier.
 
 ## Annahmen Und Defaults
 

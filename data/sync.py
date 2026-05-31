@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 from datetime import date, datetime, timedelta
-from typing import Optional, Protocol, Sequence
+import time
+from typing import Callable, Optional, Protocol, Sequence
 
 from .models import FinancialSyncPayload, ProviderIdentifier, TickerUpsert
 from .repository import RawDataRepository
@@ -20,6 +21,8 @@ WIKIPEDIA_SP500_PROVIDER_KEY = "wikipedia_sp500"
 INIT_HISTORY_DAYS = 548
 DAILY_LOOKBACK_DAYS = 3
 NEW_TICKER_FALLBACK_DAYS = 180
+DEFAULT_PRICE_BATCH_SIZE = 25
+DEFAULT_FUNDAMENTAL_BATCH_SIZE = 10
 
 
 class TickerSource(Protocol):
@@ -60,6 +63,31 @@ class PlannedFundamentalSync:
     ticker: str
     provider_key: str
     provider_symbol: str
+
+
+@dataclass(frozen=True)
+class SyncRequestPolicy:
+    batch_size: int = DEFAULT_PRICE_BATCH_SIZE
+    throttle_seconds: float = 0.0
+    max_retries: int = 2
+    backoff_seconds: float = 1.0
+    circuit_breaker_failures: int = 5
+
+    def __post_init__(self) -> None:
+        if self.batch_size < 1:
+            raise ValueError("batch_size must be positive")
+        if self.throttle_seconds < 0:
+            raise ValueError("throttle_seconds must be non-negative")
+        if self.max_retries < 0:
+            raise ValueError("max_retries must be non-negative")
+        if self.backoff_seconds < 0:
+            raise ValueError("backoff_seconds must be non-negative")
+        if self.circuit_breaker_failures < 1:
+            raise ValueError("circuit_breaker_failures must be positive")
+
+
+class ProviderCircuitBreakerOpen(RuntimeError):
+    """Raised when repeated provider failures should stop the sync early."""
 
 
 @dataclass(frozen=True)
@@ -109,11 +137,17 @@ class PriceSyncService:
         ticker_source: Optional[TickerSource] = None,
         price_source: Optional[PriceSource] = None,
         provider_key: str = YFINANCE_PROVIDER_KEY,
+        request_policy: Optional[SyncRequestPolicy] = None,
+        sleep_func: Callable[[float], None] = time.sleep,
     ) -> None:
         self.repository = repository or RawDataRepository()
         self.ticker_source = ticker_source or WikipediaSP500TickerSource()
         self.price_source = price_source or YFinancePriceSource()
         self.provider_key = provider_key
+        self.request_policy = request_policy or SyncRequestPolicy(
+            batch_size=DEFAULT_PRICE_BATCH_SIZE
+        )
+        self.sleep_func = sleep_func
 
     def run(
         self,
@@ -274,21 +308,46 @@ class PriceSyncService:
         upserted_candles = 0
         processed_tickers = 0
         try:
-            for item in planned:
-                raw_prices = self.price_source.download_prices(
-                    item.provider_symbol,
-                    item.start_date,
-                    item.end_date,
+            failure_count = 0
+            for batch in _batches(planned, self.request_policy.batch_size):
+                for item in batch:
+                    try:
+                        raw_prices = _with_retries(
+                            lambda item=item: self.price_source.download_prices(
+                                item.provider_symbol,
+                                item.start_date,
+                                item.end_date,
+                            ),
+                            policy=self.request_policy,
+                            sleep_func=self.sleep_func,
+                        )
+                    except Exception:
+                        failure_count += 1
+                        if failure_count >= self.request_policy.circuit_breaker_failures:
+                            raise ProviderCircuitBreakerOpen(
+                                "provider circuit breaker opened after "
+                                f"{failure_count} consecutive failed price requests"
+                            )
+                        raise
+                    else:
+                        failure_count = 0
+                    processed_tickers += 1
+                    candles = normalize_yfinance_prices(
+                        raw_prices,
+                        item.provider_symbol,
+                        output_ticker=item.ticker,
+                    )
+                    if candles:
+                        downloaded_tickers += 1
+                        upserted_candles += self.repository.upsert_daily_candles(
+                            candles
+                        )
+                _sleep_between_batches(
+                    processed_items=processed_tickers,
+                    total_items=len(planned),
+                    policy=self.request_policy,
+                    sleep_func=self.sleep_func,
                 )
-                processed_tickers += 1
-                candles = normalize_yfinance_prices(
-                    raw_prices,
-                    item.provider_symbol,
-                    output_ticker=item.ticker,
-                )
-                if candles:
-                    downloaded_tickers += 1
-                    upserted_candles += self.repository.upsert_daily_candles(candles)
         except Exception as exc:
             self.repository.fail_data_sync_run(
                 sync_run_id,
@@ -333,10 +392,16 @@ class FundamentalSyncService:
         repository: Optional[RawDataRepository] = None,
         fundamental_source: Optional[FundamentalSource] = None,
         provider_key: str = YFINANCE_PROVIDER_KEY,
+        request_policy: Optional[SyncRequestPolicy] = None,
+        sleep_func: Callable[[float], None] = time.sleep,
     ) -> None:
         self.repository = repository or RawDataRepository()
         self.fundamental_source = fundamental_source or YFinanceFundamentalSource()
         self.provider_key = provider_key
+        self.request_policy = request_policy or SyncRequestPolicy(
+            batch_size=DEFAULT_FUNDAMENTAL_BATCH_SIZE
+        )
+        self.sleep_func = sleep_func
 
     def run(
         self,
@@ -416,22 +481,57 @@ class FundamentalSyncService:
         upserted_market_caps = 0
         processed_tickers = 0
         try:
-            for item in planned_items:
-                raw_payload = self.fundamental_source.load_fundamentals(
-                    item.provider_symbol,
-                    imported_at=now,
+            failure_count = 0
+            for batch in _batches(planned_items, self.request_policy.batch_size):
+                for item in batch:
+                    try:
+                        raw_payload = _with_retries(
+                            lambda item=item: self.fundamental_source.load_fundamentals(
+                                item.provider_symbol,
+                                imported_at=now,
+                            ),
+                            policy=self.request_policy,
+                            sleep_func=self.sleep_func,
+                        )
+                    except Exception:
+                        failure_count += 1
+                        if (
+                            failure_count
+                            >= self.request_policy.circuit_breaker_failures
+                        ):
+                            raise ProviderCircuitBreakerOpen(
+                                "provider circuit breaker opened after "
+                                f"{failure_count} consecutive failed fundamental requests"
+                            )
+                        raise
+                    else:
+                        failure_count = 0
+                    processed_tickers += 1
+                    payload = _payload_for_internal_ticker(raw_payload, item.ticker)
+                    reports = list(payload.reports)
+                    market_caps = (
+                        [payload.market_cap] if payload.market_cap is not None else []
+                    )
+                    if reports:
+                        upserted_reports += self.repository.upsert_financial_reports(
+                            reports
+                        )
+                    if market_caps:
+                        upserted_market_caps += self.repository.upsert_market_caps(
+                            market_caps
+                        )
+                    if reports or market_caps:
+                        self.repository.mark_fundamental_updated(
+                            item.ticker,
+                            updated_at=now,
+                        )
+                        updated_tickers += 1
+                _sleep_between_batches(
+                    processed_items=processed_tickers,
+                    total_items=len(planned_items),
+                    policy=self.request_policy,
+                    sleep_func=self.sleep_func,
                 )
-                processed_tickers += 1
-                payload = _payload_for_internal_ticker(raw_payload, item.ticker)
-                reports = list(payload.reports)
-                market_caps = [payload.market_cap] if payload.market_cap is not None else []
-                if reports:
-                    upserted_reports += self.repository.upsert_financial_reports(reports)
-                if market_caps:
-                    upserted_market_caps += self.repository.upsert_market_caps(market_caps)
-                if reports or market_caps:
-                    self.repository.mark_fundamental_updated(item.ticker, updated_at=now)
-                    updated_tickers += 1
         except Exception as exc:
             self.repository.fail_data_sync_run(
                 sync_run_id,
@@ -480,6 +580,52 @@ def _append_benchmark(tickers: Sequence[str], benchmark_ticker: str) -> list[str
     if benchmark_ticker and benchmark_ticker not in symbols:
         symbols.append(benchmark_ticker)
     return symbols
+
+
+def _batches(
+    items: Sequence[PlannedPriceSync] | Sequence[PlannedFundamentalSync],
+    batch_size: int,
+):
+    for start in range(0, len(items), batch_size):
+        yield items[start : start + batch_size]
+
+
+def _with_retries(
+    call: Callable[[], object],
+    policy: SyncRequestPolicy,
+    sleep_func: Callable[[float], None],
+) -> object:
+    attempts = 0
+    failures = 0
+    while True:
+        try:
+            return call()
+        except Exception as exc:
+            failures += 1
+            if failures >= policy.circuit_breaker_failures:
+                raise ProviderCircuitBreakerOpen(
+                    "provider circuit breaker opened after "
+                    f"{failures} consecutive failed request attempts"
+                ) from exc
+            if attempts >= policy.max_retries:
+                raise
+            if policy.backoff_seconds:
+                sleep_func(policy.backoff_seconds * (2**attempts))
+            attempts += 1
+
+
+def _sleep_between_batches(
+    processed_items: int,
+    total_items: int,
+    policy: SyncRequestPolicy,
+    sleep_func: Callable[[float], None],
+) -> None:
+    if (
+        policy.throttle_seconds
+        and processed_items
+        and processed_items < total_items
+    ):
+        sleep_func(policy.throttle_seconds)
 
 
 def _price_date_from(planned: Sequence[PlannedPriceSync]) -> Optional[date]:

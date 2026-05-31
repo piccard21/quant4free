@@ -433,6 +433,23 @@ docker compose run --rm app python -m cli.sync_data --dry-run
 Echte Syncs schreiben seit AP24 Audit-Zeilen in `data_sync_runs`. Dry-Runs
 bleiben read-only und erscheinen deshalb nicht als Sync-Run.
 
+Seit AP25 kann der Audit-Trail gezielt gefiltert und diagnostiziert werden:
+
+```bash
+docker compose run --rm app python -m cli.data_status --details --sync-status failed --since-days 7
+docker compose run --rm app python -m cli.data_status --details --sync-type prices --provider yfinance --sync-limit 20
+```
+
+Die Yahoo/yfinance-Syncs sind konservativ haertbar. Fuer freie inoffizielle
+Provider sollten echte Init-Laeufe kleine Batches, Pausen und Retry/Backoff
+nutzen; Retention fuer `data_sync_runs` bleibt bewusst manuell, damit Audit-
+Historie nicht automatisch verloren geht.
+
+```bash
+docker compose run --rm app python -m cli.sync_prices --mode init --batch-size 10 --throttle-seconds 2 --max-retries 3 --backoff-seconds 2 --circuit-breaker-failures 4
+docker compose run --rm app python -m cli.sync_fundamentals --batch-size 5 --throttle-seconds 2 --max-retries 3 --backoff-seconds 2 --circuit-breaker-failures 4
+```
+
 ## Monthly Operations
 
 Read-only Monthly-Run:

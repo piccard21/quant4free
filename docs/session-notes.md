@@ -472,8 +472,24 @@ AP19 is complete:
   - `.venv/bin/python -m pytest tests/test_data_sync.py`
   - `.venv/bin/python -m pytest tests -m "not integration"`
   - `.venv/bin/python -m compileall data universes indicators strategies simulation evaluation live cli shared tests`
+  - `scripts/db_integration_tests.sh`
 
-Next step: AP25, improve sync-audit operation around `data_sync_runs` with
-filtered status output, retention/retry rules, clearer diagnostics for failed
-or stale syncs, and conservative Yahoo/yfinance hardening through configurable
-batch sizes, throttling, backoff, and a simple circuit breaker.
+## AP25: Sync-audit operation and provider hardening
+
+- Added filtered `cli.data_status --details` sync-run output by sync type,
+  status, provider, source role, time window, and limit.
+- Added sync diagnostics for failed runs, stale `started` runs, latest
+  successful sync, and latest failed sync.
+- Added `SyncRequestPolicy` for price and fundamental syncs: batch size,
+  throttle sleep, retry with exponential backoff, and circuit breaker.
+- Exposed the policy in `cli.sync_prices`, `cli.sync_fundamentals`, and
+  `cli.sync_data` for conservative Yahoo/yfinance operation.
+- Retention remains conservative and manual; the application does not
+  automatically prune `data_sync_runs`.
+- Verification:
+  - `.venv/bin/python -m pytest tests/test_data_sync.py`
+  - `.venv/bin/python -m pytest tests -m "not integration"`
+  - `.venv/bin/python -m compileall data universes indicators strategies simulation evaluation live cli shared tests`
+
+Next step: AP26, add data freshness and quality diagnostics for raw prices,
+fundamentals, market caps, and provider identifier coverage.

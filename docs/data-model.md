@@ -1,6 +1,6 @@
 # Datenmodell-Plan
 
-Stand: AP24.
+Stand: AP25.
 
 Dieses Dokument beschreibt den Zielzustand des neuen modularen Quant-Frameworks.
 AP14 ersetzt die bisherige Uebergangsentscheidung, legacy-kompatible Tabellen
@@ -23,7 +23,9 @@ ein. AP22 nutzt diese Mappings im modularen Sync fuer Provider-spezifische
 Symbolaufloesung. AP23 fuehrt kanonische `universes` und `universe_members`
 fuer Universe-Identitaet und historisierte Mitgliedschaften ein. AP24 setzt
 `data_sync_runs` als kanonischen Audit-Trail fuer echte Preis-, Fundamental-
-und Membership-Syncs um.
+und Membership-Syncs um. AP25 nutzt diesen Trail fuer gefilterte
+Operator-Diagnosen und haertet den Yahoo/yfinance-Sync ueber konfigurierbare
+Request-Policies, ohne das Schema zu erweitern.
 
 ## Leitlinien
 
@@ -125,6 +127,10 @@ AP18/AP21/AP23-Zielpraezisierung:
   Datenfenster, geplante/verarbeitete Items, Row Counts, Status und
   operator-sichtbare Fehler. Dry-Runs bleiben read-only und erzeugen keine
   Audit-Zeilen.
+- Seit AP25 kann `cli.data_status --details` diese Runs nach Typ, Status,
+  Provider, Source-Rolle, Zeitraum und Limit filtern und meldet
+  fehlgeschlagene sowie stale gestartete Runs. Retention bleibt konservativ:
+  Audit-Zeilen werden nicht automatisch geloescht.
 
 ### 2. Mandanten, Portfolios und Kataloge
 
@@ -509,6 +515,21 @@ Status: abgeschlossen als Schema-/Repository-/Sync-AP.
 - `cli.data_status --details` und `cli.operator_smoke` zeigen die juengsten
   Sync-Runs fuer Operatoren.
 - Dry-Runs bleiben read-only und schreiben keine Audit-Zeilen.
+
+### AP25: Sync-Audit-Bedienung und Betriebshaertung
+
+Status: abgeschlossen ohne Schemaaenderung.
+
+- `cli.data_status --details` kann `data_sync_runs` nach `sync_type`,
+  `status`, Provider, Source-Rolle, Zeitraum und Limit filtern.
+- Die Statusausgabe meldet failed Runs, stale `started` Runs, den letzten
+  erfolgreichen und den letzten fehlgeschlagenen Sync als Diagnosezeile.
+- Preis- und Fundamental-Syncs nutzen `SyncRequestPolicy` fuer Batch-Groessen,
+  Throttle-Pausen, Retry mit exponentiellem Backoff und Circuit-Breaker.
+- Die Sync-CLIs exponieren diese Request-Policy-Parameter fuer konservative
+  Yahoo/yfinance-Laeufe.
+- Retention bleibt bewusst konservativ: `data_sync_runs` wird nicht
+  automatisch bereinigt, damit Audit-Historie erhalten bleibt.
 
 ## Initialer Schema-Sketch
 

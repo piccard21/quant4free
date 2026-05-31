@@ -17,7 +17,9 @@ from data.models import (
 from data.repository import RawDataRepository
 from data.sync import (
     FundamentalSyncService,
+    ProviderCircuitBreakerOpen,
     PriceSyncService,
+    SyncRequestPolicy,
     calculate_price_start_date,
 )
 from data.yahoo import normalize_yfinance_prices, ttm_report_from_yfinance
@@ -481,6 +483,72 @@ class DataSyncTests(unittest.TestCase):
         self.assertEqual(run.requested_tickers_count, 2)
         self.assertIn("RuntimeError: benchmark setup failed", run.error_message)
 
+    def test_price_sync_retries_and_throttles_provider_requests(self):
+        engine = create_engine("sqlite+pysqlite:///:memory:", future=True)
+        _create_raw_tables(engine)
+        repository = RawDataRepository(engine)
+        repository.upsert_tickers(
+            [
+                TickerUpsert("AAA", "Asset AAA", "Tech"),
+                TickerUpsert("BBB", "Asset BBB", "Tech"),
+            ]
+        )
+        sleeps = []
+        price_source = FlakyPriceSource(failures_before_success=1)
+
+        result = PriceSyncService(
+            repository=repository,
+            price_source=price_source,
+            request_policy=SyncRequestPolicy(
+                batch_size=1,
+                throttle_seconds=0.25,
+                max_retries=1,
+                backoff_seconds=0.5,
+                circuit_breaker_failures=5,
+            ),
+            sleep_func=sleeps.append,
+        ).run(
+            mode="daily",
+            tickers=["AAA", "BBB"],
+            dry_run=False,
+            today=date(2026, 5, 29),
+            now=datetime(2026, 5, 29, 12, 0),
+        )
+
+        self.assertEqual(result.downloaded_tickers, 3)
+        self.assertEqual(result.upserted_candles, 3)
+        self.assertEqual(sleeps.count(0.5), 3)
+        self.assertEqual(sleeps.count(0.25), 2)
+
+    def test_price_sync_circuit_breaker_records_failed_audit_run(self):
+        engine = create_engine("sqlite+pysqlite:///:memory:", future=True)
+        _create_raw_tables(engine)
+        repository = RawDataRepository(engine)
+        repository.upsert_tickers([TickerUpsert("AAA", "Asset AAA", "Tech")])
+
+        with self.assertRaises(ProviderCircuitBreakerOpen):
+            PriceSyncService(
+                repository=repository,
+                price_source=FailingPriceSource(),
+                request_policy=SyncRequestPolicy(
+                    max_retries=4,
+                    backoff_seconds=0,
+                    circuit_breaker_failures=2,
+                ),
+                sleep_func=lambda seconds: None,
+            ).run(
+                mode="daily",
+                tickers=["AAA"],
+                dry_run=False,
+                today=date(2026, 5, 29),
+                now=datetime(2026, 5, 29, 12, 0),
+            )
+
+        run = repository.list_data_sync_runs(limit=1)[0]
+        self.assertEqual(run.sync_type, "prices")
+        self.assertEqual(run.status, "failed")
+        self.assertIn("ProviderCircuitBreakerOpen", run.error_message)
+
     def test_fundamental_sync_records_failed_audit_for_selection_errors(self):
         engine = create_engine("sqlite+pysqlite:///:memory:", future=True)
         _create_raw_tables(engine)
@@ -520,6 +588,27 @@ class FakePriceSource:
 class FailingPriceSource:
     def download_prices(self, ticker: str, start_date: date, end_date: date):
         raise RuntimeError("provider unavailable")
+
+
+class FlakyPriceSource:
+    def __init__(self, failures_before_success: int) -> None:
+        self.failures_before_success = failures_before_success
+        self.calls_by_ticker: dict[str, int] = {}
+
+    def download_prices(self, ticker: str, start_date: date, end_date: date):
+        self.calls_by_ticker[ticker] = self.calls_by_ticker.get(ticker, 0) + 1
+        if self.calls_by_ticker[ticker] <= self.failures_before_success:
+            raise RuntimeError("temporary provider failure")
+        return pd.DataFrame(
+            {
+                "Open": [10.0],
+                "High": [11.0],
+                "Low": [9.0],
+                "Close": [10.5],
+                "Volume": [1000],
+            },
+            index=pd.DatetimeIndex([end_date], name="Date"),
+        )
 
 
 class FakeTickerSource:

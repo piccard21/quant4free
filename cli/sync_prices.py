@@ -34,15 +34,52 @@ def parse_args() -> argparse.Namespace:
         default=10,
         help="Number of planned ticker date ranges to print.",
     )
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=25,
+        help="Provider requests per batch before an optional throttle pause.",
+    )
+    parser.add_argument(
+        "--throttle-seconds",
+        type=float,
+        default=0.0,
+        help="Seconds to sleep between provider request batches.",
+    )
+    parser.add_argument(
+        "--max-retries",
+        type=int,
+        default=2,
+        help="Retries per provider request before failing the sync run.",
+    )
+    parser.add_argument(
+        "--backoff-seconds",
+        type=float,
+        default=1.0,
+        help="Initial retry backoff in seconds; retries use exponential backoff.",
+    )
+    parser.add_argument(
+        "--circuit-breaker-failures",
+        type=int,
+        default=5,
+        help="Consecutive failed provider requests before opening the circuit breaker.",
+    )
     return parser.parse_args()
 
 
 def main() -> None:
-    from data.sync import PriceSyncService
+    from data.sync import PriceSyncService, SyncRequestPolicy
 
     args = parse_args()
     tickers = _parse_tickers(args.ticker, args.tickers)
-    result = PriceSyncService().run(
+    request_policy = SyncRequestPolicy(
+        batch_size=args.batch_size,
+        throttle_seconds=args.throttle_seconds,
+        max_retries=args.max_retries,
+        backoff_seconds=args.backoff_seconds,
+        circuit_breaker_failures=args.circuit_breaker_failures,
+    )
+    result = PriceSyncService(request_policy=request_policy).run(
         mode=args.mode,
         tickers=tickers,
         benchmark_ticker=args.benchmark_ticker,
@@ -57,6 +94,14 @@ def main() -> None:
     print(f"planned_tickers={len(result.planned)}")
     print(f"downloaded_tickers={result.downloaded_tickers}")
     print(f"upserted_candles={result.upserted_candles}")
+    print(
+        "request_policy "
+        f"batch_size={request_policy.batch_size} "
+        f"throttle_seconds={request_policy.throttle_seconds} "
+        f"max_retries={request_policy.max_retries} "
+        f"backoff_seconds={request_policy.backoff_seconds} "
+        f"circuit_breaker_failures={request_policy.circuit_breaker_failures}"
+    )
     if result.membership_sync_run_id is not None:
         print(f"membership_sync_run_id={result.membership_sync_run_id}")
     if result.sync_run_id is not None:

@@ -279,15 +279,28 @@ Dry-Runs bleiben weiterhin read-only und schreiben keine Audit-Zeilen.
 Verifiziert wurde mit
 `.venv/bin/python -m pytest tests/test_data_sync.py`,
 `.venv/bin/python -m pytest tests -m "not integration"` und
+`.venv/bin/python -m compileall data universes indicators strategies simulation evaluation live cli shared tests`
+sowie `scripts/db_integration_tests.sh`.
+
+AP25 ist abgeschlossen: Sync-Audit-Bedienung und Betriebshaertung wurden ohne
+Schemaaenderung ausgebaut. `cli.data_status --details` kann Sync-Runs nach
+Typ, Status, Provider, Source-Rolle, Zeitraum und Limit filtern und meldet
+fehlgeschlagene sowie stale `started` Runs als Diagnose. Preis- und
+Fundamental-Syncs nutzen eine gemeinsame `SyncRequestPolicy` fuer
+konfigurierbare Batch-Groessen, Throttle-Pausen, Retry mit exponentiellem
+Backoff und einen einfachen Circuit-Breaker. `cli.sync_prices`,
+`cli.sync_fundamentals` und `cli.sync_data` exponieren diese Schalter. Audit-
+Rows werden konservativ beibehalten; Retention/Pruning bleibt eine bewusste
+Operator-Entscheidung ausserhalb der Anwendung. Verifiziert wurde mit
+`.venv/bin/python -m pytest tests/test_data_sync.py`,
+`.venv/bin/python -m pytest tests -m "not integration"` und
 `.venv/bin/python -m compileall data universes indicators strategies simulation evaluation live cli shared tests`.
 
-Als naechster technischer AP ist AP25 geplant: Sync-Audit-Bedienung und
-Betriebshaertung ausbauen, z. B. dedizierte Filter-/Statusausgaben,
-Retention-/Retry-Regeln und klarere Operator-Diagnosen auf Basis von
-`data_sync_runs`. Fuer den aktuellen Yahoo-/yfinance-Pfad soll AP25 zudem
-konfigurierbare Batch-Groessen, Throttling, Backoff und einen einfachen
-Circuit-Breaker einplanen, damit der freie inoffizielle Provider nicht durch
-zu aggressive Abrufmuster in Rate-Limits oder temporäre Sperren laeuft.
+Als naechster technischer AP ist AP26 geplant: Daten-Freshness- und
+Qualitaetsdiagnosen fuer Rohpreise, Fundamentals, Market Caps und
+Provider-Identifier-Abdeckung ergaenzen, damit Operatoren fehlende Daten,
+stale Daten und Provider-Sync-Fehler vor Strategie- oder Live-Laeufen
+auseinanderhalten koennen.
 
 Der Umbau erfolgt ab hier schrittweise. AP4 ist bewusst ein Infrastruktur-
 Schritt, weil AP3 unter Windows mit WSL Toolchain-Probleme gezeigt hat:
@@ -322,8 +335,9 @@ Schritt, weil AP3 unter Windows mit WSL Toolchain-Probleme gezeigt hat:
     AP23.
 21. Kanonischen Data-Sync-Audit-Trail fuer Provider, Modus, Zeitfenster,
     Status, Zeilenzaehler und Fehler einfuehren. Erledigt in AP24.
-22. Sync-Audit-Bedienung und Betriebshaertung ausbauen. Naechster Schritt
-    AP25.
+22. Sync-Audit-Bedienung und Betriebshaertung ausbauen. Erledigt in AP25.
+23. Daten-Freshness- und Qualitaetsdiagnosen ausbauen. Naechster Schritt
+    AP26.
 
 Der Arbeitsplan steht in [plan.md](plan.md).
 

@@ -1,6 +1,6 @@
 # Architektur
 
-Stand: AP24.
+Stand: AP25.
 
 Das neue Framework ist der regulaere operative Pfad. Legacy-Code liegt nur noch
 als archivierte Referenz unter `legacy/current_system/`.
@@ -14,7 +14,8 @@ als archivierte Referenz unter `legacy/current_system/`.
   Tabellen als Capability-Quellen ein; AP21 trennt interne Assets von
   provider-spezifischen Symbolen, AP22 nutzt diese Symbole im Sync, AP23
   fuehrt DB-Universen und historisierte Mitgliedschaften ein, AP24 ergaenzt
-  `data_sync_runs` als Audit-Trail fuer echte Sync-Laeufe.
+  `data_sync_runs` als Audit-Trail fuer echte Sync-Laeufe, AP25 ergaenzt
+  gefilterte Sync-Diagnosen und konservative Provider-Request-Policies.
 - `universes/`: Universumsloader. Fachlich sind Universen Asset-Auswahlen und
   keine impliziten Datenanforderungen. Seit AP23 liest der Loader
   `universe_members`, wenn der Provider DB-Mitgliedschaften anbietet.
@@ -56,14 +57,15 @@ Live/Operations:
 - `live_cash_balances`
 - `live_positions`
 
-## AP18-AP24 Capability- und Provider-Modell
+## AP18-AP25 Capability- und Provider-Modell
 
 AP18 und AP19 richten die Architektur fachlich auf ein Capability- und
 Provider-Binding-Modell aus. AP20 setzt die read-only Pruefung in Code um.
 AP21 verankert Asset-Metadaten und Provider-Identifier im kanonischen Schema.
 AP22 nutzt diese Identifier im modularen Sync. AP23 verankert Universe-Katalog
 und historisierte Mitgliedschaften in der Datenbank. AP24 macht echte Syncs
-ueber `data_sync_runs` auditierbar:
+ueber `data_sync_runs` auditierbar. AP25 macht diesen Audit-Trail fuer
+Operatoren filterbar und haertet Yahoo/yfinance-Abrufe:
 
 - `assets` ist der allgemeine Asset-Katalog mit Assetklasse,
   Canonical-/Display-Symbol, Instrumenttyp, Markt und Quote-Waehrung.
@@ -95,6 +97,9 @@ ueber `data_sync_runs` auditierbar:
 - Seit AP24 schreiben Preis-, Fundamental- und Membership-Syncs kanonische
   Audit-Runs mit Provider, Source-Rolle, Modus, Zeitfenster, Status,
   Zeilenzaehlern und operator-sichtbaren Fehlern. Dry-Runs bleiben read-only.
+- Seit AP25 meldet `cli.data_status --details` filtered Runs sowie failed/stale
+  Diagnosen, und Preis-/Fundamental-Syncs koennen Batch-Groessen, Throttle,
+  Retry/Backoff und Circuit-Breaker pro Lauf konfigurieren.
 
 Details stehen in [Assetklassen, Universen und Daten-Capabilities](data-capabilities.md)
 und [Provider-, API- und Source-Binding-Modell](provider-api-model.md).
