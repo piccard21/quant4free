@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, timedelta
+from math import ceil
 from typing import TYPE_CHECKING, Mapping, Optional
 
 from cli.errors import CliUsageError, require_non_empty
@@ -137,7 +138,9 @@ def run_strategy_snapshot(
     )
 
     as_of_date = config.as_of_date or latest_trading_date(provider, members)
-    load_start_date = as_of_date - timedelta(days=config.lookback_days + 7)
+    load_start_date = as_of_date - timedelta(
+        days=_calendar_lookback_window_days(config.lookback_days)
+    )
     prices = provider.load_prices(
         members,
         start_date=load_start_date,
@@ -240,6 +243,13 @@ def factor_weights_from_args(args) -> dict[str, float]:
         "quality": args.quality_weight,
         "momentum": args.momentum_weight,
     }
+
+
+def _calendar_lookback_window_days(lookback_days: int) -> int:
+    # Trading-day indicators need more than N calendar days of raw prices.
+    # Use a conservative expansion so 252-day momentum still has enough history
+    # across weekends and market holidays.
+    return max(lookback_days + 7, ceil(lookback_days * 1.6))
 
 
 def print_strategy_summary(artifacts: StrategyRunArtifacts) -> None:

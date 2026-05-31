@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 
 import pandas as pd
 import pytest
@@ -13,6 +13,8 @@ class FakeProvider:
 
     def __init__(self, benchmark_prices=None):
         self._benchmark_prices = benchmark_prices
+        self.price_requests = []
+        self.benchmark_requests = []
 
     def list_tickers(self, active_only=False):
         return [
@@ -21,10 +23,19 @@ class FakeProvider:
         ]
 
     def load_prices(self, tickers=None, start_date=None, end_date=None):
+        self.price_requests.append(
+            {
+                "tickers": None if tickers is None else list(tickers),
+                "start_date": start_date,
+                "end_date": end_date,
+            }
+        )
         frame = pd.DataFrame(
             [
+                _price("AAA", date(2023, 4, 1), 90),
                 _price("AAA", date(2024, 1, 1), 100),
                 _price("AAA", date(2024, 1, 31), 130),
+                _price("BBB", date(2023, 4, 1), 95),
                 _price("BBB", date(2024, 1, 1), 100),
                 _price("BBB", date(2024, 1, 31), 110),
             ]
@@ -56,10 +67,18 @@ class FakeProvider:
         return _filter_frame(frame, tickers, start_date, end_date, "date")
 
     def load_benchmark_prices(self, benchmark_ticker, start_date=None, end_date=None):
+        self.benchmark_requests.append(
+            {
+                "benchmark_ticker": benchmark_ticker,
+                "start_date": start_date,
+                "end_date": end_date,
+            }
+        )
         if self._benchmark_prices is not None:
             return self._benchmark_prices
         frame = pd.DataFrame(
             [
+                _price(benchmark_ticker, date(2023, 4, 1), 180),
                 _price(benchmark_ticker, date(2024, 1, 1), 200),
                 _price(benchmark_ticker, date(2024, 1, 31), 210),
             ]
@@ -85,6 +104,22 @@ def test_strategy_snapshot_reports_missing_benchmark_as_operator_error():
             FakeProvider(benchmark_prices=pd.DataFrame()),
             StrategyRunConfig(lookback_days=30, portfolio_size=1),
         )
+
+
+def test_strategy_snapshot_uses_expanded_calendar_window_for_price_history():
+    provider = FakeProvider()
+
+    artifacts = run_strategy_snapshot(
+        provider,
+        StrategyRunConfig(lookback_days=252, portfolio_size=1),
+    )
+
+    assert artifacts.as_of_date == date(2024, 1, 31)
+    assert artifacts.load_start_date <= artifacts.as_of_date - timedelta(days=400)
+    price_request = provider.price_requests[-1]
+    benchmark_request = provider.benchmark_requests[-1]
+    assert price_request["start_date"] == artifacts.load_start_date
+    assert benchmark_request["start_date"] == artifacts.load_start_date
 
 
 def _price(ticker, day, close):

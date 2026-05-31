@@ -882,7 +882,292 @@ Damit kann die Zielgröße und Turnover-Control bereits beim ersten Setup defini
 Ohne Fixture-Daten wird die Rohdatenbank leer angelegt; dann muss vor Strategie-
 oder Monthly-Runs ein echter Data-Sync laufen.
 
-## Lokalen Operator-Test Schritt Fuer Schritt
+## Docker-Testlauf Schritt Fuer Schritt
+
+Die folgenden Schritte sind der empfohlene docker-zentrierte Testpfad fuer
+einen frischen Clone. Alle Kommandos laufen ueber Docker; eine lokale `venv`
+ist dafuer nicht noetig.
+
+### 1. Images bauen und Basisdienste starten
+
+```bash
+docker compose build
+docker compose up -d db phpmyadmin
+docker compose ps
+```
+
+### 2. Frisches Setup mit Fixture oder leerer Rohdatenbank
+
+Schnellster Testpfad mit vorhandenen Fixture-Daten:
+
+```bash
+./setup.sh init \
+  --start-capital 10000 \
+  --portfolio-size 7 \
+  --max-trades-per-month 4 \
+  --max-sector-positions 3 \
+  --min-holding-months 2 \
+  --max-funding-sell-pct 0.35 \
+  --load-fixture
+```
+
+Wenn echte Yahoo/yfinance-Syncs getestet werden sollen, dieselbe Initialisierung
+ohne `--load-fixture` ausfuehren:
+
+```bash
+./setup.sh init \
+  --start-capital 10000 \
+  --portfolio-size 7 \
+  --max-trades-per-month 4 \
+  --max-sector-positions 3 \
+  --min-holding-months 2 \
+  --max-funding-sell-pct 0.35
+```
+
+Ohne Fixture-Daten bleibt die Rohdatenbank leer; dann muessen vor Strategie-
+oder Monthly-Runs zuerst Preise und Fundamentals synchronisiert werden.
+
+### 3. Rohdaten und Diagnose pruefen
+
+```bash
+docker compose run --rm app python -m cli.data_status --details
+```
+
+Auf folgende Zeilen achten:
+
+- `asset_price_bars rows=...`
+- `asset_fundamental_reports rows=...`
+- `asset_market_caps rows=...`
+- `sync_run=... status=ok`
+- `data_quality.prices status=ok`
+- `data_quality.fundamentals status=ok`
+- `data_quality.market_caps status=ok`
+
+Wenn die Rohdatentabellen leer sind oder `data_quality.*` klar `missing`
+meldet, zuerst echte Syncs laufen lassen.
+
+### 4. Echte Daten holen
+
+Alles in einem Lauf:
+
+```bash
+docker compose run --rm app python -m cli.sync_data
+```
+
+Gezielt nur Preise oder Fundamentals:
+
+```bash
+docker compose run --rm app python -m cli.sync_prices --mode init
+docker compose run --rm app python -m cli.sync_fundamentals --mode init
+```
+
+Nur pruefen, was synchronisiert wuerde:
+
+```bash
+docker compose run --rm app python -m cli.sync_data --dry-run
+docker compose run --rm app python -m cli.sync_prices --dry-run --plan-limit 10
+docker compose run --rm app python -m cli.sync_fundamentals --dry-run --plan-limit 10
+```
+
+Nach echten Syncs erneut:
+
+```bash
+docker compose run --rm app python -m cli.data_status --details
+```
+
+### 5. Smoke-Test des Standardpfads
+
+```bash
+docker compose run --rm app python -m cli.operator_smoke --ranking-limit 5 --trade-limit 5
+```
+
+`cli.operator_smoke` schreibt keine Live-Trades und keinen offiziellen
+Monatssnapshot. Der Befehl prueft nur, ob Datenbasis, Indikatoren, Strategie
+und Benchmark-Backtest im Standardpfad fachlich laufen.
+
+### 6. Daily-Run testen
+
+Nur ansehen, was heute passieren wuerde:
+
+```bash
+docker compose run --rm app python -m cli.daily_run --dry-run-sync --model-limit 5
+```
+
+Echten Tageslauf ausfuehren:
+
+```bash
+docker compose run --rm app python -m cli.daily_run --model-limit 5
+```
+
+`daily_run` verbindet optional Data-Sync mit Indikatoren und aktuellem
+Model-Portfolio, persistiert aber noch keinen offiziellen Monats-Trade-Plan.
+
+### 7. Monthly-Run und Kauf-/Verkaufsempfehlungen
+
+Read-only Monatslauf:
+
+```bash
+docker compose run --rm app python -m cli.monthly_run --model-limit 7
+```
+
+Offiziellen Monatsstand mit Shadow/Rebalance/Decision/Trade-Plan schreiben:
+
+```bash
+docker compose run --rm app python -m cli.monthly_run --persist --model-limit 7
+```
+
+Expliziter Stichtag:
+
+```bash
+docker compose run --rm app python -m cli.monthly_run --as-of-date 2026-05-22 --persist
+```
+
+Erst `monthly_run --persist` erzeugt den persistierten Trade-Plan, der fuer
+manuelle Kaeufe und Verkaeufe im Live-Pfad verwendet werden soll.
+
+### 8. Live-Status und Performance
+
+```bash
+docker compose run --rm app python -m cli.live_status --all --limit 10
+docker compose run --rm app python -m cli.live_performance --curve-limit 5
+```
+
+`live_status` zeigt Abweichungen zwischen Real, Shadow und Model.
+`live_performance` vergleicht Real und Shadow gegen den Benchmark.
+
+### 9. Cash einzahlen oder abheben
+
+Einzahlung:
+
+```bash
+docker compose run --rm app python -m cli.live_cash --type deposit --amount 1000 --as-of-date 2026-05-22
+```
+
+Auszahlung als Dry-Run:
+
+```bash
+docker compose run --rm app python -m cli.live_cash --type withdrawal --amount 250 --as-of-date 2026-05-22 --dry-run
+```
+
+Echte Auszahlung:
+
+```bash
+docker compose run --rm app python -m cli.live_cash --type withdrawal --amount 250 --as-of-date 2026-05-22
+```
+
+Danach immer direkt pruefen:
+
+```bash
+docker compose run --rm app python -m cli.live_status --all --limit 10
+```
+
+### 10. Kauf, Verkauf und Teilverkauf
+
+Zuerst den neuesten Trade-Plan lesen, damit keine freien Zahlen geraten
+werden:
+
+```bash
+read -r TRADE_AS_OF_DATE TRADE_TICKER TRADE_SHARES TRADE_PRICE TRADE_FEE < <(
+  docker compose exec -T db sh -lc 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -B -N -e "
+    SELECT as_of_date, ticker, planned_shares, estimated_price, fee
+    FROM live_trade_plan_items
+    WHERE action = '\''BUY'\'' AND is_executable = 1
+    ORDER BY as_of_date DESC, execution_order, ticker
+    LIMIT 1;
+  "'
+)
+```
+
+BUY dry-run:
+
+```bash
+docker compose run --rm app python -m cli.live_trade \
+  --execution-type BUY \
+  --ticker "${TRADE_TICKER}" \
+  --shares "${TRADE_SHARES}" \
+  --price "${TRADE_PRICE}" \
+  --fee "${TRADE_FEE}" \
+  --as-of-date "${TRADE_AS_OF_DATE}" \
+  --trade-plan-action BUY \
+  --dry-run
+```
+
+BUY echt buchen:
+
+```bash
+docker compose run --rm app python -m cli.live_trade \
+  --execution-type BUY \
+  --ticker "${TRADE_TICKER}" \
+  --shares "${TRADE_SHARES}" \
+  --price "${TRADE_PRICE}" \
+  --fee "${TRADE_FEE}" \
+  --as-of-date "${TRADE_AS_OF_DATE}" \
+  --trade-plan-action BUY
+```
+
+Vollstaendiger Verkauf einer bestehenden Position:
+
+```bash
+docker compose run --rm app python -m cli.live_trade \
+  --execution-type SELL \
+  --ticker "${TRADE_TICKER}" \
+  --shares "${TRADE_SHARES}" \
+  --price "${TRADE_PRICE}" \
+  --fee "${TRADE_FEE}" \
+  --as-of-date "${TRADE_AS_OF_DATE}"
+```
+
+Teilverkauf derselben Position:
+
+```bash
+docker compose run --rm app python -m cli.live_trade \
+  --execution-type SELL \
+  --ticker "${TRADE_TICKER}" \
+  --shares 1 \
+  --price "${TRADE_PRICE}" \
+  --fee "${TRADE_FEE}" \
+  --as-of-date "${TRADE_AS_OF_DATE}"
+```
+
+Teilverkauf bedeutet technisch einfach: `SELL` mit weniger `--shares` als in
+der aktuellen Real-Position gehalten werden.
+
+Nach jedem echten Trade:
+
+```bash
+docker compose run --rm app python -m cli.live_status --all --limit 10
+docker compose run --rm app python -m cli.live_performance --curve-limit 5
+```
+
+### 11. Typische Reihenfolge fuer einen kompletten Testlauf
+
+Fixture-basierter Schnelltest:
+
+```bash
+docker compose build
+docker compose up -d db phpmyadmin
+./setup.sh init --start-capital 10000 --portfolio-size 7 --max-trades-per-month 4 --max-sector-positions 3 --min-holding-months 2 --max-funding-sell-pct 0.35 --load-fixture
+docker compose run --rm app python -m cli.data_status --details
+docker compose run --rm app python -m cli.operator_smoke --ranking-limit 5 --trade-limit 5
+docker compose run --rm app python -m cli.monthly_run --persist --model-limit 7
+docker compose run --rm app python -m cli.live_status --all --limit 10
+docker compose run --rm app python -m cli.live_performance --curve-limit 5
+```
+
+Echter Datenpfad ohne Fixture:
+
+```bash
+docker compose build
+docker compose up -d db phpmyadmin
+./setup.sh init --start-capital 10000 --portfolio-size 7 --max-trades-per-month 4 --max-sector-positions 3 --min-holding-months 2 --max-funding-sell-pct 0.35
+docker compose run --rm app python -m cli.sync_prices --mode init
+docker compose run --rm app python -m cli.sync_fundamentals --mode init
+docker compose run --rm app python -m cli.data_status --details
+docker compose run --rm app python -m cli.operator_smoke --ranking-limit 5 --trade-limit 5
+docker compose run --rm app python -m cli.monthly_run --persist --model-limit 7
+docker compose run --rm app python -m cli.live_status --all --limit 10
+docker compose run --rm app python -m cli.live_performance --curve-limit 5
+```
 
 Fuer die Entwicklung gibt es einen automatisierten Checklauf:
 
