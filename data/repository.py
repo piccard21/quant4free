@@ -15,6 +15,8 @@ from .models import (
     ProviderSymbolMapping,
     Ticker,
     TickerUpsert,
+    UniverseMemberUpsert,
+    UniverseRecord,
 )
 
 if TYPE_CHECKING:
@@ -86,6 +88,279 @@ class RawDataRepository:
         if not rows:
             return None
         return _ticker_from_row(rows[0])
+
+    def list_universes(self) -> list[UniverseRecord]:
+        rows = self._mappings(
+            """
+            SELECT
+                universe_key,
+                name,
+                description,
+                asset_classes,
+                membership_source_role,
+                membership_provider_key,
+                membership_rule,
+                created_at,
+                updated_at
+            FROM universes
+            ORDER BY universe_key
+            """,
+            {},
+        )
+        return [_universe_from_row(row) for row in rows]
+
+    def get_universe(self, universe_key: str) -> Optional[UniverseRecord]:
+        rows = self._mappings(
+            """
+            SELECT
+                universe_key,
+                name,
+                description,
+                asset_classes,
+                membership_source_role,
+                membership_provider_key,
+                membership_rule,
+                created_at,
+                updated_at
+            FROM universes
+            WHERE universe_key = :universe_key
+            LIMIT 1
+            """,
+            {"universe_key": universe_key},
+        )
+        if not rows:
+            return None
+        return _universe_from_row(rows[0])
+
+    def load_universe_members(
+        self,
+        universe_key: str,
+        as_of_date: Optional[date] = None,
+    ) -> list[Ticker]:
+        sql = """
+            SELECT
+                a.ticker,
+                a.name,
+                a.sector,
+                a.asset_class,
+                a.canonical_symbol,
+                a.display_symbol,
+                a.instrument_type,
+                a.exchange_code,
+                a.market,
+                a.quote_currency,
+                a.primary_provider_key,
+                a.is_active,
+                a.first_seen,
+                a.last_seen,
+                a.removed_at,
+                a.last_fundamental_update
+            FROM universe_members um
+            JOIN universes u ON u.id = um.universe_id
+            JOIN assets a ON a.ticker = um.ticker
+            WHERE u.universe_key = :universe_key
+        """
+        params: dict[str, Any] = {"universe_key": universe_key}
+        if as_of_date is not None:
+            sql += """
+              AND um.valid_from <= :as_of_date
+              AND (um.valid_to IS NULL OR um.valid_to > :as_of_date)
+            """
+            params["as_of_date"] = as_of_date
+        else:
+            sql += " AND um.valid_to IS NULL"
+        sql += " ORDER BY a.ticker"
+        rows = self._mappings(sql, params)
+        return [_ticker_from_row(row) for row in rows]
+
+    def ensure_universes(self, universes: Sequence[UniverseRecord]) -> int:
+        if not universes:
+            return 0
+        rows = [
+            {
+                "universe_key": universe.key,
+                "name": universe.name,
+                "description": universe.description,
+                "asset_classes": ",".join(universe.asset_classes),
+                "membership_source_role": universe.membership_source_role,
+                "membership_provider_key": universe.membership_provider_key,
+                "membership_rule": universe.membership_rule,
+            }
+            for universe in universes
+        ]
+        dialect = self.engine.dialect.name
+        if dialect == "sqlite":
+            statement = text(
+                """
+                INSERT INTO universes
+                    (
+                        universe_key,
+                        name,
+                        description,
+                        asset_classes,
+                        membership_source_role,
+                        membership_provider_key,
+                        membership_rule
+                    )
+                VALUES
+                    (
+                        :universe_key,
+                        :name,
+                        :description,
+                        :asset_classes,
+                        :membership_source_role,
+                        :membership_provider_key,
+                        :membership_rule
+                    )
+                ON CONFLICT(universe_key) DO UPDATE SET
+                    name = excluded.name,
+                    description = excluded.description,
+                    asset_classes = excluded.asset_classes,
+                    membership_source_role = excluded.membership_source_role,
+                    membership_provider_key = excluded.membership_provider_key,
+                    membership_rule = excluded.membership_rule
+                """
+            )
+        else:
+            statement = text(
+                """
+                INSERT INTO universes
+                    (
+                        universe_key,
+                        name,
+                        description,
+                        asset_classes,
+                        membership_source_role,
+                        membership_provider_key,
+                        membership_rule
+                    )
+                VALUES
+                    (
+                        :universe_key,
+                        :name,
+                        :description,
+                        :asset_classes,
+                        :membership_source_role,
+                        :membership_provider_key,
+                        :membership_rule
+                    )
+                ON DUPLICATE KEY UPDATE
+                    name = VALUES(name),
+                    description = VALUES(description),
+                    asset_classes = VALUES(asset_classes),
+                    membership_source_role = VALUES(membership_source_role),
+                    membership_provider_key = VALUES(membership_provider_key),
+                    membership_rule = VALUES(membership_rule)
+                """
+            )
+        with self.engine.begin() as connection:
+            connection.execute(statement, rows)
+        return len(rows)
+
+    def upsert_universe_members(
+        self,
+        members: Sequence[UniverseMemberUpsert],
+    ) -> int:
+        if not members:
+            return 0
+        rows = [
+            {
+                "universe_key": member.universe_key,
+                "ticker": member.ticker,
+                "valid_from": member.valid_from,
+                "valid_to": member.valid_to,
+                "source_provider_key": member.source_provider_key,
+                "imported_at": member.imported_at,
+            }
+            for member in members
+        ]
+        dialect = self.engine.dialect.name
+        if dialect == "sqlite":
+            statement = text(
+                """
+                INSERT INTO universe_members
+                    (
+                        universe_id,
+                        ticker,
+                        valid_from,
+                        valid_to,
+                        source_provider_key,
+                        imported_at
+                    )
+                SELECT
+                    u.id,
+                    :ticker,
+                    :valid_from,
+                    :valid_to,
+                    :source_provider_key,
+                    :imported_at
+                FROM universes u
+                WHERE u.universe_key = :universe_key
+                ON CONFLICT(universe_id, ticker, valid_from) DO UPDATE SET
+                    valid_to = excluded.valid_to,
+                    source_provider_key = excluded.source_provider_key,
+                    imported_at = excluded.imported_at
+                """
+            )
+        else:
+            statement = text(
+                """
+                INSERT INTO universe_members
+                    (
+                        universe_id,
+                        ticker,
+                        valid_from,
+                        valid_to,
+                        source_provider_key,
+                        imported_at
+                    )
+                SELECT
+                    u.id,
+                    :ticker,
+                    :valid_from,
+                    :valid_to,
+                    :source_provider_key,
+                    :imported_at
+                FROM universes u
+                WHERE u.universe_key = :universe_key
+                ON DUPLICATE KEY UPDATE
+                    valid_to = VALUES(valid_to),
+                    source_provider_key = VALUES(source_provider_key),
+                    imported_at = VALUES(imported_at)
+                """
+            )
+        with self.engine.begin() as connection:
+            connection.execute(statement, rows)
+        return len(rows)
+
+    def close_universe_memberships(
+        self,
+        universe_key: str,
+        current_tickers: Sequence[str],
+        valid_to: date,
+    ) -> int:
+        current = list(dict.fromkeys(ticker.upper() for ticker in current_tickers))
+        sql = """
+            UPDATE universe_members
+            SET valid_to = :valid_to
+            WHERE universe_id = (
+                SELECT id FROM universes WHERE universe_key = :universe_key
+            )
+              AND valid_to IS NULL
+        """
+        params: dict[str, Any] = {
+            "universe_key": universe_key,
+            "valid_to": valid_to,
+        }
+        if current:
+            sql += " AND ticker NOT IN :tickers"
+            statement = text(sql).bindparams(bindparam("tickers", expanding=True))
+            params["tickers"] = current
+        else:
+            statement = text(sql)
+        with self.engine.begin() as connection:
+            result = connection.execute(statement, params)
+        return int(result.rowcount or 0)
 
     def load_daily_candles(
         self,
@@ -429,6 +704,8 @@ class RawDataRepository:
         with self.engine.begin() as connection:
             connection.execute(statement, rows)
             connection.execute(self._default_identifier_statement(), rows)
+            self._ensure_default_universes(connection)
+            self._upsert_default_universe_members(connection, rows)
         return len(rows)
 
     def deactivate_missing_active_tickers(
@@ -451,6 +728,17 @@ class RawDataRepository:
                 statement,
                 {"tickers": list(current_tickers), "sync_time": sync_time},
             )
+            self._ensure_default_universes(connection)
+            sync_date = sync_time.date()
+            for universe_key in ("sp500_active", "active_tickers"):
+                connection.execute(
+                    self._close_default_universe_members_statement(current_tickers),
+                    {
+                        "universe_key": universe_key,
+                        "valid_to": sync_date,
+                        "tickers": list(current_tickers),
+                    },
+                )
         return int(result.rowcount or 0)
 
     def ensure_ticker(
@@ -1108,6 +1396,141 @@ class RawDataRepository:
             """
         )
 
+    def _ensure_default_universes(self, connection) -> None:
+        rows = _default_universe_rows()
+        if self.engine.dialect.name == "sqlite":
+            statement = text(
+                """
+                INSERT INTO universes
+                    (
+                        universe_key,
+                        name,
+                        description,
+                        asset_classes,
+                        membership_source_role,
+                        membership_provider_key,
+                        membership_rule
+                    )
+                VALUES
+                    (
+                        :universe_key,
+                        :name,
+                        :description,
+                        :asset_classes,
+                        :membership_source_role,
+                        :membership_provider_key,
+                        :membership_rule
+                    )
+                ON CONFLICT(universe_key) DO UPDATE SET
+                    name = excluded.name,
+                    description = excluded.description,
+                    asset_classes = excluded.asset_classes,
+                    membership_source_role = excluded.membership_source_role,
+                    membership_provider_key = excluded.membership_provider_key,
+                    membership_rule = excluded.membership_rule
+                """
+            )
+        else:
+            statement = text(
+                """
+                INSERT INTO universes
+                    (
+                        universe_key,
+                        name,
+                        description,
+                        asset_classes,
+                        membership_source_role,
+                        membership_provider_key,
+                        membership_rule
+                    )
+                VALUES
+                    (
+                        :universe_key,
+                        :name,
+                        :description,
+                        :asset_classes,
+                        :membership_source_role,
+                        :membership_provider_key,
+                        :membership_rule
+                    )
+                ON DUPLICATE KEY UPDATE
+                    name = VALUES(name),
+                    description = VALUES(description),
+                    asset_classes = VALUES(asset_classes),
+                    membership_source_role = VALUES(membership_source_role),
+                    membership_provider_key = VALUES(membership_provider_key),
+                    membership_rule = VALUES(membership_rule)
+                """
+            )
+        connection.execute(statement, rows)
+
+    def _upsert_default_universe_members(
+        self,
+        connection,
+        asset_rows: Sequence[dict[str, Any]],
+    ) -> None:
+        member_rows: list[dict[str, Any]] = []
+        for row in asset_rows:
+            valid_from = row["sync_time"].date()
+            base = {
+                "ticker": row["ticker"],
+                "valid_from": valid_from,
+                "source_provider_key": row["primary_provider_key"] or "mysql_fixture",
+                "imported_at": row["sync_time"],
+            }
+            member_rows.append({"universe_key": "all_tickers", **base})
+            if bool(row["is_active"]):
+                member_rows.append({"universe_key": "sp500_active", **base})
+                member_rows.append({"universe_key": "active_tickers", **base})
+        if not member_rows:
+            return
+        connection.execute(self._open_universe_member_statement(), member_rows)
+
+    def _open_universe_member_statement(self):
+        return text(
+            """
+            INSERT INTO universe_members
+                (
+                    universe_id,
+                    ticker,
+                    valid_from,
+                    valid_to,
+                    source_provider_key,
+                    imported_at
+                )
+            SELECT
+                u.id,
+                :ticker,
+                :valid_from,
+                NULL,
+                :source_provider_key,
+                :imported_at
+            FROM universes u
+            WHERE u.universe_key = :universe_key
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM universe_members current_member
+                  WHERE current_member.universe_id = u.id
+                    AND current_member.ticker = :ticker
+                    AND current_member.valid_to IS NULL
+              )
+            """
+        )
+
+    def _close_default_universe_members_statement(self, tickers: Sequence[str]):
+        statement = text(
+            """
+            UPDATE universe_members
+            SET valid_to = :valid_to
+            WHERE universe_id = (
+                SELECT id FROM universes WHERE universe_key = :universe_key
+            )
+              AND valid_to IS NULL
+              AND ticker NOT IN :tickers
+            """
+        )
+        return statement.bindparams(bindparam("tickers", expanding=True))
+
     @staticmethod
     def _add_ticker_filter(
         sql: str,
@@ -1209,6 +1632,59 @@ def _ticker_from_row(row: dict[str, Any]) -> Ticker:
         quote_currency=row.get("quote_currency") or "USD",
         primary_provider_key=row.get("primary_provider_key") or "mysql_fixture",
     )
+
+
+def _universe_from_row(row: dict[str, Any]) -> UniverseRecord:
+    asset_classes = tuple(
+        item.strip()
+        for item in (row["asset_classes"] or "").split(",")
+        if item.strip()
+    )
+    return UniverseRecord(
+        key=row["universe_key"],
+        name=row["name"],
+        description=row["description"],
+        asset_classes=asset_classes or ("equity",),
+        membership_source_role=row["membership_source_role"] or "membership",
+        membership_provider_key=row["membership_provider_key"] or "mysql_fixture",
+        membership_rule=row["membership_rule"] or "assets.is_active = 1",
+        created_at=row["created_at"],
+        updated_at=row["updated_at"],
+    )
+
+
+def _default_universe_rows() -> list[dict[str, Any]]:
+    return [
+        {
+            "universe_key": "sp500_active",
+            "name": "S&P 500 active fixture universe",
+            "description": (
+                "Fixture-compatible default universe using currently active tickers."
+            ),
+            "asset_classes": "equity",
+            "membership_source_role": "membership",
+            "membership_provider_key": "mysql_fixture",
+            "membership_rule": "historical membership in universe_members",
+        },
+        {
+            "universe_key": "active_tickers",
+            "name": "Active tickers",
+            "description": "All assets with an open active membership interval.",
+            "asset_classes": "equity",
+            "membership_source_role": "membership",
+            "membership_provider_key": "mysql_fixture",
+            "membership_rule": "open membership in universe_members",
+        },
+        {
+            "universe_key": "all_tickers",
+            "name": "All tickers",
+            "description": "All assets known to the raw-data provider.",
+            "asset_classes": "equity,etf",
+            "membership_source_role": "membership",
+            "membership_provider_key": "mysql_fixture",
+            "membership_rule": "all assets with membership in universe_members",
+        },
+    ]
 
 
 def load_market_caps(

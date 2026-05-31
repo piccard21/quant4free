@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Optional, Protocol, Sequence
 
 from shared.capabilities import ProviderIdentifierCoverage
 
-from .models import Ticker
+from .models import Ticker, UniverseRecord
 from .repository import RawDataRepository
 
 if TYPE_CHECKING:
@@ -23,6 +23,18 @@ class DataProvider(Protocol):
 
     def list_tickers(self, active_only: bool = False) -> list[Ticker]:
         """Return known tickers, optionally restricted to active universe members."""
+        ...
+
+    def list_universes(self) -> list[UniverseRecord]:
+        """Return known universe catalog entries."""
+        ...
+
+    def load_universe_members(
+        self,
+        universe_key: str,
+        as_of_date: Optional[date] = None,
+    ) -> list[Ticker]:
+        """Return asset metadata for members of a configured universe."""
         ...
 
     def load_prices(
@@ -84,6 +96,16 @@ class FixtureDataProvider:
 
     def list_tickers(self, active_only: bool = False) -> list[Ticker]:
         return self.repository.list_tickers(active_only=active_only)
+
+    def list_universes(self) -> list[UniverseRecord]:
+        return self.repository.list_universes()
+
+    def load_universe_members(
+        self,
+        universe_key: str,
+        as_of_date: Optional[date] = None,
+    ) -> list[Ticker]:
+        return self.repository.load_universe_members(universe_key, as_of_date)
 
     def load_prices(
         self,

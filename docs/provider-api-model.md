@@ -106,6 +106,9 @@ Source-Rollen Provider-Identifier vorhanden sind.
 AP22 nutzt diese Identifier-Basis im modularen Sync: Preis- und
 Fundamental-Sync fragen externe Provider mit `provider_symbol` ab und
 persistieren die normalisierten Daten wieder unter dem internen `ticker`.
+AP23 verlagert Universe-Identitaet und historisierte Membership in
+`universes` und `universe_members`; Membership bleibt dabei eine Source-Rolle,
+nicht die Preis- oder Fundamental-API selbst.
 
 ## Binding-Regeln
 

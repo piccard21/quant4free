@@ -37,7 +37,7 @@ class UniverseLoader(Protocol):
 
 
 class ActiveTickerUniverse:
-    """Universe backed by active assets from the canonical raw-data schema."""
+    """Universe backed by canonical DB membership when available."""
 
     key = "active_tickers"
 
@@ -51,6 +51,11 @@ class ActiveTickerUniverse:
         self.key = self.definition.key
 
     def load_members(self, as_of_date: Optional[date] = None) -> list[str]:
+        load_universe_members = getattr(self.provider, "load_universe_members", None)
+        if load_universe_members is not None:
+            tickers = load_universe_members(self.definition.key, as_of_date)
+            return [ticker.ticker for ticker in tickers]
+
         tickers = self.provider.list_tickers(active_only=self.definition.active_only)
         return [ticker.ticker for ticker in tickers]
 
@@ -65,7 +70,7 @@ UNIVERSE_DEFINITIONS: dict[str, UniverseDefinition] = {
         active_only=True,
         asset_classes=("equity",),
         membership_provider_key="mysql_fixture",
-        membership_rule="assets.is_active = 1",
+        membership_rule="historical membership in universe_members",
     ),
     "active_tickers": UniverseDefinition(
         key="active_tickers",
@@ -74,7 +79,7 @@ UNIVERSE_DEFINITIONS: dict[str, UniverseDefinition] = {
         active_only=True,
         asset_classes=("equity",),
         membership_provider_key="mysql_fixture",
-        membership_rule="assets.is_active = 1",
+        membership_rule="open membership in universe_members",
     ),
     "all_tickers": UniverseDefinition(
         key="all_tickers",
@@ -83,7 +88,7 @@ UNIVERSE_DEFINITIONS: dict[str, UniverseDefinition] = {
         active_only=False,
         asset_classes=("equity", "etf"),
         membership_provider_key="mysql_fixture",
-        membership_rule="all assets",
+        membership_rule="all assets with membership in universe_members",
     ),
 }
 

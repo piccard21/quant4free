@@ -228,7 +228,7 @@ mysql_exec "
 "
 echo "[INFO] loading canonical raw-data fixture"
 mysql_file fixtures/raw_market_data.sql
-echo "[INFO] applying canonical AP14 schema"
+echo "[INFO] applying canonical schema"
 mysql_file init.sql
 
 mysql_exec "
@@ -250,6 +250,8 @@ mysql_exec "
   USE \`${SMOKE_DB}\`;
   SELECT 'assets' AS table_name, COUNT(*) AS row_count FROM assets
   UNION ALL SELECT 'asset_provider_identifiers', COUNT(*) FROM asset_provider_identifiers
+  UNION ALL SELECT 'universes', COUNT(*) FROM universes
+  UNION ALL SELECT 'universe_members', COUNT(*) FROM universe_members
   UNION ALL SELECT 'asset_price_bars', COUNT(*) FROM asset_price_bars
   UNION ALL SELECT 'asset_fundamental_reports', COUNT(*) FROM asset_fundamental_reports
   UNION ALL SELECT 'asset_market_caps', COUNT(*) FROM asset_market_caps

@@ -58,8 +58,13 @@ def main() -> None:
         ) from exc
 
     if args.list_configs:
+        try:
+            provider = FixtureDataProvider()
+            universe_definitions = provider.list_universes()
+        except Exception:
+            universe_definitions = list_universe_definitions()
         print("universes:")
-        for definition in list_universe_definitions():
+        for definition in universe_definitions:
             asset_classes = ",".join(definition.asset_classes)
             print(
                 f"  {definition.key}: {definition.name} "

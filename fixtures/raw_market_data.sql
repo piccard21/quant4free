@@ -1,5 +1,5 @@
 -- Raw market data fixture for the modular quant framework.
--- Contains only non-portfolio raw data tables.
+-- Contains only non-portfolio raw data and universe membership tables.
 -- Generated from the canonical AP14 raw-data fixture on 2026-05-24.
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
@@ -9,6 +9,8 @@ SET FOREIGN_KEY_CHECKS = 0;
 DROP TABLE IF EXISTS `asset_market_caps`;
 DROP TABLE IF EXISTS `asset_fundamental_reports`;
 DROP TABLE IF EXISTS `asset_price_bars`;
+DROP TABLE IF EXISTS `universe_members`;
+DROP TABLE IF EXISTS `universes`;
 DROP TABLE IF EXISTS `asset_provider_identifiers`;
 DROP TABLE IF EXISTS `assets`;
 
@@ -59,6 +61,40 @@ CREATE TABLE `asset_provider_identifiers` (
   KEY `idx_asset_provider_identifiers_provider_lookup` (`provider_key`,`identifier_scheme`,`provider_symbol`),
   KEY `idx_asset_provider_identifiers_ticker_provider` (`ticker`,`provider_key`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Provider-specific asset identifiers and symbols';
+
+--
+-- Table structure for `universes`
+--
+CREATE TABLE `universes` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `universe_key` varchar(100) NOT NULL COMMENT 'Stable universe configuration key',
+  `name` varchar(255) NOT NULL COMMENT 'Operator-facing universe name',
+  `description` varchar(500) DEFAULT NULL COMMENT 'Universe description',
+  `asset_classes` varchar(255) NOT NULL DEFAULT 'equity' COMMENT 'Comma-separated allowed asset classes',
+  `membership_source_role` varchar(64) NOT NULL DEFAULT 'membership' COMMENT 'Source role providing membership',
+  `membership_provider_key` varchar(64) NOT NULL DEFAULT 'mysql_fixture' COMMENT 'Provider key for membership source',
+  `membership_rule` varchar(255) NOT NULL COMMENT 'Membership rule or source description',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `idx_universes_key` (`universe_key`),
+  KEY `idx_universes_membership_provider` (`membership_provider_key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Canonical universe catalog';
+
+--
+-- Table structure for `universe_members`
+--
+CREATE TABLE `universe_members` (
+  `universe_id` int NOT NULL COMMENT 'Universe FK',
+  `ticker` varchar(32) NOT NULL COMMENT 'Asset ticker FK',
+  `valid_from` date NOT NULL COMMENT 'Membership interval start',
+  `valid_to` date DEFAULT NULL COMMENT 'Membership interval end; NULL means current',
+  `source_provider_key` varchar(64) DEFAULT NULL COMMENT 'Provider that supplied membership',
+  `imported_at` datetime DEFAULT NULL COMMENT 'Import timestamp',
+  PRIMARY KEY (`universe_id`,`ticker`,`valid_from`),
+  KEY `idx_universe_members_ticker_dates` (`ticker`,`valid_from`,`valid_to`),
+  KEY `idx_universe_members_universe_dates` (`universe_id`,`valid_from`,`valid_to`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Historical asset membership by universe';
 
 --
 -- Table structure for `asset_price_bars`
@@ -635,6 +671,87 @@ SET
   `instrument_type` = 'etf',
   `sector` = NULL
 WHERE `ticker` IN ('SPY', 'QQQ', 'IWM');
+
+--
+-- Data for `universes`
+--
+INSERT INTO `universes` (
+  `universe_key`,
+  `name`,
+  `description`,
+  `asset_classes`,
+  `membership_source_role`,
+  `membership_provider_key`,
+  `membership_rule`
+) VALUES
+  (
+    'sp500_active',
+    'S&P 500 active fixture universe',
+    'Fixture-compatible default universe using currently active tickers.',
+    'equity',
+    'membership',
+    'mysql_fixture',
+    'historical membership in universe_members'
+  ),
+  (
+    'active_tickers',
+    'Active tickers',
+    'All assets with an open active membership interval.',
+    'equity',
+    'membership',
+    'mysql_fixture',
+    'open membership in universe_members'
+  ),
+  (
+    'all_tickers',
+    'All tickers',
+    'All assets known to the raw-data provider.',
+    'equity,etf',
+    'membership',
+    'mysql_fixture',
+    'all assets with membership in universe_members'
+  );
+
+--
+-- Data for `universe_members`
+--
+INSERT INTO `universe_members` (
+  `universe_id`,
+  `ticker`,
+  `valid_from`,
+  `valid_to`,
+  `source_provider_key`,
+  `imported_at`
+)
+SELECT
+  `universes`.`id`,
+  `assets`.`ticker`,
+  DATE(`assets`.`first_seen`),
+  NULL,
+  COALESCE(`assets`.`primary_provider_key`, 'mysql_fixture'),
+  `assets`.`first_seen`
+FROM `universes`
+JOIN `assets` ON `assets`.`is_active` = 1
+WHERE `universes`.`universe_key` IN ('sp500_active', 'active_tickers');
+
+INSERT INTO `universe_members` (
+  `universe_id`,
+  `ticker`,
+  `valid_from`,
+  `valid_to`,
+  `source_provider_key`,
+  `imported_at`
+)
+SELECT
+  `universes`.`id`,
+  `assets`.`ticker`,
+  DATE(`assets`.`first_seen`),
+  NULL,
+  COALESCE(`assets`.`primary_provider_key`, 'mysql_fixture'),
+  `assets`.`first_seen`
+FROM `universes`
+JOIN `assets` ON 1 = 1
+WHERE `universes`.`universe_key` = 'all_tickers';
 
 INSERT INTO `asset_provider_identifiers` (
   `ticker`,

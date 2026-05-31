@@ -102,6 +102,29 @@ class ProviderSymbolMapping:
 
 
 @dataclass(frozen=True)
+class UniverseRecord:
+    key: str
+    name: str
+    description: Optional[str] = None
+    asset_classes: tuple[str, ...] = ("equity",)
+    membership_source_role: str = "membership"
+    membership_provider_key: str = "mysql_fixture"
+    membership_rule: str = "assets.is_active = 1"
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+
+@dataclass(frozen=True)
+class UniverseMemberUpsert:
+    universe_key: str
+    ticker: str
+    valid_from: date
+    valid_to: Optional[date] = None
+    source_provider_key: Optional[str] = "mysql_fixture"
+    imported_at: Optional[datetime] = None
+
+
+@dataclass(frozen=True)
 class FinancialSyncPayload:
     reports: tuple[FinancialReport, ...]
     market_cap: Optional[MarketCapSnapshot] = None

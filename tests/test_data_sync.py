@@ -12,6 +12,7 @@ from data.models import (
     MarketCapSnapshot,
     ProviderIdentifier,
     TickerUpsert,
+    UniverseMemberUpsert,
 )
 from data.repository import RawDataRepository
 from data.sync import (
@@ -191,6 +192,12 @@ class DataSyncTests(unittest.TestCase):
             provider_identifier_count = connection.execute(
                 text("SELECT COUNT(*) FROM asset_provider_identifiers")
             ).scalar_one()
+            universe_count = connection.execute(
+                text("SELECT COUNT(*) FROM universes")
+            ).scalar_one()
+            universe_member_count = connection.execute(
+                text("SELECT COUNT(*) FROM universe_members")
+            ).scalar_one()
             candle = connection.execute(
                 text("SELECT close, volume FROM asset_price_bars")
             ).mappings().one()
@@ -210,10 +217,58 @@ class DataSyncTests(unittest.TestCase):
         self.assertEqual(ticker["primary_provider_key"], "mysql_fixture")
         self.assertIsNotNone(ticker["last_fundamental_update"])
         self.assertEqual(provider_identifier_count, 1)
+        self.assertEqual(universe_count, 3)
+        self.assertEqual(universe_member_count, 3)
         self.assertEqual(float(candle["close"]), 13.0)
         self.assertEqual(candle["volume"], 200)
         self.assertEqual(report_count, 1)
         self.assertEqual(market_cap, 123)
+
+    def test_repository_reads_and_histories_universe_members(self):
+        engine = create_engine("sqlite+pysqlite:///:memory:", future=True)
+        _create_raw_tables(engine)
+        repository = RawDataRepository(engine)
+
+        repository.upsert_tickers(
+            [
+                TickerUpsert("AAA", "Asset AAA", "Tech"),
+                TickerUpsert("BBB", "Asset BBB", "Health"),
+            ],
+            sync_time=datetime(2026, 5, 20, 12, 0),
+        )
+        repository.deactivate_missing_active_tickers(
+            ["AAA"],
+            sync_time=datetime(2026, 5, 25, 12, 0),
+        )
+        repository.upsert_universe_members(
+            [
+                UniverseMemberUpsert(
+                    universe_key="sp500_active",
+                    ticker="BBB",
+                    valid_from=date(2026, 5, 28),
+                    source_provider_key="pytest",
+                    imported_at=datetime(2026, 5, 28, 12, 0),
+                )
+            ]
+        )
+
+        universes = repository.list_universes()
+        current_members = repository.load_universe_members("sp500_active")
+        historical_members = repository.load_universe_members(
+            "sp500_active",
+            as_of_date=date(2026, 5, 21),
+        )
+
+        self.assertEqual([universe.key for universe in universes], [
+            "active_tickers",
+            "all_tickers",
+            "sp500_active",
+        ])
+        self.assertEqual([member.ticker for member in current_members], ["AAA", "BBB"])
+        self.assertEqual(
+            [member.ticker for member in historical_members],
+            ["AAA", "BBB"],
+        )
 
     def test_repository_reads_provider_identifiers_and_coverage(self):
         engine = create_engine("sqlite+pysqlite:///:memory:", future=True)
@@ -411,6 +466,39 @@ def _create_raw_tables(engine) -> None:
                     last_seen DATETIME,
                     removed_at DATETIME,
                     last_fundamental_update DATETIME
+                )
+                """
+            )
+        )
+        connection.execute(
+            text(
+                """
+                CREATE TABLE universes (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    universe_key VARCHAR(100) NOT NULL UNIQUE,
+                    name VARCHAR(255) NOT NULL,
+                    description VARCHAR(500),
+                    asset_classes VARCHAR(255) NOT NULL DEFAULT 'equity',
+                    membership_source_role VARCHAR(64) NOT NULL DEFAULT 'membership',
+                    membership_provider_key VARCHAR(64) NOT NULL DEFAULT 'mysql_fixture',
+                    membership_rule VARCHAR(255) NOT NULL,
+                    created_at DATETIME,
+                    updated_at DATETIME
+                )
+                """
+            )
+        )
+        connection.execute(
+            text(
+                """
+                CREATE TABLE universe_members (
+                    universe_id INTEGER NOT NULL,
+                    ticker VARCHAR(32) NOT NULL,
+                    valid_from DATE NOT NULL,
+                    valid_to DATE,
+                    source_provider_key VARCHAR(64),
+                    imported_at DATETIME,
+                    PRIMARY KEY (universe_id, ticker, valid_from)
                 )
                 """
             )

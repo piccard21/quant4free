@@ -510,6 +510,8 @@ Rohdaten:
 
 - `assets`
 - `asset_provider_identifiers`
+- `universes`
+- `universe_members`
 - `asset_price_bars`
 - `asset_fundamental_reports`
 - `asset_market_caps`

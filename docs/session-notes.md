@@ -432,5 +432,26 @@ AP19 is complete:
   - `.venv/bin/python -m pytest tests/test_data_sync.py tests/test_capabilities.py`
   - `.venv/bin/python -m compileall data universes shared cli tests`
 
-Next step: AP23, introduce canonical `universes` and `universe_members` tables
-so universe identity and historical membership can move into the database.
+## AP23: DB universes and historical membership
+
+- Added canonical `universes` and `universe_members` tables to `init.sql` and
+  the raw-data fixture.
+- Seeded `sp500_active`, `active_tickers`, and `all_tickers` in both schema and
+  fixture paths.
+- Added `UniverseRecord` and `UniverseMemberUpsert` models plus repository
+  methods for listing universes, reading as-of members, inserting memberships,
+  and closing open membership intervals.
+- `RawDataRepository.upsert_tickers` now maintains default universe
+  memberships; `deactivate_missing_active_tickers` closes active memberships
+  for removed tickers.
+- The universe loader now reads DB memberships when the provider supports
+  them, with the old active-ticker fallback preserved for test/fake providers.
+- Updated data/status and smoke checks to include universe table counts.
+- Verification:
+  - `.venv/bin/python -m pytest tests -m "not integration"`
+  - `.venv/bin/python -m compileall data universes cli tests`
+  - `scripts/db_integration_tests.sh`
+
+Next step: AP24, introduce a canonical data-sync audit trail, likely
+`data_sync_runs`, for provider/mode/date-window/status/row-count/error
+tracking across price, fundamental, and membership syncs.

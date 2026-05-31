@@ -1,6 +1,6 @@
 # Datenmodell-Plan
 
-Stand: AP22.
+Stand: AP23.
 
 Dieses Dokument beschreibt den Zielzustand des neuen modularen Quant-Frameworks.
 AP14 ersetzt die bisherige Uebergangsentscheidung, legacy-kompatible Tabellen
@@ -20,7 +20,8 @@ das Provider-Binding-Modell steht in
 Capability-/Provider-Pruefung in Python um. AP21 konkretisiert den
 Asset-Katalog im Schema und fuehrt provider-spezifische Identifier-Mappings
 ein. AP22 nutzt diese Mappings im modularen Sync fuer Provider-spezifische
-Symbolaufloesung.
+Symbolaufloesung. AP23 fuehrt kanonische `universes` und `universe_members`
+fuer Universe-Identitaet und historisierte Mitgliedschaften ein.
 
 ## Leitlinien
 
@@ -88,6 +89,8 @@ Zweck:
 |---|---|
 | `assets` | Asset-Stammdaten inklusive Assetklasse, Canonical-/Display-Symbol, Instrumenttyp, Markt und Quote-Waehrung. Ersetzt `tickers`; `ticker` bleibt aktueller FK fuer den kanonischen Pfad. |
 | `asset_provider_identifiers` | Provider-spezifische Symbole und optionale stabile IDs je Asset. |
+| `universes` | Katalog auswählbarer Universen inklusive Membership-Quelle und Assetklassen. |
+| `universe_members` | Historisierte Asset-Mitgliedschaften pro Universum. |
 | `asset_price_bars` | Tägliche OHLCV-Preisbars. Ersetzt `daily_candles`. |
 | `asset_fundamental_reports` | Annual-/TTM-Fundamentaldaten. Ersetzt `financial_reports`. |
 | `asset_market_caps` | Market-Cap-Zeitreihe. Ersetzt `market_cap_snapshots`. |
@@ -96,13 +99,16 @@ Zweck:
 `tickers.is_active` wird nicht in `assets` uebernommen. Aktive
 Universumsmitgliedschaft gehoert in `universe_members`.
 
-AP18/AP21-Zielpraezisierung:
+AP18/AP21/AP23-Zielpraezisierung:
 
 - `assets` bleibt der zentrale Asset-Katalog und traegt seit AP21 explizite
   Assetklassen wie `equity` oder `etf`; weitere Klassen wie `crypto`, `cash`,
   `fx` oder `future` sind fachlich vorbereitet.
 - `asset_provider_identifiers` trennt interne Asset-Symbole von
   provider-spezifischen Symbolen und IDs.
+- `universes` und `universe_members` sind seit AP23 Teil des kanonischen
+  Rohdaten-/Katalogpfads; `sp500_active`, `active_tickers` und `all_tickers`
+  werden in Schema und Fixture geseedet.
 - `asset_price_bars` bleibt die generische Quelle fuer taegliche OHLCV-Daten,
   sofern eine Assetklasse solche Preisbars besitzt.
 - `asset_fundamental_reports` ist aktienspezifisch und darf nicht als
@@ -466,6 +472,20 @@ Status: abgeschlossen als Sync-/Metadaten-AP.
   normalisiert und in die kanonischen Tabellen geschrieben.
 - Universumsdefinitionen tragen explizite Metadaten fuer Assetklassen,
   Membership-Quelle und Membership-Regel.
+
+### AP23: DB-Universen und historisierte Mitgliedschaft
+
+Status: abgeschlossen als Schema-/Repository-AP.
+
+- `universes` und `universe_members` sind kanonische Tabellen in `init.sql`
+  und der Rohdaten-Fixture.
+- `sp500_active`, `active_tickers` und `all_tickers` werden als
+  Universe-Katalogeintraege geseedet.
+- `RawDataRepository` liest Universen und Mitglieder, pflegt
+  Default-Mitgliedschaften bei Asset-Upserts und schliesst offene aktive
+  Membership-Intervalle bei Deaktivierungen.
+- Der modulare Universe-Loader liest DB-Mitgliedschaften, wenn ein Provider
+  diese anbietet, und behaelt einen Fallback fuer Tests/Fake-Provider.
 
 ## Initialer Schema-Sketch
 

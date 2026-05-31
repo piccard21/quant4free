@@ -1,6 +1,6 @@
 # Architektur
 
-Stand: AP22.
+Stand: AP23.
 
 Das neue Framework ist der regulaere operative Pfad. Legacy-Code liegt nur noch
 als archivierte Referenz unter `legacy/current_system/`.
@@ -8,14 +8,15 @@ als archivierte Referenz unter `legacy/current_system/`.
 ## Module
 
 - `data/`: Provider, Sync und Zugriff auf `assets`,
-  `asset_provider_identifiers`, `asset_price_bars`,
+  `asset_provider_identifiers`, `universes`, `universe_members`,
+  `asset_price_bars`,
   `asset_fundamental_reports`, `asset_market_caps`. AP18 ordnet diese
   Tabellen als Capability-Quellen ein; AP21 trennt interne Assets von
-  provider-spezifischen Symbolen, AP22 nutzt diese Symbole im Sync.
-- `universes/`: Universumsdefinitionen, aktuell ueber aktive Assets. Fachlich
-  sind Universen Asset-Auswahlen und keine impliziten Datenanforderungen.
-  Seit AP22 tragen die Definitionen explizite Metadaten zu Assetklassen,
-  Membership-Quelle und Membership-Regel.
+  provider-spezifischen Symbolen, AP22 nutzt diese Symbole im Sync, AP23
+  fuehrt DB-Universen und historisierte Mitgliedschaften ein.
+- `universes/`: Universumsloader. Fachlich sind Universen Asset-Auswahlen und
+  keine impliziten Datenanforderungen. Seit AP23 liest der Loader
+  `universe_members`, wenn der Provider DB-Mitgliedschaften anbietet.
 - `indicators/`: modulare Indikatorberechnung.
 - `strategies/`: Value/Quality/Momentum-Strategie und Model Portfolio. Die
   aktuelle Strategie ist eine Aktienstrategie, weil sie Preise,
@@ -33,6 +34,8 @@ Rohdaten:
 
 - `assets`
 - `asset_provider_identifiers`
+- `universes`
+- `universe_members`
 - `asset_price_bars`
 - `asset_fundamental_reports`
 - `asset_market_caps`
@@ -51,12 +54,13 @@ Live/Operations:
 - `live_cash_balances`
 - `live_positions`
 
-## AP18-AP22 Capability- und Provider-Modell
+## AP18-AP23 Capability- und Provider-Modell
 
 AP18 und AP19 richten die Architektur fachlich auf ein Capability- und
 Provider-Binding-Modell aus. AP20 setzt die read-only Pruefung in Code um.
 AP21 verankert Asset-Metadaten und Provider-Identifier im kanonischen Schema.
-AP22 nutzt diese Identifier im modularen Sync:
+AP22 nutzt diese Identifier im modularen Sync. AP23 verankert Universe-Katalog
+und historisierte Mitgliedschaften in der Datenbank:
 
 - `assets` ist der allgemeine Asset-Katalog mit Assetklasse,
   Canonical-/Display-Symbol, Instrumenttyp, Markt und Quote-Waehrung.
@@ -82,6 +86,9 @@ AP22 nutzt diese Identifier im modularen Sync:
 - Seit AP22 loesen Preis- und Fundamental-Sync interne Ticker auf
   Provider-Symbole auf und schreiben normalisierte Daten wieder unter dem
   internen Ticker zurueck.
+- Seit AP23 sind `sp500_active`, `active_tickers` und `all_tickers` als
+  DB-Universen geseedet; offene und historische Mitgliedschaften werden in
+  `universe_members` abgefragt.
 
 Details stehen in [Assetklassen, Universen und Daten-Capabilities](data-capabilities.md)
 und [Provider-, API- und Source-Binding-Modell](provider-api-model.md).

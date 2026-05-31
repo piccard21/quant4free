@@ -42,9 +42,10 @@ schema with the canonical modular schema.
 
 AP2, AP3, and AP4 are complete. The new modular framework can read raw fixture
 data from MySQL through the new data-provider layer. The canonical fixture is
-`fixtures/raw_market_data.sql`, which contains only `assets`,
-`asset_provider_identifiers`, `asset_price_bars`,
-`asset_fundamental_reports`, and `asset_market_caps`.
+`fixtures/raw_market_data.sql`, which contains only raw data and universe
+membership tables: `assets`, `asset_provider_identifiers`, `universes`,
+`universe_members`, `asset_price_bars`, `asset_fundamental_reports`, and
+`asset_market_caps`.
 
 AP5 is complete: selectable universes and benchmarks are implemented through
 configuration keys.
@@ -179,9 +180,20 @@ AP22:
 and
 `.venv/bin/python -m compileall data universes shared cli tests`.
 
-AP23 is planned next: introduce canonical `universes` and
-`universe_members` tables so universe identity and historical membership move
-from code-only definitions into the database.
+AP23 is complete: canonical `universes` and `universe_members` tables now
+store universe identity and historical membership. The raw-data fixture and
+`init.sql` seed `sp500_active`, `active_tickers`, and `all_tickers`; provider
+upserts maintain default memberships; deactivation closes active membership
+intervals; and the modular Universe loader reads DB memberships when the
+provider supports them while retaining a test/fake-provider fallback.
+Verification for AP23:
+`.venv/bin/python -m pytest tests -m "not integration"`,
+`.venv/bin/python -m compileall data universes cli tests`, and
+`scripts/db_integration_tests.sh`.
+
+AP24 is planned next: introduce a canonical data-sync audit trail, likely
+`data_sync_runs`, so price/fundamental/membership syncs can record provider,
+mode, date window, row counts, status, and operator-visible failures.
 
 ## Build, Test, and Development Commands
 

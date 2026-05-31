@@ -60,6 +60,160 @@ CREATE TABLE IF NOT EXISTS asset_provider_identifiers (
 COMMENT='Provider-specific asset identifiers and symbols';
 
 
+CREATE TABLE IF NOT EXISTS universes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    universe_key VARCHAR(100) NOT NULL UNIQUE,
+    name VARCHAR(255) NOT NULL,
+    description VARCHAR(500),
+    asset_classes VARCHAR(255) NOT NULL DEFAULT 'equity',
+    membership_source_role VARCHAR(64) NOT NULL DEFAULT 'membership',
+    membership_provider_key VARCHAR(64) NOT NULL DEFAULT 'mysql_fixture',
+    membership_rule VARCHAR(255) NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    KEY idx_universes_key (universe_key),
+    KEY idx_universes_membership_provider (membership_provider_key)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+COMMENT='Canonical universe catalog';
+
+
+CREATE TABLE IF NOT EXISTS universe_members (
+    universe_id INT NOT NULL,
+    ticker VARCHAR(32) NOT NULL,
+    valid_from DATE NOT NULL,
+    valid_to DATE,
+    source_provider_key VARCHAR(64),
+    imported_at DATETIME,
+
+    PRIMARY KEY (universe_id, ticker, valid_from),
+    KEY idx_universe_members_ticker_dates (ticker, valid_from, valid_to),
+    KEY idx_universe_members_universe_dates (universe_id, valid_from, valid_to),
+
+    CONSTRAINT fk_universe_members_universe
+        FOREIGN KEY (universe_id) REFERENCES universes(id) ON DELETE CASCADE,
+    CONSTRAINT fk_universe_members_asset
+        FOREIGN KEY (ticker) REFERENCES assets(ticker) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+COMMENT='Historical asset membership by universe';
+
+
+INSERT INTO universes (
+    universe_key,
+    name,
+    description,
+    asset_classes,
+    membership_source_role,
+    membership_provider_key,
+    membership_rule
+)
+SELECT
+    'sp500_active',
+    'S&P 500 active fixture universe',
+    'Fixture-compatible default universe using currently active tickers.',
+    'equity',
+    'membership',
+    'mysql_fixture',
+    'historical membership in universe_members'
+WHERE NOT EXISTS (
+    SELECT 1 FROM universes WHERE universe_key = 'sp500_active'
+);
+
+INSERT INTO universes (
+    universe_key,
+    name,
+    description,
+    asset_classes,
+    membership_source_role,
+    membership_provider_key,
+    membership_rule
+)
+SELECT
+    'active_tickers',
+    'Active tickers',
+    'All assets with an open active membership interval.',
+    'equity',
+    'membership',
+    'mysql_fixture',
+    'open membership in universe_members'
+WHERE NOT EXISTS (
+    SELECT 1 FROM universes WHERE universe_key = 'active_tickers'
+);
+
+INSERT INTO universes (
+    universe_key,
+    name,
+    description,
+    asset_classes,
+    membership_source_role,
+    membership_provider_key,
+    membership_rule
+)
+SELECT
+    'all_tickers',
+    'All tickers',
+    'All assets known to the raw-data provider.',
+    'equity,etf',
+    'membership',
+    'mysql_fixture',
+    'all assets with membership in universe_members'
+WHERE NOT EXISTS (
+    SELECT 1 FROM universes WHERE universe_key = 'all_tickers'
+);
+
+INSERT INTO universe_members (
+    universe_id,
+    ticker,
+    valid_from,
+    valid_to,
+    source_provider_key,
+    imported_at
+)
+SELECT
+    u.id,
+    a.ticker,
+    COALESCE(DATE(a.first_seen), CURRENT_DATE),
+    NULL,
+    COALESCE(a.primary_provider_key, 'mysql_fixture'),
+    a.first_seen
+FROM universes u
+JOIN assets a ON a.is_active = 1
+WHERE u.universe_key IN ('sp500_active', 'active_tickers')
+  AND NOT EXISTS (
+      SELECT 1
+      FROM universe_members current_member
+      WHERE current_member.universe_id = u.id
+        AND current_member.ticker = a.ticker
+        AND current_member.valid_to IS NULL
+  );
+
+INSERT INTO universe_members (
+    universe_id,
+    ticker,
+    valid_from,
+    valid_to,
+    source_provider_key,
+    imported_at
+)
+SELECT
+    u.id,
+    a.ticker,
+    COALESCE(DATE(a.first_seen), CURRENT_DATE),
+    NULL,
+    COALESCE(a.primary_provider_key, 'mysql_fixture'),
+    a.first_seen
+FROM universes u
+JOIN assets a ON 1 = 1
+WHERE u.universe_key = 'all_tickers'
+  AND NOT EXISTS (
+      SELECT 1
+      FROM universe_members current_member
+      WHERE current_member.universe_id = u.id
+        AND current_member.ticker = a.ticker
+        AND current_member.valid_to IS NULL
+  );
+
+
 CREATE TABLE IF NOT EXISTS asset_price_bars (
     ticker VARCHAR(32) NOT NULL,
     date DATE NOT NULL,

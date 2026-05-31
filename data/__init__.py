@@ -9,6 +9,8 @@ __all__ = [
     "RawDataRepository",
     "Ticker",
     "TickerUpsert",
+    "UniverseMemberUpsert",
+    "UniverseRecord",
     "FundamentalSyncService",
     "latest_daily_candles",
     "latest_financial_reports",
@@ -28,6 +30,8 @@ def __getattr__(name: str):
         "MarketCapSnapshot",
         "Ticker",
         "TickerUpsert",
+        "UniverseMemberUpsert",
+        "UniverseRecord",
     }:
         from . import models
 

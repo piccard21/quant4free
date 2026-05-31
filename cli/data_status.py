@@ -5,6 +5,8 @@ from typing import Any
 RAW_TABLES = {
     "assets": None,
     "asset_provider_identifiers": None,
+    "universes": None,
+    "universe_members": None,
     "asset_price_bars": "date",
     "asset_fundamental_reports": "report_date",
     "asset_market_caps": "date",
@@ -110,6 +112,26 @@ def main() -> None:
                     "asset_class="
                     f"{row['asset_class']} "
                     f"assets={row['row_count']}"
+                )
+            for row in connection.execute(
+                text(
+                    """
+                    SELECT
+                        u.universe_key,
+                        COUNT(*) AS member_count
+                    FROM universes u
+                    LEFT JOIN universe_members um
+                        ON um.universe_id = u.id
+                        AND um.valid_to IS NULL
+                    GROUP BY u.universe_key
+                    ORDER BY u.universe_key
+                    """
+                )
+            ).mappings():
+                print(
+                    "universe="
+                    f"{row['universe_key']} "
+                    f"current_members={row['member_count']}"
                 )
             for row in connection.execute(
                 text(

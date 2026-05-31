@@ -206,8 +206,9 @@ APs erfolgen:
 4. Erledigt in AP21: `assets` um Assetklassen- und Symbol-Metadaten
    erweitern.
 5. Erledigt in AP21: Identifier-Mapping fuer Provider einfuehren.
-6. Historisierte `universes`/`universe_members` als echte Tabellen einfuehren,
-   falls Code-Konfiguration nicht mehr reicht.
+6. Erledigt in AP23: Historisierte `universes`/`universe_members` als echte
+   Tabellen einfuehren, damit Universe-Identitaet und Mitgliedschaft aus der
+   Code-only-Konfiguration in die Datenbank wandern.
 7. Provider-Capabilities pro Datenquelle beschreiben.
 8. Neue Assetklassen wie Krypto erst anbinden, wenn deren Minimal-Capability
    und Fixture-Pfad definiert sind.
@@ -227,4 +228,7 @@ Default-Pfad sowie negative Capability-/Provider-Faelle. AP21 ist
 abgeschlossen: Asset-Metadaten und Provider-Identifier sind im Schema, in der
 Fixture, im Repository und optional im Capability-Check verankert. AP22 ist
 abgeschlossen: Provider-Identifier werden im Sync fuer Symbolaufloesung
-genutzt, und Universe-Definitionen tragen explizitere Metadaten.
+genutzt, und Universe-Definitionen tragen explizitere Metadaten. AP23 ist
+abgeschlossen: Universe-Katalog und historisierte Mitgliedschaft liegen in
+`universes` und `universe_members`, und der Loader liest DB-Mitgliedschaften,
+wenn der Provider sie anbietet.

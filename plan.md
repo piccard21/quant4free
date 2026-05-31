@@ -2,7 +2,7 @@
 
 ## Umsetzungsstand
 
-Stand: AP20 ist abgeschlossen. Das kanonische AP14-Schema ist der regulaere
+Stand: AP23 ist abgeschlossen. Das kanonische AP14-Schema ist der regulaere
 modulare Betriebspfad, AP15 dokumentiert den Host-Crontab-Betrieb fuer Daily
 und Monthly, und AP16 ergaenzt einen read-only Performance-Report fuer Real
 Portfolio, Shadow Portfolio und Benchmark. AP17 ergaenzt eine isolierte
@@ -11,7 +11,10 @@ MySQL-Pfad. AP18 dokumentiert das Datenmodell fuer mehrere Assetklassen,
 Universen und optionale Datenarten explizit. AP19 trennt Universen,
 Provider/APIs, Source-Rollen, Identifier und Capability-Bindings fachlich. AP20
 setzt dieses Design als read-only Capability- und Provider-Check fuer den
-bestehenden Pfad um.
+bestehenden Pfad um. AP21 konkretisiert den Asset-Katalog und Provider-
+Identifier, AP22 nutzt Provider-Symbole im Sync, und AP23 verlagert
+Universe-Identitaet sowie historisierte Mitgliedschaft in kanonische
+DB-Tabellen.
 
 Strategische Anpassung:
 
@@ -32,15 +35,30 @@ Strategische Anpassung:
 
 Naechster AP:
 
-AP23:
+AP24:
 
-- Echte Tabellen `universes` und `universe_members` einfuehren.
-- Universe-Identitaet und historisierte Mitgliedschaft aus Code-Definitionen
-  in die Datenbank ueberfuehren.
-- Den aktuellen `sp500_active`-Pfad auf die DB-Universen migrieren, ohne die
-  bestehenden Operator-CLIs zu brechen.
+- Kanonischen Data-Sync-Audit-Trail einfuehren, voraussichtlich
+  `data_sync_runs`.
+- Preis-, Fundamental- und Membership-Syncs sollen Provider, Modus,
+  Zeitfenster, Status, Zeilenzaehler und operator-sichtbare Fehler
+  nachvollziehbar speichern.
 
 Erledigt:
+
+AP23:
+
+- Echte Tabellen `universes` und `universe_members` eingefuehrt.
+- `sp500_active`, `active_tickers` und `all_tickers` in `init.sql` und
+  Fixture geseedet.
+- `RawDataRepository` liest Universen und Mitglieder, pflegt Default-
+  Mitgliedschaften bei Asset-Upserts und schliesst aktive Membership-
+  Intervalle bei Deaktivierungen.
+- Der Universe-Loader liest DB-Mitgliedschaften, wenn der Provider sie
+  anbietet, und behaelt den Fallback fuer Tests/Fake-Provider.
+- Verifikation:
+  - `.venv/bin/python -m pytest tests -m "not integration"`
+  - `.venv/bin/python -m compileall data universes cli tests`
+  - `scripts/db_integration_tests.sh`
 
 AP22:
 
@@ -1541,6 +1559,28 @@ Umfang:
 - Universe-Loader so erweitern, dass er DB-Mitgliedschaften lesen kann.
 - Fixture, Setup, Status-CLIs und Regressionstests auf die neuen Tabellen
   erweitern.
+
+Status: abgeschlossen in AP23.
+
+Verifikation:
+
+- `.venv/bin/python -m pytest tests -m "not integration"`
+- `.venv/bin/python -m compileall data universes cli tests`
+- `scripts/db_integration_tests.sh`
+
+### AP24: Data-Sync-Audit-Trail
+
+Ziel:
+
+- Daten-Syncs operator-faehig nachvollziehbar machen, ohne Logs als einzige
+  Quelle fuer Status, Zaehler und Fehler zu verwenden.
+
+Umfang:
+
+- Tabelle `data_sync_runs` fuer Provider, Source-Rolle, Modus, Zeitfenster,
+  Status, Row Counts und Fehlermeldung einfuehren.
+- Preis-, Fundamental- und Membership-Syncs sollen Runs schreiben.
+- Status-/Smoke-CLIs sollen die juengsten Sync-Runs anzeigen koennen.
 
 Status: naechster Schritt.
 

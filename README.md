@@ -165,7 +165,9 @@ read-only. Doppelte Snapshots je Stichtag werden kontrolliert abgelehnt.
 
 AP14 ist abgeschlossen: Der regulaere modulare Pfad nutzt jetzt kanonische
 Tabellen statt legacy-kompatibler Tabellen. Rohdaten laufen ueber `assets`,
-`asset_price_bars`, `asset_fundamental_reports` und `asset_market_caps`.
+`asset_price_bars`, `asset_fundamental_reports` und `asset_market_caps`; AP23
+ergaenzt `universes` und `universe_members` fuer historisierte
+Universe-Mitgliedschaften.
 Live-/Operations-Artefakte laufen ueber `portfolio_target_items`,
 `live_rebalance_items`, `live_decision_items`, `live_trade_plans`,
 `live_trade_plan_items`, `live_trade_executions`, `live_cash_ledger`,
@@ -176,7 +178,7 @@ umgestellt.
 AP15 ist abgeschlossen: Der Host-Crontab-Betrieb ist dokumentiert und ueber
 `scripts/cron_daily.sh`, `scripts/cron_monthly.sh` und feste `flock`-/Logpfade
 ausfuehrbar. `scripts/client_smoke.sh` prueft einen frischen isolierten Client
-mit Fixture, AP14-Schema, Startkapital, Monthly-Persistenz, Trade-Plan,
+mit Fixture, kanonischem Schema, Startkapital, Monthly-Persistenz, Trade-Plan,
 Live-Status, Cash-Dry-Run und optionaler Smoke-Trade-Buchung.
 
 AP16 ist abgeschlossen: `live.performance` und `cli.live_performance` liefern
@@ -257,9 +259,23 @@ Membership-Source-Role/-Provider und Membership-Regel. Verifiziert wurde mit
 und
 `.venv/bin/python -m compileall data universes shared cli tests`.
 
-Als naechster technischer AP ist AP23 geplant: echte `universes`- und
-`universe_members`-Tabellen sollen Universe-Identitaet und historisierte
-Mitgliedschaft aus Code-Definitionen in die Datenbank ueberfuehren.
+AP23 ist abgeschlossen: Universe-Identitaet und historisierte Mitgliedschaft
+liegen jetzt in den kanonischen Tabellen `universes` und `universe_members`.
+`init.sql` und die Rohdaten-Fixture seedet `sp500_active`, `active_tickers`
+und `all_tickers`; `RawDataRepository` kann Universen und Mitglieder lesen,
+Default-Mitgliedschaften bei Asset-Upserts pflegen und aktive
+Mitgliedschaftsintervalle bei Deaktivierungen schliessen. Der modulare
+Universe-Loader nutzt DB-Mitgliedschaften, wenn der Provider sie anbietet, und
+behaelt fuer Tests/Fake-Provider den bisherigen `list_tickers`-Fallback.
+Verifiziert wurde mit
+`.venv/bin/python -m pytest tests -m "not integration"`,
+`.venv/bin/python -m compileall data universes cli tests` und
+`scripts/db_integration_tests.sh`.
+
+Als naechster technischer AP ist AP24 geplant: ein kanonischer
+Data-Sync-Audit-Trail, voraussichtlich `data_sync_runs`, soll Provider, Modus,
+Zeitfenster, Status, Zeilenzaehler und operator-sichtbare Fehler fuer Preis-,
+Fundamental- und Membership-Syncs speichern.
 
 Der Umbau erfolgt ab hier schrittweise. AP4 ist bewusst ein Infrastruktur-
 Schritt, weil AP3 unter Windows mit WSL Toolchain-Probleme gezeigt hat:
@@ -290,8 +306,10 @@ Schritt, weil AP3 unter Windows mit WSL Toolchain-Probleme gezeigt hat:
 19. Provider-spezifische Symbolaufloesung und explizitere Universums-Metadaten
     auf Basis der Identifier-Mappings umsetzen. Erledigt in AP22.
 20. Echte `universes`- und `universe_members`-Tabellen fuer
-    DB-identifizierbare und historisierte Universen einfuehren. Naechster
-    Schritt AP23.
+    DB-identifizierbare und historisierte Universen einfuehren. Erledigt in
+    AP23.
+21. Kanonischen Data-Sync-Audit-Trail fuer Provider, Modus, Zeitfenster,
+    Status, Zeilenzaehler und Fehler einfuehren. Naechster Schritt AP24.
 
 Der Arbeitsplan steht in [plan.md](plan.md).
 
@@ -352,7 +370,8 @@ docker compose run --rm app python -m cli.backtest_status --start-date 2026-01-0
 docker compose run --rm app python -m cli.operator_smoke --ranking-limit 5 --trade-limit 5
 ```
 
-Die Fixture enthaelt nur `assets`, `asset_provider_identifiers`,
+Die Fixture enthaelt nur raw-data- und universe-nahe Tabellen: `assets`,
+`asset_provider_identifiers`, `universes`, `universe_members`,
 `asset_price_bars`, `asset_fundamental_reports` und `asset_market_caps`.
 Live-Daten wie Trades, Cash Ledger, Real-Positionen und Performance-Snapshots
 sind bewusst nicht enthalten. `init.sql` legt die kanonischen

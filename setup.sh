@@ -22,7 +22,7 @@ Usage:
   ./setup.sh rebuild --start-capital <amount> [--portfolio-size <n>] [--max-trades-per-month <n>] [--max-sector-positions <n>] [--min-holding-months <n>] [--max-funding-sell-pct <pct>] [--mysql-root-password <pw>] [--db-name <name>]
 
 Modes:
-  init      Reset Docker DB volume, start MySQL, create AP14 schema, optionally load raw fixture.
+  init      Reset Docker DB volume, start MySQL, create canonical schema, optionally load raw fixture.
   rebuild   Keep raw market data, clear live/evaluation state, reset cash and strategy overrides.
 USAGE
 }
@@ -250,6 +250,8 @@ verify_canonical_schema() {
     USE ${DB_NAME};
     SELECT 'assets' AS table_name, COUNT(*) AS row_count FROM assets
     UNION ALL SELECT 'asset_provider_identifiers', COUNT(*) FROM asset_provider_identifiers
+    UNION ALL SELECT 'universes', COUNT(*) FROM universes
+    UNION ALL SELECT 'universe_members', COUNT(*) FROM universe_members
     UNION ALL SELECT 'asset_price_bars', COUNT(*) FROM asset_price_bars
     UNION ALL SELECT 'asset_fundamental_reports', COUNT(*) FROM asset_fundamental_reports
     UNION ALL SELECT 'asset_market_caps', COUNT(*) FROM asset_market_caps
