@@ -195,8 +195,10 @@ AP24 is complete: canonical `data_sync_runs` now records real price,
 fundamental, and membership sync runs with provider, source role, mode, date
 window, row counters, status, and operator-visible failure messages.
 `RawDataRepository` exposes start/finish/fail/list methods, sync services write
-audit rows, sync CLIs print generated run IDs, and `cli.data_status --details`
-shows the latest runs. Dry-runs remain read-only and do not write audit rows.
+audit rows including planning/setup failures after a real sync starts, sync
+CLIs print generated run IDs, and `cli.data_status --details` plus
+`cli.operator_smoke` show the latest runs. Dry-runs remain read-only and do not
+write audit rows.
 Verification for AP24:
 `.venv/bin/python -m pytest tests/test_data_sync.py`,
 `.venv/bin/python -m pytest tests -m "not integration"`, and

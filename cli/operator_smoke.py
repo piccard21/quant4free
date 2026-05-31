@@ -7,6 +7,7 @@ from cli.errors import CliUsageError, require_non_empty, run_cli
 
 RAW_TABLES = {
     "assets": None,
+    "data_sync_runs": "started_at",
     "asset_price_bars": "date",
     "asset_fundamental_reports": "report_date",
     "asset_market_caps": "date",
@@ -43,6 +44,12 @@ def parse_args() -> argparse.Namespace:
         default=5,
         help="Number of first backtest trades to print.",
     )
+    parser.add_argument(
+        "--sync-run-limit",
+        type=int,
+        default=3,
+        help="Number of latest data sync audit rows to print.",
+    )
     return parser.parse_args()
 
 
@@ -71,6 +78,12 @@ def main() -> None:
                 _table_status_statement(text, table_name, date_column)
             ).mappings().one()
             print(_format_table_status(table_name, row))
+        sync_runs = list(
+            connection.execute(_latest_sync_runs_statement(text, args.sync_run_limit)).mappings()
+        )
+        print(f"sync_runs_recent={len(sync_runs)}")
+        for row in sync_runs:
+            print(_format_sync_run_status(row))
 
     provider = FixtureDataProvider()
     try:
@@ -273,6 +286,47 @@ def _format_table_status(table_name: str, row: dict[str, Any]) -> str:
         parts.append(f"from={row['min_date']}")
     if row.get("max_date") is not None:
         parts.append(f"to={row['max_date']}")
+    return " ".join(parts)
+
+
+def _latest_sync_runs_statement(text_fn, limit: int):
+    return text_fn(
+        """
+        SELECT
+            id,
+            sync_type,
+            provider_key,
+            mode,
+            status,
+            started_at,
+            finished_at,
+            planned_items,
+            processed_items,
+            upserted_rows,
+            error_message
+        FROM data_sync_runs
+        ORDER BY started_at DESC, id DESC
+        LIMIT :limit
+        """
+    ).bindparams(limit=max(limit, 0))
+
+
+def _format_sync_run_status(row: dict[str, Any]) -> str:
+    parts = [
+        f"sync_run={row['id']}",
+        f"type={row['sync_type']}",
+        f"provider={row['provider_key']}",
+        f"mode={row['mode']}",
+        f"status={row['status']}",
+        f"started={row['started_at']}",
+        f"planned={row['planned_items']}",
+        f"processed={row['processed_items']}",
+        f"upserted_rows={row['upserted_rows']}",
+    ]
+    if row.get("finished_at") is not None:
+        parts.append(f"finished={row['finished_at']}")
+    if row.get("error_message"):
+        parts.append(f"error={row['error_message']}")
     return " ".join(parts)
 
 

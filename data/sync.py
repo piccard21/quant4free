@@ -187,51 +187,75 @@ class PriceSyncService:
                     for ticker in self.repository.list_tickers(active_only=True)
                 ]
 
-        if not dry_run:
-            self.repository.ensure_ticker(
-                benchmark_ticker,
-                name="SPDR S&P 500 ETF Trust",
-                sector="Benchmark",
-                is_active=False,
-                sync_time=now,
-            )
-            self.repository.upsert_provider_identifiers(
-                [
-                    ProviderIdentifier(
-                        ticker=benchmark_ticker,
-                        provider_key=self.provider_key,
-                        identifier_scheme="ticker",
-                        provider_symbol=benchmark_ticker,
-                        market="US",
-                        quote_currency="USD",
-                        is_primary=True,
-                        imported_at=now,
-                    )
-                ]
-            )
         symbols = _append_benchmark(selected_tickers, benchmark_ticker)
-        provider_symbols = {
-            mapping.ticker: mapping
-            for mapping in self.repository.resolve_provider_symbols(
+        sync_run_id = None
+        planned: tuple[PlannedPriceSync, ...] = ()
+
+        if not dry_run:
+            sync_run_id = self.repository.start_data_sync_run(
+                sync_type="prices",
                 provider_key=self.provider_key,
-                tickers=symbols,
-                fallback_to_ticker=True,
+                source_role="prices",
+                mode=mode,
+                dry_run=False,
+                started_at=now,
+                requested_tickers_count=len(symbols),
             )
-        }
-        planned = tuple(
-            PlannedPriceSync(
-                ticker=symbol,
-                provider_key=self.provider_key,
-                provider_symbol=provider_symbols[symbol].provider_symbol,
-                start_date=calculate_price_start_date(
-                    mode,
-                    self.repository.latest_candle_date(symbol),
-                    today,
-                ),
-                end_date=today,
+
+        try:
+            if not dry_run:
+                self.repository.ensure_ticker(
+                    benchmark_ticker,
+                    name="SPDR S&P 500 ETF Trust",
+                    sector="Benchmark",
+                    is_active=False,
+                    sync_time=now,
+                )
+                self.repository.upsert_provider_identifiers(
+                    [
+                        ProviderIdentifier(
+                            ticker=benchmark_ticker,
+                            provider_key=self.provider_key,
+                            identifier_scheme="ticker",
+                            provider_symbol=benchmark_ticker,
+                            market="US",
+                            quote_currency="USD",
+                            is_primary=True,
+                            imported_at=now,
+                        )
+                    ]
+                )
+            provider_symbols = {
+                mapping.ticker: mapping
+                for mapping in self.repository.resolve_provider_symbols(
+                    provider_key=self.provider_key,
+                    tickers=symbols,
+                    fallback_to_ticker=True,
+                )
+            }
+            planned = tuple(
+                PlannedPriceSync(
+                    ticker=symbol,
+                    provider_key=self.provider_key,
+                    provider_symbol=provider_symbols[symbol].provider_symbol,
+                    start_date=calculate_price_start_date(
+                        mode,
+                        self.repository.latest_candle_date(symbol),
+                        today,
+                    ),
+                    end_date=today,
+                )
+                for symbol in symbols
             )
-            for symbol in symbols
-        )
+        except Exception as exc:
+            if sync_run_id is not None:
+                self.repository.fail_data_sync_run(
+                    sync_run_id,
+                    error_message=_exception_message(exc),
+                    planned_items=len(planned),
+                    requested_tickers_count=len(symbols),
+                )
+            raise
 
         if dry_run:
             return PriceSyncResult(
@@ -246,18 +270,6 @@ class PriceSyncService:
                 membership_sync_run_id=None,
             )
 
-        sync_run_id = self.repository.start_data_sync_run(
-            sync_type="prices",
-            provider_key=self.provider_key,
-            source_role="prices",
-            mode=mode,
-            dry_run=False,
-            started_at=now,
-            date_from=min((item.start_date for item in planned), default=None),
-            date_to=max((item.end_date for item in planned), default=None),
-            requested_tickers_count=len(symbols),
-            planned_items=len(planned),
-        )
         downloaded_tickers = 0
         upserted_candles = 0
         processed_tickers = 0
@@ -282,6 +294,9 @@ class PriceSyncService:
                 sync_run_id,
                 error_message=_exception_message(exc),
                 planned_items=len(planned),
+                date_from=_price_date_from(planned),
+                date_to=_price_date_to(planned),
+                requested_tickers_count=len(symbols),
                 processed_items=processed_tickers,
                 upserted_rows=upserted_candles,
                 upserted_candles=upserted_candles,
@@ -291,6 +306,9 @@ class PriceSyncService:
         self.repository.finish_data_sync_run(
             sync_run_id,
             planned_items=len(planned),
+            date_from=_price_date_from(planned),
+            date_to=_price_date_to(planned),
+            requested_tickers_count=len(symbols),
             processed_items=processed_tickers,
             upserted_rows=upserted_candles,
             upserted_candles=upserted_candles,
@@ -333,30 +351,53 @@ class FundamentalSyncService:
             raise ValueError("mode must be 'init' or 'daily'")
 
         now = now or datetime.now()
-        planned = _normalize_ticker_list(tickers)
-        if planned is None:
-            planned = self.repository.select_tickers_for_fundamental_sync(
+        planned: list[str] = []
+        planned_items: tuple[PlannedFundamentalSync, ...] = ()
+        sync_run_id = None
+        if not dry_run:
+            sync_run_id = self.repository.start_data_sync_run(
+                sync_type="fundamentals",
+                provider_key=self.provider_key,
+                source_role="fundamentals",
                 mode=mode,
-                refresh_hours=refresh_hours,
-                limit=limit,
-                now=now,
+                dry_run=False,
+                started_at=now,
             )
-        provider_symbols = {
-            mapping.ticker: mapping
-            for mapping in self.repository.resolve_provider_symbols(
-                provider_key=self.provider_key,
-                tickers=planned,
-                fallback_to_ticker=True,
+        try:
+            planned_selection = _normalize_ticker_list(tickers)
+            if planned_selection is None:
+                planned_selection = self.repository.select_tickers_for_fundamental_sync(
+                    mode=mode,
+                    refresh_hours=refresh_hours,
+                    limit=limit,
+                    now=now,
+                )
+            planned = planned_selection
+            provider_symbols = {
+                mapping.ticker: mapping
+                for mapping in self.repository.resolve_provider_symbols(
+                    provider_key=self.provider_key,
+                    tickers=planned,
+                    fallback_to_ticker=True,
+                )
+            }
+            planned_items = tuple(
+                PlannedFundamentalSync(
+                    ticker=ticker,
+                    provider_key=self.provider_key,
+                    provider_symbol=provider_symbols[ticker].provider_symbol,
+                )
+                for ticker in planned
             )
-        }
-        planned_items = tuple(
-            PlannedFundamentalSync(
-                ticker=ticker,
-                provider_key=self.provider_key,
-                provider_symbol=provider_symbols[ticker].provider_symbol,
-            )
-            for ticker in planned
-        )
+        except Exception as exc:
+            if sync_run_id is not None:
+                self.repository.fail_data_sync_run(
+                    sync_run_id,
+                    error_message=_exception_message(exc),
+                    requested_tickers_count=len(planned),
+                    planned_items=len(planned_items),
+                )
+            raise
 
         if dry_run:
             return FundamentalSyncResult(
@@ -370,16 +411,6 @@ class FundamentalSyncService:
                 sync_run_id=None,
             )
 
-        sync_run_id = self.repository.start_data_sync_run(
-            sync_type="fundamentals",
-            provider_key=self.provider_key,
-            source_role="fundamentals",
-            mode=mode,
-            dry_run=False,
-            started_at=now,
-            requested_tickers_count=len(planned),
-            planned_items=len(planned_items),
-        )
         updated_tickers = 0
         upserted_reports = 0
         upserted_market_caps = 0
@@ -406,6 +437,7 @@ class FundamentalSyncService:
                 sync_run_id,
                 error_message=_exception_message(exc),
                 planned_items=len(planned_items),
+                requested_tickers_count=len(planned),
                 processed_items=processed_tickers,
                 upserted_rows=upserted_reports + upserted_market_caps,
                 updated_tickers=updated_tickers,
@@ -417,6 +449,7 @@ class FundamentalSyncService:
         self.repository.finish_data_sync_run(
             sync_run_id,
             planned_items=len(planned_items),
+            requested_tickers_count=len(planned),
             processed_items=processed_tickers,
             upserted_rows=upserted_reports + upserted_market_caps,
             updated_tickers=updated_tickers,
@@ -447,6 +480,14 @@ def _append_benchmark(tickers: Sequence[str], benchmark_ticker: str) -> list[str
     if benchmark_ticker and benchmark_ticker not in symbols:
         symbols.append(benchmark_ticker)
     return symbols
+
+
+def _price_date_from(planned: Sequence[PlannedPriceSync]) -> Optional[date]:
+    return min((item.start_date for item in planned), default=None)
+
+
+def _price_date_to(planned: Sequence[PlannedPriceSync]) -> Optional[date]:
+    return max((item.end_date for item in planned), default=None)
 
 
 def _exception_message(exc: Exception) -> str:

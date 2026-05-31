@@ -271,9 +271,11 @@ behaelt fuer Tests/Fake-Provider den bisherigen `list_tickers`-Fallback.
 AP24 ist abgeschlossen: Der kanonische Data-Sync-Audit-Trail
 `data_sync_runs` ist in `init.sql`, der Rohdaten-Fixture, dem
 `RawDataRepository`, den Preis-/Fundamental-/Membership-Syncs und
-`cli.data_status --details` verdrahtet. Echte Sync-Laeufe speichern Provider,
-Source-Rolle, Modus, Zeitfenster, Status, Zaehler und operator-sichtbare
-Fehler. Dry-Runs bleiben weiterhin read-only und schreiben keine Audit-Zeilen.
+`cli.data_status --details` sowie `cli.operator_smoke` verdrahtet. Echte
+Sync-Laeufe speichern Provider, Source-Rolle, Modus, Zeitfenster, Status,
+Zaehler und operator-sichtbare Fehler; auch Vorbereitungs-/Planungsfehler
+werden als `failed` auditiert, sobald ein echter Sync-Lauf gestartet wurde.
+Dry-Runs bleiben weiterhin read-only und schreiben keine Audit-Zeilen.
 Verifiziert wurde mit
 `.venv/bin/python -m pytest tests/test_data_sync.py`,
 `.venv/bin/python -m pytest tests -m "not integration"` und

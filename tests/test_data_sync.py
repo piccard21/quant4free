@@ -460,6 +460,44 @@ class DataSyncTests(unittest.TestCase):
         self.assertEqual(run.status, "failed")
         self.assertIn("RuntimeError: provider unavailable", run.error_message)
 
+    def test_price_sync_records_failed_audit_for_setup_errors(self):
+        engine = create_engine("sqlite+pysqlite:///:memory:", future=True)
+        _create_raw_tables(engine)
+        repository = FailingEnsureTickerRepository(engine)
+        repository.upsert_tickers([TickerUpsert("AAA", "Asset AAA", "Tech")])
+
+        with self.assertRaises(RuntimeError):
+            PriceSyncService(repository=repository).run(
+                mode="daily",
+                tickers=["AAA"],
+                dry_run=False,
+                today=date(2026, 5, 29),
+                now=datetime(2026, 5, 29, 12, 0),
+            )
+
+        run = repository.list_data_sync_runs(limit=1)[0]
+        self.assertEqual(run.sync_type, "prices")
+        self.assertEqual(run.status, "failed")
+        self.assertEqual(run.requested_tickers_count, 2)
+        self.assertIn("RuntimeError: benchmark setup failed", run.error_message)
+
+    def test_fundamental_sync_records_failed_audit_for_selection_errors(self):
+        engine = create_engine("sqlite+pysqlite:///:memory:", future=True)
+        _create_raw_tables(engine)
+        repository = FailingFundamentalSelectionRepository(engine)
+
+        with self.assertRaises(RuntimeError):
+            FundamentalSyncService(repository=repository).run(
+                mode="daily",
+                dry_run=False,
+                now=datetime(2026, 5, 29, 12, 0),
+            )
+
+        run = repository.list_data_sync_runs(limit=1)[0]
+        self.assertEqual(run.sync_type, "fundamentals")
+        self.assertEqual(run.status, "failed")
+        self.assertIn("RuntimeError: selection failed", run.error_message)
+
 
 class FakePriceSource:
     def __init__(self) -> None:
@@ -490,6 +528,16 @@ class FakeTickerSource:
 
     def list_tickers(self) -> list[TickerUpsert]:
         return self.tickers
+
+
+class FailingEnsureTickerRepository(RawDataRepository):
+    def ensure_ticker(self, *args, **kwargs) -> None:
+        raise RuntimeError("benchmark setup failed")
+
+
+class FailingFundamentalSelectionRepository(RawDataRepository):
+    def select_tickers_for_fundamental_sync(self, *args, **kwargs) -> list[str]:
+        raise RuntimeError("selection failed")
 
 
 class FakeFundamentalSource:

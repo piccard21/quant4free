@@ -225,6 +225,27 @@ def test_mysql_operational_persistence_cash_dry_run_and_cli(mysql_engine, mysql_
     assert "ping=ok" in cli_result.stdout
     assert "assets rows=" in cli_result.stdout
 
+    smoke_result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "cli.operator_smoke",
+            "--ranking-limit",
+            "0",
+            "--trade-limit",
+            "0",
+            "--sync-run-limit",
+            "1",
+        ],
+        check=True,
+        env=mysql_cli_env,
+        text=True,
+        capture_output=True,
+    )
+    assert "operator_smoke=ok" in smoke_result.stdout
+    assert "raw.data_sync_runs rows=" in smoke_result.stdout
+    assert "sync_runs_recent=" in smoke_result.stdout
+
 
 def _settings(**overrides) -> OperationalSettings:
     values = {

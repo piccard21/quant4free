@@ -504,7 +504,10 @@ Status: abgeschlossen als Schema-/Repository-/Sync-AP.
   fehlschlagen lassen und die juengsten Runs lesen.
 - Preis-, Fundamental- und Membership-Syncs schreiben echte Runs mit Provider,
   Source-Rolle, Modus, Zeitfenster, Status, Zaehlern und Fehlermeldung.
-- `cli.data_status --details` zeigt die juengsten Sync-Runs fuer Operatoren.
+- Vorbereitungs- und Planungsfehler nach Start eines echten Syncs werden als
+  `failed` auditiert.
+- `cli.data_status --details` und `cli.operator_smoke` zeigen die juengsten
+  Sync-Runs fuer Operatoren.
 - Dry-Runs bleiben read-only und schreiben keine Audit-Zeilen.
 
 ## Initialer Schema-Sketch

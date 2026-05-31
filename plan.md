@@ -59,8 +59,10 @@ AP24:
 - Fundamental-Sync schreibt Audit-Runs inklusive Report-/Market-Cap-Zaehlern.
 - Fehler in Provider-Downloads werden als `failed` mit operator-sichtbarer
   Fehlermeldung persistiert und danach weiterhin an die CLI durchgereicht.
-- `cli.data_status --details` zeigt die juengsten Sync-Runs; Sync-CLIs geben
-  erzeugte Run-IDs aus.
+- Vorbereitungs- und Planungsfehler nach Start eines echten Preis- oder
+  Fundamental-Syncs werden ebenfalls als `failed` persistiert.
+- `cli.data_status --details` und `cli.operator_smoke` zeigen die juengsten
+  Sync-Runs; Sync-CLIs geben erzeugte Run-IDs aus.
 - Dry-Runs bleiben read-only und schreiben keine Audit-Zeilen.
 - Verifikation:
   - `.venv/bin/python -m pytest tests/test_data_sync.py`

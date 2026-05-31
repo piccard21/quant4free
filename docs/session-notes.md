@@ -462,10 +462,11 @@ AP19 is complete:
   refreshes S&P 500 membership.
 - Fundamental sync now records real fundamental runs with report and
   market-cap counters.
-- Provider failures are persisted as `failed` audit runs with an
-  operator-visible error before the original exception is re-raised.
-- Sync CLIs print created run IDs; `cli.data_status --details` shows recent
-  sync runs.
+- Provider, planning, and setup failures after a real sync starts are
+  persisted as `failed` audit runs with an operator-visible error before the
+  original exception is re-raised.
+- Sync CLIs print created run IDs; `cli.data_status --details` and
+  `cli.operator_smoke` show recent sync runs.
 - Dry-runs remain read-only and do not write audit rows.
 - Verification:
   - `.venv/bin/python -m pytest tests/test_data_sync.py`
