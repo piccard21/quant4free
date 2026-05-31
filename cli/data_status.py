@@ -4,6 +4,7 @@ from typing import Any
 
 RAW_TABLES = {
     "assets": None,
+    "asset_provider_identifiers": None,
     "asset_price_bars": "date",
     "asset_fundamental_reports": "report_date",
     "asset_market_caps": "date",
@@ -95,6 +96,37 @@ def main() -> None:
             ).scalar_one()
             print(f"active_tickers={active_tickers}")
             print(f"latest_price_rows={latest_price_rows}")
+            for row in connection.execute(
+                text(
+                    """
+                    SELECT asset_class, COUNT(*) AS row_count
+                    FROM assets
+                    GROUP BY asset_class
+                    ORDER BY asset_class
+                    """
+                )
+            ).mappings():
+                print(
+                    "asset_class="
+                    f"{row['asset_class']} "
+                    f"assets={row['row_count']}"
+                )
+            for row in connection.execute(
+                text(
+                    """
+                    SELECT provider_key, identifier_scheme, COUNT(*) AS row_count
+                    FROM asset_provider_identifiers
+                    GROUP BY provider_key, identifier_scheme
+                    ORDER BY provider_key, identifier_scheme
+                    """
+                )
+            ).mappings():
+                print(
+                    "provider_identifiers="
+                    f"{row['provider_key']} "
+                    f"scheme={row['identifier_scheme']} "
+                    f"rows={row['row_count']}"
+                )
             benchmark = connection.execute(
                 text(
                     """

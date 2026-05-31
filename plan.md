@@ -32,18 +32,31 @@ Strategische Anpassung:
 
 Naechster AP:
 
-AP21:
+AP22:
 
-- Asset-Katalog und Identifier-Basis fuer mehrere Assetklassen konkretisieren.
-- Entscheiden, ob `assets` direkt um Assetklasse, Canonical Symbol,
-  Provider-Symbole und Markt-/Waehrungsfelder erweitert wird oder ob zuerst
-  separate Identifier-Tabellen eingefuehrt werden.
-- Den AP20-Checker so vorbereiten, dass er echte Asset-Metadaten und
-  Provider-Identifier statt nur Code-Profile pruefen kann.
-- Migration, Fixture und DB-Integrationstests fuer die gewaehlte
-  Identifier-/Asset-Metadata-Linie planen und umsetzen.
+- Provider-spezifische Symbolaufloesung in den Data-Sync-Pfad einbauen.
+- Universums-Metadaten expliziter modellieren, damit Membership-Quellen,
+  Asset-Metadaten und Provider-Identifier sauber zusammenspielen.
+- Die AP21-Identifier-Mappings fuer echte Provider-/Source-Binding-Workflows
+  nutzen, ohne den aktuellen `mysql_fixture`-Default-Pfad zu brechen.
 
 Erledigt:
+
+AP21:
+
+- `assets` um Assetklasse, Canonical-/Display-Symbol, Instrumenttyp,
+  Exchange, Markt, Quote-Waehrung und Primaer-Provider erweitert.
+- Separate Tabelle `asset_provider_identifiers` fuer provider-spezifische
+  Symbole und IDs eingefuehrt.
+- Repository-Modelle, Upserts, Fixture, Status-CLI, Setup-/Smoke-Checks und
+  DB-Integrationserwartungen angepasst.
+- `shared.capabilities` kann supplied Asset-Metadaten und
+  Provider-Identifier-Coverage pruefen.
+- `cli.orchestration` reicht reale Member-Metadaten und Identifier-Coverage an
+  den Checker weiter, wenn ein Provider diese Coverage melden kann.
+- Verifikation:
+  - `.venv/bin/python -m pytest tests/test_capabilities.py tests/test_data_sync.py tests/test_orchestration.py`
+  - `.venv/bin/python -m compileall data universes indicators strategies simulation evaluation live cli shared tests`
 
 AP20:
 
@@ -901,7 +914,12 @@ Aktueller Linux-Befund:
 
 ### AP5: Universen Und Benchmarks
 
-Status: naechster Schritt.
+Status: erledigt in AP21.
+
+Verifikation:
+
+- `.venv/bin/python -m pytest tests/test_capabilities.py tests/test_data_sync.py tests/test_orchestration.py`
+- `.venv/bin/python -m compileall data universes indicators strategies simulation evaluation live cli shared tests`
 
 Ziel:
 
@@ -1449,14 +1467,40 @@ Ziel:
 
 Umfang:
 
-- Zielstruktur fuer `assets.asset_class`, Canonical-/Display-Symbole,
-  Provider-Symbole, Markt und Quote-Waehrung konkretisieren.
-- Entscheiden, ob Provider-Identifier direkt an `assets` oder in separaten
-  Mapping-Tabellen modelliert werden.
-- Fixture, Migration und DB-Integrationstests fuer die gewaehlte Linie
-  vorbereiten.
+- `assets` enthaelt jetzt `asset_class`, Canonical-/Display-Symbol,
+  Instrumenttyp, Exchange, Markt, Quote-Waehrung und Primaer-Provider.
+- Provider-Identifier werden in der separaten Tabelle
+  `asset_provider_identifiers` modelliert.
+- Fixture, Repository, Status-CLI, Setup-/Smoke-Checks und
+  DB-Integrationserwartungen wurden fuer diese Linie angepasst.
+- Der Capability-Checker kann supplied Asset-Metadaten und
+  Provider-Identifier-Coverage validieren.
 - Sicherstellen, dass der bestehende AP14/AP20-Default-Pfad unveraendert
   lauffaehig bleibt.
+
+Status: abgeschlossen in AP21.
+
+Verifikation:
+
+- `.venv/bin/python -m pytest tests/test_capabilities.py tests/test_data_sync.py tests/test_orchestration.py`
+- `.venv/bin/python -m compileall data universes indicators strategies simulation evaluation live cli shared tests`
+
+### AP22: Provider-Symbolaufloesung und Universums-Metadaten
+
+Ziel:
+
+- Die AP21-Identifier-Basis fuer echte Provider-/Source-Binding-Workflows
+  nutzen.
+
+Umfang:
+
+- Provider-spezifische Symbolaufloesung in den modularen Sync-Pfad integrieren.
+- Explizitere Universums-Metadaten fuer Membership-Quelle, Assetklassen-Policy
+  und Identifier-Anforderungen modellieren.
+- Providerwechsel anhand tatsaechlicher Identifier-Abdeckung im relevanten
+  Universum bewerten.
+- Den bestehenden `mysql_fixture`-Default-Pfad als Referenz unveraendert
+  lauffaehig halten.
 
 Status: naechster Schritt.
 
@@ -1485,6 +1529,8 @@ Status: naechster Schritt.
 20. Provider-/API-Bindings und Source-of-Truth je Datenart planen.
 21. Read-only Capability- und Provider-Check fuer bestehende Strategie- und Datenpfade
     einfuehren.
+22. Asset-Katalog und Provider-Identifier-Basis konkretisieren.
+23. Provider-Symbolaufloesung und explizitere Universums-Metadaten umsetzen.
 
 ## Testing Und Akzeptanz
 

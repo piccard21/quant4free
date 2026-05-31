@@ -1,6 +1,6 @@
 # Datenmodell-Plan
 
-Stand: AP20.
+Stand: AP21.
 
 Dieses Dokument beschreibt den Zielzustand des neuen modularen Quant-Frameworks.
 AP14 ersetzt die bisherige Uebergangsentscheidung, legacy-kompatible Tabellen
@@ -17,8 +17,9 @@ angebunden werden koennen. Die detaillierte Capability-Matrix und
 Migrationslinie stehen in [docs/data-capabilities.md](data-capabilities.md);
 das Provider-Binding-Modell steht in
 [docs/provider-api-model.md](provider-api-model.md). AP20 setzt diese
-Capability-/Provider-Pruefung in Python um, fuehrt aber weiterhin keine
-Schemaaenderung ein.
+Capability-/Provider-Pruefung in Python um. AP21 konkretisiert den
+Asset-Katalog im Schema und fuehrt provider-spezifische Identifier-Mappings
+ein.
 
 ## Leitlinien
 
@@ -73,6 +74,7 @@ AP14-Zieltabellen:
 
 ```text
 assets
+asset_provider_identifiers
 asset_price_bars
 asset_fundamental_reports
 asset_market_caps
@@ -83,7 +85,8 @@ Zweck:
 
 | Tabelle | Zweck |
 |---|---|
-| `assets` | Wertpapier-Stammdaten. Ersetzt `tickers`; `symbol` bleibt fachlicher Ticker, aber nicht mehr Tabellenname/PK-Konzept der gesamten DB. |
+| `assets` | Asset-Stammdaten inklusive Assetklasse, Canonical-/Display-Symbol, Instrumenttyp, Markt und Quote-Waehrung. Ersetzt `tickers`; `ticker` bleibt aktueller FK fuer den kanonischen Pfad. |
+| `asset_provider_identifiers` | Provider-spezifische Symbole und optionale stabile IDs je Asset. |
 | `asset_price_bars` | Tägliche OHLCV-Preisbars. Ersetzt `daily_candles`. |
 | `asset_fundamental_reports` | Annual-/TTM-Fundamentaldaten. Ersetzt `financial_reports`. |
 | `asset_market_caps` | Market-Cap-Zeitreihe. Ersetzt `market_cap_snapshots`. |
@@ -92,10 +95,13 @@ Zweck:
 `tickers.is_active` wird nicht in `assets` uebernommen. Aktive
 Universumsmitgliedschaft gehoert in `universe_members`.
 
-AP18-Zielpraezisierung:
+AP18/AP21-Zielpraezisierung:
 
-- `assets` bleibt der zentrale Asset-Katalog, soll spaeter aber Assetklassen
-  wie `equity`, `etf`, `crypto`, `cash`, `fx` oder `future` tragen koennen.
+- `assets` bleibt der zentrale Asset-Katalog und traegt seit AP21 explizite
+  Assetklassen wie `equity` oder `etf`; weitere Klassen wie `crypto`, `cash`,
+  `fx` oder `future` sind fachlich vorbereitet.
+- `asset_provider_identifiers` trennt interne Asset-Symbole von
+  provider-spezifischen Symbolen und IDs.
 - `asset_price_bars` bleibt die generische Quelle fuer taegliche OHLCV-Daten,
   sofern eine Assetklasse solche Preisbars besitzt.
 - `asset_fundamental_reports` ist aktienspezifisch und darf nicht als
@@ -424,6 +430,30 @@ Status: abgeschlossen als Dokumentations-/Design-AP.
 - Provider-spezifische Identifier werden als spaeterer notwendiger
   Mapping-Bereich dokumentiert.
 - Keine Schema- oder Codeaenderungen wurden in AP19 umgesetzt.
+
+### AP20: Capability- und Provider-Check
+
+Status: abgeschlossen als read-only Code-AP.
+
+- `shared.capabilities` deklariert Capability-Schluessel, Source-Rollen,
+  Provider-Capabilities, Universe-Profile und Anforderungen fuer Strategie,
+  Indikatoren, Benchmarks und Live-Workflows.
+- Der aktuelle Default-Pfad bleibt gueltig, inkompatible Provider- oder
+  Universe-Kombinationen werden frueh abgelehnt.
+- Keine Schemaaenderungen wurden in AP20 umgesetzt.
+
+### AP21: Asset-Katalog und Provider-Identifier
+
+Status: abgeschlossen als Schema-/Repository-AP.
+
+- `assets` enthaelt Assetklasse, Canonical-/Display-Symbol, Instrumenttyp,
+  Exchange, Markt, Quote-Waehrung und Primaer-Provider.
+- `asset_provider_identifiers` modelliert provider-spezifische Symbole und
+  optionale stabile Provider-IDs.
+- Repository-Upserts erzeugen fuer den Default-Pfad automatisch
+  `mysql_fixture`-Ticker-Mappings.
+- Der Capability-Checker kann supplied Asset-Metadaten und
+  Provider-Identifier-Coverage optional auswerten.
 
 ## Initialer Schema-Sketch
 

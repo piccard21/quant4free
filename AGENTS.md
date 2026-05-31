@@ -43,7 +43,8 @@ schema with the canonical modular schema.
 AP2, AP3, and AP4 are complete. The new modular framework can read raw fixture
 data from MySQL through the new data-provider layer. The canonical fixture is
 `fixtures/raw_market_data.sql`, which contains only `assets`,
-`asset_price_bars`, `asset_fundamental_reports`, and `asset_market_caps`.
+`asset_provider_identifiers`, `asset_price_bars`,
+`asset_fundamental_reports`, and `asset_market_caps`.
 
 AP5 is complete: selectable universes and benchmarks are implemented through
 configuration keys.
@@ -86,7 +87,9 @@ decision-log, trade-plan-summary, and trade-plan-snapshot artifacts.
 
 AP14 is complete: the regular modular path now uses canonical tables instead
 of legacy-compatible tables. Raw data uses `assets`, `asset_price_bars`,
-`asset_fundamental_reports`, and `asset_market_caps`. Live/operations uses
+`asset_fundamental_reports`, and `asset_market_caps`; AP21 adds
+`asset_provider_identifiers` for provider-specific symbols and IDs.
+Live/operations uses
 `strategy_instances`, `strategy_config_snapshots`, `portfolio_target_items`,
 `live_rebalance_items`, `live_decision_items`, `live_trade_plans`,
 `live_trade_plan_items`, `live_trade_executions`, `live_cash_ledger`,
@@ -148,9 +151,23 @@ dependency. Verification for AP20:
 `.venv/bin/python -m pytest tests/test_capabilities.py tests/test_orchestration.py`
 and `.venv/bin/python -m compileall shared cli tests`.
 
-AP21 is planned next: concretize the asset catalog and provider identifier
-basis for multiple asset classes so the AP20 checker can move from code-only
-profiles toward real asset metadata and provider identifier coverage.
+AP21 is complete: the canonical asset catalog now has explicit metadata for
+asset class, canonical/display symbols, instrument type, exchange, market,
+quote currency, and primary provider. Provider-specific identifiers are modeled
+in `asset_provider_identifiers`. `RawDataRepository` can read/write these
+fields, upserts create default `mysql_fixture` ticker mappings, and
+`shared.capabilities` can validate supplied asset metadata plus provider
+identifier coverage. The strategy orchestration now passes real member
+metadata and identifier coverage into the checker when the provider exposes it.
+The fixture and schema include the new table and classify benchmark ETFs as
+`etf`. Verification for AP21:
+`.venv/bin/python -m pytest tests/test_capabilities.py tests/test_data_sync.py tests/test_orchestration.py`
+and
+`.venv/bin/python -m compileall data universes indicators strategies simulation evaluation live cli shared tests`.
+
+AP22 is planned next: use the AP21 identifier basis for real provider/source
+binding workflows, including provider-specific symbol resolution during sync
+and more explicit universe membership metadata.
 
 ## Build, Test, and Development Commands
 

@@ -46,8 +46,11 @@ Langfristig relevante Asset-Metadaten:
 | `sector`/`industry` | Nur fuer Assetklassen, bei denen diese Klassifikation sinnvoll ist. |
 | Provider-IDs | Provider-spezifische Kennungen fuer Yahoo, SimFin, CoinGecko usw. |
 
-AP18 aendert die Tabelle noch nicht. Die Felder sind die dokumentierte
-Zielrichtung fuer einen spaeteren Implementierungs-AP.
+AP21 hat diese Zielrichtung technisch begonnen: `assets` enthaelt jetzt
+Assetklasse, Canonical-/Display-Symbol, Instrumenttyp, Exchange, Markt,
+Quote-Waehrung und Primaer-Provider. Provider-spezifische Symbole und IDs
+liegen in `asset_provider_identifiers`, damit mehrere Provider parallel pro
+Asset abgebildet werden koennen.
 
 ### Assetklasse
 
@@ -200,20 +203,19 @@ APs erfolgen:
 3. Erledigt in AP20: Einen read-only Capability- und Provider-Checker bauen,
    der die vorhandenen AP14-Tabellen sowie Default-Bindings prueft und fuer den
    aktuellen Default-Pfad gruen ist.
-4. `assets` um Assetklassen- und Symbol-Metadaten erweitern.
-5. Historisierte `universes`/`universe_members` als echte Tabellen einfuehren,
+4. Erledigt in AP21: `assets` um Assetklassen- und Symbol-Metadaten
+   erweitern.
+5. Erledigt in AP21: Identifier-Mapping fuer Provider einfuehren.
+6. Historisierte `universes`/`universe_members` als echte Tabellen einfuehren,
    falls Code-Konfiguration nicht mehr reicht.
-6. Provider-Capabilities pro Datenquelle beschreiben.
-7. Neue Assetklassen wie Krypto erst anbinden, wenn deren Minimal-Capability
+7. Provider-Capabilities pro Datenquelle beschreiben.
+8. Neue Assetklassen wie Krypto erst anbinden, wenn deren Minimal-Capability
    und Fixture-Pfad definiert sind.
 
-## AP18-AP20-Abgrenzung
+## AP18-AP21-Abgrenzung
 
-Nicht Teil von AP18-AP20:
+Nicht Teil von AP18-AP21:
 
-- keine Migration von `init.sql`
-- keine neuen Tabellen
-- keine persistente Aenderung der Repository- oder Strategie-Contracts
 - keine neue Provider-Anbindung
 - keine Krypto-Implementierung
 
@@ -221,4 +223,6 @@ AP18 ist abgeschlossen: Begriffe, Capability-Matrix, Validierungslogik und
 Migrationslinie sind dokumentiert. AP19 ist abgeschlossen: Provider- und
 API-Bindings sind dokumentiert. AP20 ist abgeschlossen: `shared.capabilities`
 enthaelt den read-only Capability- und Provider-Checker fuer den aktuellen
-Default-Pfad sowie negative Capability-/Provider-Faelle.
+Default-Pfad sowie negative Capability-/Provider-Faelle. AP21 ist
+abgeschlossen: Asset-Metadaten und Provider-Identifier sind im Schema, in der
+Fixture, im Repository und optional im Capability-Check verankert.

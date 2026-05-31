@@ -55,6 +55,14 @@ AP20-Einordnung:
 - Die Strategie bleibt selbst provideragnostisch; die Validierung sitzt vor
   Strategieausfuehrung und CLI-Orchestrierung.
 
+AP21-Einordnung:
+
+- Die Strategie-Orchestrierung reicht echte Member-Metadaten und
+  Provider-Identifier-Coverage an den Capability-Checker weiter, wenn der
+  Provider diese Informationen liefern kann.
+- Die Strategie selbst arbeitet weiterhin nur mit normalisierten DataFrames und
+  bleibt von provider-spezifischen Symbolen entkoppelt.
+
 Smoke-Check:
 
 ```bash

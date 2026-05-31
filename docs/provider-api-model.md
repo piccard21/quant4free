@@ -97,9 +97,11 @@ ein internes Asset-Modell mit provider-spezifischen Identifiern.
 | `exchange`/`market` | Disambiguierung bei Symbolkollisionen. |
 | `quote_currency` | Bewertungswaehrung fuer Preise und Portfolio-Bewertung. |
 
-AP20 migriert noch kein vollstaendiges Identifier-Schema. Der
-Capability-Checker ist so entworfen, dass ein spaeteres Identifier-Mapping
-nicht gegen seine Annahmen arbeitet.
+AP21 fuehrt die erste technische Identifier-Basis ein. `assets` enthaelt die
+internen Asset-Metadaten, und `asset_provider_identifiers` speichert
+provider-spezifische Symbole und optionale stabile Provider-IDs. Der
+Capability-Checker kann optional pruefen, ob fuer die relevanten Ticker und
+Source-Rollen Provider-Identifier vorhanden sind.
 
 ## Binding-Regeln
 
@@ -198,18 +200,16 @@ AP19 blieb Design. AP20 hat die technische Umsetzung begonnen:
    Anforderungen prueft.
 5. Erledigt in AP20: Negative Tests fuer inkompatible Provider-/Universums-
    Kombinationen ergaenzen.
-6. Spaetere APs koennen `data_providers`, `provider_configs`,
-   provider-spezifische Identifier und echte Multi-Provider-Syncs in das Schema
+6. Erledigt in AP21: provider-spezifische Identifier in das Schema
    ueberfuehren.
+7. Spaetere APs koennen `data_providers`, `provider_configs` und echte
+   Multi-Provider-Syncs in das Schema ueberfuehren.
 
-## AP19-Abgrenzung
+## AP19-AP21-Abgrenzung
 
-Nicht Teil von AP19:
+Nicht Teil von AP19-AP21:
 
 - keine neue API-Anbindung
-- keine Migration von `init.sql`
-- keine neuen Provider-Tabellen
-- kein vollstaendiges Identifier-Mapping
 - keine Aenderung der produktiven Sync-CLIs
 - keine Aenderung am laufenden S&P-500-Default-Pfad
 
@@ -217,5 +217,7 @@ AP19 ist abgeschlossen: Provider/API-Bindings, Source-of-Truth je Datenart,
 Provider-Capabilities, Identifier-Anforderungen, Austauschbarkeitsregeln und
 die angepasste AP20-Implementierungslinie sind dokumentiert. AP20 ist
 abgeschlossen: `shared.capabilities` validiert den aktuellen Default-Pfad
-read-only und prueft negative Provider-/Source-Binding-Faelle ohne
-Schemaaenderung.
+read-only und prueft negative Provider-/Source-Binding-Faelle. AP21 ist
+abgeschlossen: `asset_provider_identifiers` bildet provider-spezifische
+Symbole/IDs ab, und der Capability-Check kann Identifier-Coverage optional
+auswerten.

@@ -1,16 +1,17 @@
 # Architektur
 
-Stand: AP20.
+Stand: AP21.
 
 Das neue Framework ist der regulaere operative Pfad. Legacy-Code liegt nur noch
 als archivierte Referenz unter `legacy/current_system/`.
 
 ## Module
 
-- `data/`: Provider, Sync und Zugriff auf `assets`, `asset_price_bars`,
+- `data/`: Provider, Sync und Zugriff auf `assets`,
+  `asset_provider_identifiers`, `asset_price_bars`,
   `asset_fundamental_reports`, `asset_market_caps`. AP18 ordnet diese
-  Tabellen als Capability-Quellen ein: Preise sind generisch, Fundamentals
-  aktienspezifisch, Market Caps optional je Assetklasse.
+  Tabellen als Capability-Quellen ein; AP21 trennt interne Assets von
+  provider-spezifischen Symbolen.
 - `universes/`: Universumsdefinitionen, aktuell ueber aktive Assets. Fachlich
   sind Universen Asset-Auswahlen und keine impliziten Datenanforderungen.
 - `indicators/`: modulare Indikatorberechnung.
@@ -29,6 +30,7 @@ als archivierte Referenz unter `legacy/current_system/`.
 Rohdaten:
 
 - `assets`
+- `asset_provider_identifiers`
 - `asset_price_bars`
 - `asset_fundamental_reports`
 - `asset_market_caps`
@@ -47,14 +49,15 @@ Live/Operations:
 - `live_cash_balances`
 - `live_positions`
 
-## AP18/AP19 Capability- und Provider-Modell
+## AP18-AP21 Capability- und Provider-Modell
 
-AP18 und AP19 fuehren noch keine neuen Tabellen oder Contracts ein. Die
-Architektur wird aber fachlich auf ein Capability- und Provider-Binding-Modell
-ausgerichtet:
+AP18 und AP19 richten die Architektur fachlich auf ein Capability- und
+Provider-Binding-Modell aus. AP20 setzt die read-only Pruefung in Code um.
+AP21 verankert Asset-Metadaten und Provider-Identifier im kanonischen Schema:
 
-- `assets` ist der allgemeine Asset-Katalog, auch wenn das aktuelle Schema noch
-  aktiennah ist.
+- `assets` ist der allgemeine Asset-Katalog mit Assetklasse,
+  Canonical-/Display-Symbol, Instrumenttyp, Markt und Quote-Waehrung.
+- `asset_provider_identifiers` speichert provider-spezifische Symbole und IDs.
 - Assetklassen wie `equity`, `etf`, `crypto`, `cash`, `fx` und `future`
   bestimmen, welche Datenarten sinnvoll sind.
 - Universen sind Asset-Auswahlen und duerfen nicht implizit eine konkrete API
@@ -69,8 +72,10 @@ ausgerichtet:
   verlangt.
 - Seit AP20 prueft ein read-only Capability-Checker in `shared.capabilities`,
   ob Universum, Provider-Bindings und deklarierte Anforderungen fuer den
-  aktuellen Lauf zusammenpassen. Identifier-Abdeckung und echte Asset-Metadaten
-  bleiben AP21+.
+  aktuellen Lauf zusammenpassen.
+- Seit AP21 kann der Checker supplied Asset-Metadaten und
+  Provider-Identifier-Coverage auswerten; die Strategie-Orchestrierung reicht
+  diese Daten durch, wenn der Provider sie melden kann.
 
 Details stehen in [Assetklassen, Universen und Daten-Capabilities](data-capabilities.md)
 und [Provider-, API- und Source-Binding-Modell](provider-api-model.md).

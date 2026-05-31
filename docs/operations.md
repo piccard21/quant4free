@@ -509,6 +509,7 @@ docker compose run --rm app python -m cli.live_trade --execution-type SELL --tic
 Rohdaten:
 
 - `assets`
+- `asset_provider_identifiers`
 - `asset_price_bars`
 - `asset_fundamental_reports`
 - `asset_market_caps`

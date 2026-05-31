@@ -10,23 +10,58 @@ SET time_zone = '+00:00';
 -- ###########################################################################
 
 CREATE TABLE IF NOT EXISTS assets (
-    ticker VARCHAR(10) PRIMARY KEY,
+    ticker VARCHAR(32) PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     sector VARCHAR(255),
+    asset_class VARCHAR(32) NOT NULL DEFAULT 'equity',
+    canonical_symbol VARCHAR(64),
+    display_symbol VARCHAR(64),
+    instrument_type VARCHAR(32) NOT NULL DEFAULT 'stock',
+    exchange_code VARCHAR(64),
+    market VARCHAR(64) DEFAULT 'US',
+    quote_currency CHAR(3) NOT NULL DEFAULT 'USD',
+    primary_provider_key VARCHAR(64) DEFAULT 'mysql_fixture',
     is_active TINYINT(1) NOT NULL DEFAULT 1,
     first_seen DATETIME,
     last_seen DATETIME,
     removed_at DATETIME,
     last_fundamental_update DATETIME,
 
+    KEY idx_assets_asset_class (asset_class),
+    KEY idx_assets_canonical_symbol (canonical_symbol),
     KEY idx_assets_is_active (is_active),
     KEY idx_assets_last_fundamental_update (last_fundamental_update)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
 COMMENT='Canonical asset master data';
 
 
+CREATE TABLE IF NOT EXISTS asset_provider_identifiers (
+    ticker VARCHAR(32) NOT NULL,
+    provider_key VARCHAR(64) NOT NULL,
+    identifier_scheme VARCHAR(64) NOT NULL DEFAULT 'ticker',
+    provider_symbol VARCHAR(128) NOT NULL,
+    provider_asset_id VARCHAR(128),
+    exchange_code VARCHAR(64),
+    market VARCHAR(64),
+    quote_currency CHAR(3),
+    is_primary TINYINT(1) NOT NULL DEFAULT 0,
+    valid_from DATE,
+    valid_to DATE,
+    imported_at DATETIME,
+
+    PRIMARY KEY (ticker, provider_key, identifier_scheme, provider_symbol),
+    KEY idx_asset_provider_identifiers_provider_lookup
+        (provider_key, identifier_scheme, provider_symbol),
+    KEY idx_asset_provider_identifiers_ticker_provider (ticker, provider_key),
+
+    CONSTRAINT fk_asset_provider_identifiers_asset
+        FOREIGN KEY (ticker) REFERENCES assets(ticker) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+COMMENT='Provider-specific asset identifiers and symbols';
+
+
 CREATE TABLE IF NOT EXISTS asset_price_bars (
-    ticker VARCHAR(10) NOT NULL,
+    ticker VARCHAR(32) NOT NULL,
     date DATE NOT NULL,
     open DECIMAL(20,4),
     high DECIMAL(20,4),
@@ -44,7 +79,7 @@ COMMENT='Canonical daily OHLCV price bars';
 
 
 CREATE TABLE IF NOT EXISTS asset_fundamental_reports (
-    ticker VARCHAR(10) NOT NULL,
+    ticker VARCHAR(32) NOT NULL,
     report_date DATE NOT NULL,
     report_type ENUM('annual', 'ttm') NOT NULL,
 
@@ -69,7 +104,7 @@ COMMENT='Canonical annual and TTM fundamental reports';
 
 
 CREATE TABLE IF NOT EXISTS asset_market_caps (
-    ticker VARCHAR(10) NOT NULL,
+    ticker VARCHAR(32) NOT NULL,
     date DATE NOT NULL,
     market_cap BIGINT,
     imported_at DATETIME,
@@ -212,7 +247,7 @@ COMMENT='Frozen operational configuration per live run date';
 CREATE TABLE IF NOT EXISTS portfolio_target_items (
     as_of_date DATE NOT NULL,
     snapshot_type VARCHAR(20) NOT NULL,
-    ticker VARCHAR(10) NOT NULL,
+    ticker VARCHAR(32) NOT NULL,
 
     portfolio_rank INT,
     source_rank INT,
@@ -239,7 +274,7 @@ COMMENT='Frozen model and shadow target portfolio items';
 
 CREATE TABLE IF NOT EXISTS live_rebalance_items (
     as_of_date DATE NOT NULL,
-    ticker VARCHAR(10) NOT NULL,
+    ticker VARCHAR(32) NOT NULL,
     sector VARCHAR(100),
     action VARCHAR(20) NOT NULL,
     reason VARCHAR(255),
@@ -266,7 +301,7 @@ COMMENT='Frozen live rebalance actions';
 
 CREATE TABLE IF NOT EXISTS live_decision_items (
     as_of_date DATE NOT NULL,
-    ticker VARCHAR(10) NOT NULL,
+    ticker VARCHAR(32) NOT NULL,
     action VARCHAR(20) NOT NULL,
     reason VARCHAR(255),
     source_rank INT,
@@ -324,7 +359,7 @@ COMMENT='Concrete capital-aware live trade plan summary';
 
 CREATE TABLE IF NOT EXISTS live_trade_plan_items (
     as_of_date DATE NOT NULL,
-    ticker VARCHAR(10) NOT NULL,
+    ticker VARCHAR(32) NOT NULL,
     action VARCHAR(20) NOT NULL,
     reason VARCHAR(255),
     execution_order INT,
@@ -364,7 +399,7 @@ COMMENT='Concrete live trade plan items';
 
 CREATE TABLE IF NOT EXISTS live_positions (
     position_id INT AUTO_INCREMENT PRIMARY KEY,
-    ticker VARCHAR(10) NOT NULL,
+    ticker VARCHAR(32) NOT NULL,
     shares DECIMAL(20,6) NOT NULL,
     buy_price DECIMAL(20,6),
     opened_at DATETIME NOT NULL,
@@ -403,7 +438,7 @@ WHERE NOT EXISTS (
 CREATE TABLE IF NOT EXISTS live_trade_executions (
     id INT AUTO_INCREMENT PRIMARY KEY,
     as_of_date DATE NOT NULL,
-    ticker VARCHAR(10) NOT NULL,
+    ticker VARCHAR(32) NOT NULL,
     execution_type ENUM('BUY','SELL') NOT NULL,
     trade_plan_action ENUM('BUY','SELL','ADJUST_BUY','ADJUST_SELL'),
     executed_at DATETIME NOT NULL,
@@ -438,7 +473,7 @@ CREATE TABLE IF NOT EXISTS live_cash_ledger (
     id INT AUTO_INCREMENT PRIMARY KEY,
     booked_at DATETIME NOT NULL,
     as_of_date DATE NOT NULL,
-    ticker VARCHAR(10),
+    ticker VARCHAR(32),
     entry_type ENUM('trade_buy','trade_sell','tax_payment','deposit','withdrawal','correction') NOT NULL,
     amount DECIMAL(20,6) NOT NULL,
     balance_after DECIMAL(20,6) NOT NULL,

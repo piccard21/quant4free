@@ -9,30 +9,62 @@ SET FOREIGN_KEY_CHECKS = 0;
 DROP TABLE IF EXISTS `asset_market_caps`;
 DROP TABLE IF EXISTS `asset_fundamental_reports`;
 DROP TABLE IF EXISTS `asset_price_bars`;
+DROP TABLE IF EXISTS `asset_provider_identifiers`;
 DROP TABLE IF EXISTS `assets`;
 
 --
 -- Table structure for `assets`
 --
 CREATE TABLE `assets` (
-  `ticker` varchar(10) NOT NULL COMMENT 'Eindeutiges Börsenkürzel des Unternehmens, z. B. AAPL oder BRK-B',
+  `ticker` varchar(32) NOT NULL COMMENT 'Eindeutiges Börsenkürzel des Unternehmens, z. B. AAPL oder BRK-B',
   `name` varchar(255) NOT NULL COMMENT 'Offizieller Firmenname laut Quellen wie Wikipedia oder Yahoo Finance',
   `sector` varchar(255) DEFAULT NULL COMMENT 'GICS-Sektor des Unternehmens',
+  `asset_class` varchar(32) NOT NULL DEFAULT 'equity' COMMENT 'Assetklasse, z. B. equity, etf oder crypto',
+  `canonical_symbol` varchar(64) DEFAULT NULL COMMENT 'Eindeutiges internes Symbol',
+  `display_symbol` varchar(64) DEFAULT NULL COMMENT 'Operator-Anzeigesymbol',
+  `instrument_type` varchar(32) NOT NULL DEFAULT 'stock' COMMENT 'Instrumenttyp innerhalb der Assetklasse',
+  `exchange_code` varchar(64) DEFAULT NULL COMMENT 'Handelsplatz oder Boerse, sofern bekannt',
+  `market` varchar(64) DEFAULT 'US' COMMENT 'Markt oder Region',
+  `quote_currency` char(3) NOT NULL DEFAULT 'USD' COMMENT 'Bewertungswaehrung',
+  `primary_provider_key` varchar(64) DEFAULT 'mysql_fixture' COMMENT 'Primaerer Provider fuer das Default-Identifier-Mapping',
   `is_active` tinyint(1) NOT NULL DEFAULT '1' COMMENT '1 = aktuell im S&P 500, 0 = entfernt; aktuell noch operative Hilfsspalte',
   `first_seen` datetime DEFAULT NULL COMMENT 'Erstes Auftreten im System',
   `last_seen` datetime DEFAULT NULL COMMENT 'Letzte Bestätigung im Index',
   `removed_at` datetime DEFAULT NULL COMMENT 'Zeitpunkt der Entfernung aus dem Index',
   `last_fundamental_update` datetime DEFAULT NULL COMMENT 'Letztes Update der Fundamentaldaten',
   PRIMARY KEY (`ticker`),
+  KEY `idx_assets_asset_class` (`asset_class`),
+  KEY `idx_assets_canonical_symbol` (`canonical_symbol`),
   KEY `idx_assets_is_active` (`is_active`),
   KEY `idx_assets_last_fundamental_update` (`last_fundamental_update`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Canonical asset master data';
 
 --
+-- Table structure for `asset_provider_identifiers`
+--
+CREATE TABLE `asset_provider_identifiers` (
+  `ticker` varchar(32) NOT NULL COMMENT 'Internes Asset-Ticker-Symbol',
+  `provider_key` varchar(64) NOT NULL COMMENT 'Provider-Schluessel',
+  `identifier_scheme` varchar(64) NOT NULL DEFAULT 'ticker' COMMENT 'Identifier-Schema des Providers',
+  `provider_symbol` varchar(128) NOT NULL COMMENT 'Symbol oder Identifier beim Provider',
+  `provider_asset_id` varchar(128) DEFAULT NULL COMMENT 'Optionaler stabiler Provider-Identifier',
+  `exchange_code` varchar(64) DEFAULT NULL COMMENT 'Provider- oder Markt-Boerse',
+  `market` varchar(64) DEFAULT NULL COMMENT 'Provider-Markt',
+  `quote_currency` char(3) DEFAULT NULL COMMENT 'Provider-Quote-Waehrung',
+  `is_primary` tinyint(1) NOT NULL DEFAULT '0' COMMENT 'Primaeres Mapping fuer diesen Provider',
+  `valid_from` date DEFAULT NULL COMMENT 'Beginn der Gueltigkeit',
+  `valid_to` date DEFAULT NULL COMMENT 'Ende der Gueltigkeit',
+  `imported_at` datetime DEFAULT NULL COMMENT 'Importzeitpunkt',
+  PRIMARY KEY (`ticker`,`provider_key`,`identifier_scheme`,`provider_symbol`),
+  KEY `idx_asset_provider_identifiers_provider_lookup` (`provider_key`,`identifier_scheme`,`provider_symbol`),
+  KEY `idx_asset_provider_identifiers_ticker_provider` (`ticker`,`provider_key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Provider-specific asset identifiers and symbols';
+
+--
 -- Table structure for `asset_price_bars`
 --
 CREATE TABLE `asset_price_bars` (
-  `ticker` varchar(10) NOT NULL COMMENT 'Ticker (FK)',
+  `ticker` varchar(32) NOT NULL COMMENT 'Ticker (FK)',
   `date` date NOT NULL COMMENT 'Handelstag',
   `open` decimal(20,4) DEFAULT NULL COMMENT 'Eröffnungskurs',
   `high` decimal(20,4) DEFAULT NULL COMMENT 'Tageshoch',
@@ -47,7 +79,7 @@ CREATE TABLE `asset_price_bars` (
 -- Table structure for `asset_fundamental_reports`
 --
 CREATE TABLE `asset_fundamental_reports` (
-  `ticker` varchar(10) NOT NULL COMMENT 'Ticker (FK)',
+  `ticker` varchar(32) NOT NULL COMMENT 'Ticker (FK)',
   `report_date` date NOT NULL COMMENT 'Berichtsdatum',
   `report_type` enum('annual','ttm') NOT NULL COMMENT 'Berichtstyp (annual / ttm)',
   `revenue` bigint DEFAULT '0' COMMENT 'Umsatz',
@@ -67,7 +99,7 @@ CREATE TABLE `asset_fundamental_reports` (
 -- Table structure for `asset_market_caps`
 --
 CREATE TABLE `asset_market_caps` (
-  `ticker` varchar(10) NOT NULL COMMENT 'Ticker (FK)',
+  `ticker` varchar(32) NOT NULL COMMENT 'Ticker (FK)',
   `date` date NOT NULL COMMENT 'Datum des Snapshots',
   `market_cap` bigint DEFAULT NULL COMMENT 'Marktkapitalisierung',
   `imported_at` datetime DEFAULT NULL COMMENT 'Importzeitpunkt',
@@ -587,6 +619,51 @@ INSERT INTO `assets` (`ticker`, `name`, `sector`, `is_active`, `first_seen`, `la
   ('ZBH', 'Zimmer Biomet', 'Health Care', 1, '2026-04-22 07:41:34', '2026-05-23 03:00:05', NULL, '2026-05-15 01:02:52'),
   ('ZBRA', 'Zebra Technologies', 'Information Technology', 1, '2026-04-22 07:41:34', '2026-05-23 03:00:05', NULL, '2026-05-15 01:02:57'),
   ('ZTS', 'Zoetis', 'Health Care', 1, '2026-04-22 07:41:34', '2026-05-23 03:00:05', NULL, '2026-05-15 01:03:01');
+
+UPDATE `assets`
+SET
+  `canonical_symbol` = `ticker`,
+  `display_symbol` = `ticker`,
+  `market` = 'US',
+  `quote_currency` = 'USD',
+  `primary_provider_key` = 'mysql_fixture'
+WHERE `canonical_symbol` IS NULL;
+
+UPDATE `assets`
+SET
+  `asset_class` = 'etf',
+  `instrument_type` = 'etf',
+  `sector` = NULL
+WHERE `ticker` IN ('SPY', 'QQQ', 'IWM');
+
+INSERT INTO `asset_provider_identifiers` (
+  `ticker`,
+  `provider_key`,
+  `identifier_scheme`,
+  `provider_symbol`,
+  `provider_asset_id`,
+  `exchange_code`,
+  `market`,
+  `quote_currency`,
+  `is_primary`,
+  `valid_from`,
+  `valid_to`,
+  `imported_at`
+)
+SELECT
+  `ticker`,
+  'mysql_fixture',
+  'ticker',
+  `ticker`,
+  NULL,
+  `exchange_code`,
+  `market`,
+  `quote_currency`,
+  1,
+  NULL,
+  NULL,
+  `last_seen`
+FROM `assets`;
 
 --
 -- Data for `asset_price_bars` (200962 rows)

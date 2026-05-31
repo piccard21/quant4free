@@ -249,6 +249,7 @@ verify_canonical_schema() {
   mysql_exec "
     USE ${DB_NAME};
     SELECT 'assets' AS table_name, COUNT(*) AS row_count FROM assets
+    UNION ALL SELECT 'asset_provider_identifiers', COUNT(*) FROM asset_provider_identifiers
     UNION ALL SELECT 'asset_price_bars', COUNT(*) FROM asset_price_bars
     UNION ALL SELECT 'asset_fundamental_reports', COUNT(*) FROM asset_fundamental_reports
     UNION ALL SELECT 'asset_market_caps', COUNT(*) FROM asset_market_caps

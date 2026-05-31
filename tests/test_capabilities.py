@@ -1,7 +1,9 @@
 import pytest
 
 from shared.capabilities import (
+    AssetMetadata,
     CapabilityValidationError,
+    ProviderIdentifierCoverage,
     SOURCE_ROLE_FUNDAMENTALS,
     validate_indicator_run_capabilities,
     validate_live_capabilities,
@@ -53,6 +55,49 @@ def test_strategy_capability_check_rejects_equity_strategy_on_crypto_universe():
     assert "strategy=value_quality_momentum cannot run with universe=crypto_top_liquid" in message
     assert "missing capability fundamentals.equity_reports" in message
     assert "asset_class=crypto" in message
+
+
+def test_strategy_capability_check_uses_asset_metadata_when_supplied():
+    with pytest.raises(CapabilityValidationError) as exc_info:
+        validate_strategy_run_capabilities(
+            strategy_key="value_quality_momentum",
+            universe_key="sp500_active",
+            benchmark_key="spy",
+            provider_key="mysql_fixture",
+            asset_metadata=(
+                AssetMetadata(ticker="AAA", asset_class="equity"),
+                AssetMetadata(ticker="BTC-USD", asset_class="crypto"),
+            ),
+        )
+
+    assert str(exc_info.value) == (
+        "universe=sp500_active asset metadata contains unsupported "
+        "asset_class=crypto for ticker=BTC-USD"
+    )
+
+
+def test_strategy_capability_check_rejects_missing_provider_identifier_coverage():
+    with pytest.raises(CapabilityValidationError) as exc_info:
+        validate_strategy_run_capabilities(
+            strategy_key="value_quality_momentum",
+            universe_key="sp500_active",
+            benchmark_key="spy",
+            provider_key="mysql_fixture",
+            provider_identifier_coverage=(
+                ProviderIdentifierCoverage(
+                    source_role="prices",
+                    provider_key="mysql_fixture",
+                    identifier_scheme="ticker",
+                    required_tickers=("AAA", "BBB"),
+                    covered_tickers=("AAA",),
+                ),
+            ),
+        )
+
+    assert str(exc_info.value) == (
+        "provider=mysql_fixture missing provider identifier mapping "
+        "for source_role=prices identifier_scheme=ticker: tickers=BBB"
+    )
 
 
 def test_strategy_capability_check_rejects_provider_without_required_role():

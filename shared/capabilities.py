@@ -57,6 +57,33 @@ class ProviderCapability:
 
 
 @dataclass(frozen=True)
+class AssetMetadata:
+    ticker: str
+    asset_class: str
+    canonical_symbol: str | None = None
+    display_symbol: str | None = None
+    quote_currency: str | None = None
+
+
+@dataclass(frozen=True)
+class ProviderIdentifierCoverage:
+    source_role: str
+    provider_key: str
+    identifier_scheme: str
+    required_tickers: tuple[str, ...]
+    covered_tickers: tuple[str, ...]
+
+    @property
+    def missing_tickers(self) -> tuple[str, ...]:
+        covered = {ticker.upper() for ticker in self.covered_tickers}
+        return tuple(
+            ticker
+            for ticker in self.required_tickers
+            if ticker.upper() not in covered
+        )
+
+
+@dataclass(frozen=True)
 class SourceBinding:
     source_role: str
     provider_key: str
@@ -406,6 +433,8 @@ def validate_strategy_run_capabilities(
     benchmark_key: str = "spy",
     provider_key: str = "mysql_fixture",
     source_bindings: Mapping[str, str | None] | None = None,
+    asset_metadata: Sequence[AssetMetadata] | None = None,
+    provider_identifier_coverage: Sequence[ProviderIdentifierCoverage] | None = None,
 ) -> CapabilityCheckReport:
     requirements = [
         *requirements_for_strategy(strategy_key),
@@ -418,6 +447,8 @@ def validate_strategy_run_capabilities(
         provider_key=provider_key,
         requirements=requirements,
         source_bindings=source_bindings,
+        asset_metadata=asset_metadata,
+        provider_identifier_coverage=provider_identifier_coverage,
     )
 
 
@@ -427,6 +458,8 @@ def validate_indicator_run_capabilities(
     universe_key: str = "sp500_active",
     provider_key: str = "mysql_fixture",
     source_bindings: Mapping[str, str | None] | None = None,
+    asset_metadata: Sequence[AssetMetadata] | None = None,
+    provider_identifier_coverage: Sequence[ProviderIdentifierCoverage] | None = None,
 ) -> CapabilityCheckReport:
     requirements = _unique_requirements(
         requirement
@@ -440,6 +473,8 @@ def validate_indicator_run_capabilities(
         provider_key=provider_key,
         requirements=requirements,
         source_bindings=source_bindings,
+        asset_metadata=asset_metadata,
+        provider_identifier_coverage=provider_identifier_coverage,
     )
 
 
@@ -449,6 +484,8 @@ def validate_live_capabilities(
     benchmark_key: str | None = None,
     provider_key: str = "mysql_fixture",
     source_bindings: Mapping[str, str | None] | None = None,
+    asset_metadata: Sequence[AssetMetadata] | None = None,
+    provider_identifier_coverage: Sequence[ProviderIdentifierCoverage] | None = None,
 ) -> CapabilityCheckReport:
     requirements = [*requirements_for_live_workflow(live_workflow_key)]
     if benchmark_key is not None:
@@ -460,6 +497,8 @@ def validate_live_capabilities(
         provider_key=provider_key,
         requirements=requirements,
         source_bindings=source_bindings,
+        asset_metadata=asset_metadata,
+        provider_identifier_coverage=provider_identifier_coverage,
     )
 
 
@@ -471,13 +510,14 @@ def validate_capabilities(
     provider_key: str,
     requirements: Sequence[Requirement],
     source_bindings: Mapping[str, str | None] | None = None,
+    asset_metadata: Sequence[AssetMetadata] | None = None,
+    provider_identifier_coverage: Sequence[ProviderIdentifierCoverage] | None = None,
 ) -> CapabilityCheckReport:
     bindings = _resolve_source_bindings(provider_key, source_bindings)
     universe_profile = _universe_profile(universe_key) if universe_key else None
-    asset_classes = (
-        universe_profile.asset_classes
-        if universe_profile is not None
-        else (ASSET_CLASS_EQUITY,)
+    asset_classes = _asset_classes_from_metadata(
+        universe_profile,
+        asset_metadata,
     )
 
     if universe_profile is not None:
@@ -505,6 +545,11 @@ def validate_capabilities(
                 f"source_role={requirement.source_role}: "
                 f"missing capability {requirement.capability_key}"
             )
+    _validate_provider_identifier_coverage(
+        requirements,
+        bindings,
+        provider_identifier_coverage,
+    )
 
     return CapabilityCheckReport(
         strategy_key=strategy_key,
@@ -601,6 +646,72 @@ def _validate_universe_capabilities(
                 f"{prefix}universe={universe_profile.universe_key}: "
                 f"missing capability {requirement.capability_key} "
                 f"for asset_class={asset_classes}"
+            )
+
+
+def _asset_classes_from_metadata(
+    universe_profile: UniverseCapabilityProfile | None,
+    asset_metadata: Sequence[AssetMetadata] | None,
+) -> tuple[str, ...]:
+    if not asset_metadata:
+        if universe_profile is not None:
+            return universe_profile.asset_classes
+        return (ASSET_CLASS_EQUITY,)
+
+    asset_classes = tuple(
+        sorted({item.asset_class for item in asset_metadata if item.asset_class})
+    )
+    if not asset_classes:
+        if universe_profile is not None:
+            return universe_profile.asset_classes
+        return (ASSET_CLASS_EQUITY,)
+
+    if universe_profile is not None:
+        allowed = set(universe_profile.asset_classes)
+        unexpected = [
+            item
+            for item in asset_metadata
+            if item.asset_class and item.asset_class not in allowed
+        ]
+        if unexpected:
+            sample = unexpected[0]
+            raise CapabilityValidationError(
+                f"universe={universe_profile.universe_key} asset metadata "
+                f"contains unsupported asset_class={sample.asset_class} "
+                f"for ticker={sample.ticker}"
+            )
+    return asset_classes
+
+
+def _validate_provider_identifier_coverage(
+    requirements: Sequence[Requirement],
+    bindings: Mapping[str, str | None],
+    provider_identifier_coverage: Sequence[ProviderIdentifierCoverage] | None,
+) -> None:
+    if not provider_identifier_coverage:
+        return
+    coverage_by_role_provider = {
+        (coverage.source_role, coverage.provider_key): coverage
+        for coverage in provider_identifier_coverage
+    }
+    for requirement in requirements:
+        bound_provider = bindings.get(requirement.source_role)
+        if bound_provider is None:
+            continue
+        coverage = coverage_by_role_provider.get(
+            (requirement.source_role, bound_provider)
+        )
+        if coverage is None:
+            continue
+        missing = coverage.missing_tickers
+        if missing:
+            sample = ", ".join(missing[:5])
+            suffix = "" if len(missing) <= 5 else f", +{len(missing) - 5} more"
+            raise CapabilityValidationError(
+                f"provider={bound_provider} missing provider identifier mapping "
+                f"for source_role={requirement.source_role} "
+                f"identifier_scheme={coverage.identifier_scheme}: "
+                f"tickers={sample}{suffix}"
             )
 
 

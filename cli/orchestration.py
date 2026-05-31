@@ -53,7 +53,17 @@ def run_strategy_snapshot(
 ) -> StrategyRunArtifacts:
     from evaluation import create_benchmark
     from indicators import compute_indicators, create_indicators
-    from shared import CapabilityValidationError, validate_strategy_run_capabilities
+    from shared import (
+        AssetMetadata,
+        CapabilityValidationError,
+        validate_strategy_run_capabilities,
+    )
+    from shared.capabilities import (
+        SOURCE_ROLE_CLASSIFICATION,
+        SOURCE_ROLE_FUNDAMENTALS,
+        SOURCE_ROLE_MARKET_CAPS,
+        SOURCE_ROLE_PRICES,
+    )
     from strategies import StrategyContext, create_default_strategy
     from universes import create_universe
 
@@ -70,12 +80,42 @@ def run_strategy_snapshot(
             str(exc),
             hint="use cli.framework_status --list-configs",
         ) from exc
+    members = universe.load_members(config.as_of_date)
+    all_tickers = provider.list_tickers(active_only=False)
+    member_lookup = {ticker.upper() for ticker in members}
+    asset_metadata = tuple(
+        AssetMetadata(
+            ticker=ticker.ticker,
+            asset_class=ticker.asset_class,
+            canonical_symbol=ticker.canonical_symbol,
+            display_symbol=ticker.display_symbol,
+            quote_currency=ticker.quote_currency,
+        )
+        for ticker in all_tickers
+        if ticker.ticker.upper() in member_lookup
+    )
+    provider_identifier_coverage = tuple(
+        provider.provider_identifier_coverage(
+            source_role=source_role,
+            provider_key=provider.key,
+            tickers=members,
+        )
+        for source_role in (
+            SOURCE_ROLE_PRICES,
+            SOURCE_ROLE_FUNDAMENTALS,
+            SOURCE_ROLE_MARKET_CAPS,
+            SOURCE_ROLE_CLASSIFICATION,
+        )
+        if hasattr(provider, "provider_identifier_coverage")
+    )
     try:
         validate_strategy_run_capabilities(
             strategy_key=strategy.key,
             universe_key=universe.key,
             benchmark_key=benchmark.spec.key,
             provider_key=provider.key,
+            asset_metadata=asset_metadata,
+            provider_identifier_coverage=provider_identifier_coverage,
         )
     except CapabilityValidationError as exc:
         raise CliUsageError(
@@ -86,10 +126,9 @@ def run_strategy_snapshot(
             ),
         ) from exc
 
-    members = universe.load_members(config.as_of_date)
     member_sectors = {
         ticker.ticker.upper(): ticker.sector
-        for ticker in provider.list_tickers(active_only=False)
+        for ticker in all_tickers
     }
     require_non_empty(
         "universe members",

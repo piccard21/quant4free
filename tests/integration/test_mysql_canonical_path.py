@@ -27,6 +27,7 @@ pytestmark = pytest.mark.integration
 
 CANONICAL_TABLES = {
     "assets",
+    "asset_provider_identifiers",
     "asset_price_bars",
     "asset_fundamental_reports",
     "asset_market_caps",
@@ -61,6 +62,9 @@ def test_mysql_schema_and_fixture_are_isolated_and_complete(mysql_engine):
         }
         counts = {
             "assets": conn.execute(text("SELECT COUNT(*) FROM assets")).scalar_one(),
+            "asset_provider_identifiers": conn.execute(
+                text("SELECT COUNT(*) FROM asset_provider_identifiers")
+            ).scalar_one(),
             "asset_price_bars": conn.execute(text("SELECT COUNT(*) FROM asset_price_bars")).scalar_one(),
             "asset_fundamental_reports": conn.execute(text("SELECT COUNT(*) FROM asset_fundamental_reports")).scalar_one(),
             "asset_market_caps": conn.execute(text("SELECT COUNT(*) FROM asset_market_caps")).scalar_one(),
@@ -69,6 +73,7 @@ def test_mysql_schema_and_fixture_are_isolated_and_complete(mysql_engine):
 
     assert CANONICAL_TABLES <= tables
     assert counts["assets"] > 0
+    assert counts["asset_provider_identifiers"] >= counts["assets"]
     assert counts["asset_price_bars"] > 0
     assert counts["asset_fundamental_reports"] > 0
     assert counts["asset_market_caps"] > 0
@@ -112,12 +117,19 @@ def test_mysql_raw_repository_upserts_and_latest_queries(mysql_engine):
     repository.mark_fundamental_updated(ticker, sync_time)
 
     asset = repository.get_ticker(ticker)
+    identifiers = repository.list_provider_identifiers(
+        provider_key="mysql_fixture",
+        tickers=[ticker],
+    )
     latest_candle = repository.latest_daily_candles([ticker], as_of_date=date(2026, 5, 30))[0]
     latest_report = repository.latest_financial_reports("ttm", [ticker], as_of_date=date(2026, 5, 30))[0]
     latest_market_cap = repository.latest_market_caps([ticker], as_of_date=date(2026, 5, 30))[0]
 
     assert asset is not None
     assert asset.name == "AP17 Renamed Asset"
+    assert asset.asset_class == "equity"
+    assert identifiers
+    assert identifiers[0].provider_symbol == ticker
     assert asset.sector == "Quality"
     assert asset.last_fundamental_update == sync_time
     assert latest_candle.date == date(2026, 5, 29)

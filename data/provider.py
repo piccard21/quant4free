@@ -3,6 +3,8 @@ from __future__ import annotations
 from datetime import date
 from typing import TYPE_CHECKING, Optional, Protocol, Sequence
 
+from shared.capabilities import ProviderIdentifierCoverage
+
 from .models import Ticker
 from .repository import RawDataRepository
 
@@ -60,6 +62,17 @@ class DataProvider(Protocol):
         """Return benchmark OHLCV rows using the same schema as load_prices."""
         ...
 
+    def provider_identifier_coverage(
+        self,
+        *,
+        source_role: str,
+        provider_key: str,
+        tickers: Sequence[str],
+        identifier_scheme: str = "ticker",
+    ) -> ProviderIdentifierCoverage:
+        """Return provider identifier coverage for requested internal tickers."""
+        ...
+
 
 class FixtureDataProvider:
     """DataProvider backed by the canonical AP14 market-data schema."""
@@ -111,3 +124,18 @@ class FixtureDataProvider:
         if not benchmark_ticker:
             raise ValueError("benchmark_ticker must not be empty")
         return self.load_prices([benchmark_ticker], start_date, end_date)
+
+    def provider_identifier_coverage(
+        self,
+        *,
+        source_role: str,
+        provider_key: str,
+        tickers: Sequence[str],
+        identifier_scheme: str = "ticker",
+    ) -> ProviderIdentifierCoverage:
+        return self.repository.provider_identifier_coverage(
+            source_role=source_role,
+            provider_key=provider_key,
+            tickers=tickers,
+            identifier_scheme=identifier_scheme,
+        )

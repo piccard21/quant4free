@@ -11,6 +11,7 @@ from .models import (
     DailyCandle,
     FinancialReport,
     MarketCapSnapshot,
+    ProviderIdentifier,
     Ticker,
     TickerUpsert,
 )
@@ -31,6 +32,14 @@ class RawDataRepository:
                 ticker,
                 name,
                 sector,
+                asset_class,
+                canonical_symbol,
+                display_symbol,
+                instrument_type,
+                exchange_code,
+                market,
+                quote_currency,
+                primary_provider_key,
                 is_active,
                 first_seen,
                 last_seen,
@@ -45,19 +54,7 @@ class RawDataRepository:
         sql += " ORDER BY ticker"
 
         rows = self._mappings(sql, params)
-        return [
-            Ticker(
-                ticker=row["ticker"],
-                name=row["name"],
-                sector=row["sector"],
-                is_active=bool(row["is_active"]),
-                first_seen=row["first_seen"],
-                last_seen=row["last_seen"],
-                removed_at=row["removed_at"],
-                last_fundamental_update=row["last_fundamental_update"],
-            )
-            for row in rows
-        ]
+        return [_ticker_from_row(row) for row in rows]
 
     def get_ticker(self, ticker: str) -> Optional[Ticker]:
         rows = self._mappings(
@@ -66,6 +63,14 @@ class RawDataRepository:
                 ticker,
                 name,
                 sector,
+                asset_class,
+                canonical_symbol,
+                display_symbol,
+                instrument_type,
+                exchange_code,
+                market,
+                quote_currency,
+                primary_provider_key,
                 is_active,
                 first_seen,
                 last_seen,
@@ -79,17 +84,7 @@ class RawDataRepository:
         )
         if not rows:
             return None
-        row = rows[0]
-        return Ticker(
-            ticker=row["ticker"],
-            name=row["name"],
-            sector=row["sector"],
-            is_active=bool(row["is_active"]),
-            first_seen=row["first_seen"],
-            last_seen=row["last_seen"],
-            removed_at=row["removed_at"],
-            last_fundamental_update=row["last_fundamental_update"],
-        )
+        return _ticker_from_row(rows[0])
 
     def load_daily_candles(
         self,
@@ -306,6 +301,14 @@ class RawDataRepository:
                 "ticker": item.ticker,
                 "name": item.name,
                 "sector": item.sector,
+                "asset_class": item.asset_class,
+                "canonical_symbol": item.canonical_symbol or item.ticker,
+                "display_symbol": item.display_symbol or item.ticker,
+                "instrument_type": item.instrument_type,
+                "exchange_code": item.exchange_code,
+                "market": item.market,
+                "quote_currency": item.quote_currency,
+                "primary_provider_key": item.primary_provider_key,
                 "is_active": 1 if item.is_active else 0,
                 "sync_time": sync_time,
             }
@@ -316,12 +319,52 @@ class RawDataRepository:
             statement = text(
                 """
                 INSERT INTO assets
-                    (ticker, name, sector, is_active, first_seen, last_seen, removed_at)
+                    (
+                        ticker,
+                        name,
+                        sector,
+                        asset_class,
+                        canonical_symbol,
+                        display_symbol,
+                        instrument_type,
+                        exchange_code,
+                        market,
+                        quote_currency,
+                        primary_provider_key,
+                        is_active,
+                        first_seen,
+                        last_seen,
+                        removed_at
+                    )
                 VALUES
-                    (:ticker, :name, :sector, :is_active, :sync_time, :sync_time, NULL)
+                    (
+                        :ticker,
+                        :name,
+                        :sector,
+                        :asset_class,
+                        :canonical_symbol,
+                        :display_symbol,
+                        :instrument_type,
+                        :exchange_code,
+                        :market,
+                        :quote_currency,
+                        :primary_provider_key,
+                        :is_active,
+                        :sync_time,
+                        :sync_time,
+                        NULL
+                    )
                 ON CONFLICT(ticker) DO UPDATE SET
                     name = excluded.name,
                     sector = excluded.sector,
+                    asset_class = excluded.asset_class,
+                    canonical_symbol = excluded.canonical_symbol,
+                    display_symbol = excluded.display_symbol,
+                    instrument_type = excluded.instrument_type,
+                    exchange_code = excluded.exchange_code,
+                    market = excluded.market,
+                    quote_currency = excluded.quote_currency,
+                    primary_provider_key = excluded.primary_provider_key,
                     is_active = excluded.is_active,
                     last_seen = excluded.last_seen,
                     removed_at = NULL
@@ -331,12 +374,52 @@ class RawDataRepository:
             statement = text(
                 """
                 INSERT INTO assets
-                    (ticker, name, sector, is_active, first_seen, last_seen, removed_at)
+                    (
+                        ticker,
+                        name,
+                        sector,
+                        asset_class,
+                        canonical_symbol,
+                        display_symbol,
+                        instrument_type,
+                        exchange_code,
+                        market,
+                        quote_currency,
+                        primary_provider_key,
+                        is_active,
+                        first_seen,
+                        last_seen,
+                        removed_at
+                    )
                 VALUES
-                    (:ticker, :name, :sector, :is_active, :sync_time, :sync_time, NULL)
+                    (
+                        :ticker,
+                        :name,
+                        :sector,
+                        :asset_class,
+                        :canonical_symbol,
+                        :display_symbol,
+                        :instrument_type,
+                        :exchange_code,
+                        :market,
+                        :quote_currency,
+                        :primary_provider_key,
+                        :is_active,
+                        :sync_time,
+                        :sync_time,
+                        NULL
+                    )
                 ON DUPLICATE KEY UPDATE
                     name = VALUES(name),
                     sector = VALUES(sector),
+                    asset_class = VALUES(asset_class),
+                    canonical_symbol = VALUES(canonical_symbol),
+                    display_symbol = VALUES(display_symbol),
+                    instrument_type = VALUES(instrument_type),
+                    exchange_code = VALUES(exchange_code),
+                    market = VALUES(market),
+                    quote_currency = VALUES(quote_currency),
+                    primary_provider_key = VALUES(primary_provider_key),
                     is_active = VALUES(is_active),
                     last_seen = VALUES(last_seen),
                     removed_at = NULL
@@ -344,6 +427,7 @@ class RawDataRepository:
             )
         with self.engine.begin() as connection:
             connection.execute(statement, rows)
+            connection.execute(self._default_identifier_statement(), rows)
         return len(rows)
 
     def deactivate_missing_active_tickers(
@@ -621,6 +705,219 @@ class RawDataRepository:
             connection.execute(statement, rows)
         return len(rows)
 
+    def list_provider_identifiers(
+        self,
+        provider_key: Optional[str] = None,
+        tickers: Optional[Sequence[str]] = None,
+    ) -> list[ProviderIdentifier]:
+        sql = """
+            SELECT
+                ticker,
+                provider_key,
+                identifier_scheme,
+                provider_symbol,
+                provider_asset_id,
+                exchange_code,
+                market,
+                quote_currency,
+                is_primary,
+                valid_from,
+                valid_to,
+                imported_at
+            FROM asset_provider_identifiers
+            WHERE 1 = 1
+        """
+        params: dict[str, Any] = {}
+        if provider_key is not None:
+            sql += " AND provider_key = :provider_key"
+            params["provider_key"] = provider_key
+        sql = self._add_ticker_filter(sql, params, tickers)
+        sql += " ORDER BY ticker, provider_key, identifier_scheme, provider_symbol"
+        rows = self._mappings(sql, params, tickers=tickers)
+        return [
+            ProviderIdentifier(
+                ticker=row["ticker"],
+                provider_key=row["provider_key"],
+                identifier_scheme=row["identifier_scheme"],
+                provider_symbol=row["provider_symbol"],
+                provider_asset_id=row["provider_asset_id"],
+                exchange_code=row["exchange_code"],
+                market=row["market"],
+                quote_currency=row["quote_currency"],
+                is_primary=bool(row["is_primary"]),
+                valid_from=row["valid_from"],
+                valid_to=row["valid_to"],
+                imported_at=row["imported_at"],
+            )
+            for row in rows
+        ]
+
+    def upsert_provider_identifiers(
+        self,
+        identifiers: Sequence[ProviderIdentifier],
+    ) -> int:
+        if not identifiers:
+            return 0
+        rows = [
+            {
+                "ticker": identifier.ticker,
+                "provider_key": identifier.provider_key,
+                "identifier_scheme": identifier.identifier_scheme,
+                "provider_symbol": identifier.provider_symbol,
+                "provider_asset_id": identifier.provider_asset_id,
+                "exchange_code": identifier.exchange_code,
+                "market": identifier.market,
+                "quote_currency": identifier.quote_currency,
+                "is_primary": 1 if identifier.is_primary else 0,
+                "valid_from": identifier.valid_from,
+                "valid_to": identifier.valid_to,
+                "imported_at": identifier.imported_at,
+            }
+            for identifier in identifiers
+        ]
+        dialect = self.engine.dialect.name
+        if dialect == "sqlite":
+            statement = text(
+                """
+                INSERT INTO asset_provider_identifiers
+                    (
+                        ticker,
+                        provider_key,
+                        identifier_scheme,
+                        provider_symbol,
+                        provider_asset_id,
+                        exchange_code,
+                        market,
+                        quote_currency,
+                        is_primary,
+                        valid_from,
+                        valid_to,
+                        imported_at
+                    )
+                VALUES
+                    (
+                        :ticker,
+                        :provider_key,
+                        :identifier_scheme,
+                        :provider_symbol,
+                        :provider_asset_id,
+                        :exchange_code,
+                        :market,
+                        :quote_currency,
+                        :is_primary,
+                        :valid_from,
+                        :valid_to,
+                        :imported_at
+                    )
+                ON CONFLICT(ticker, provider_key, identifier_scheme, provider_symbol)
+                DO UPDATE SET
+                    provider_asset_id = excluded.provider_asset_id,
+                    exchange_code = excluded.exchange_code,
+                    market = excluded.market,
+                    quote_currency = excluded.quote_currency,
+                    is_primary = excluded.is_primary,
+                    valid_from = excluded.valid_from,
+                    valid_to = excluded.valid_to,
+                    imported_at = excluded.imported_at
+                """
+            )
+        else:
+            statement = text(
+                """
+                INSERT INTO asset_provider_identifiers
+                    (
+                        ticker,
+                        provider_key,
+                        identifier_scheme,
+                        provider_symbol,
+                        provider_asset_id,
+                        exchange_code,
+                        market,
+                        quote_currency,
+                        is_primary,
+                        valid_from,
+                        valid_to,
+                        imported_at
+                    )
+                VALUES
+                    (
+                        :ticker,
+                        :provider_key,
+                        :identifier_scheme,
+                        :provider_symbol,
+                        :provider_asset_id,
+                        :exchange_code,
+                        :market,
+                        :quote_currency,
+                        :is_primary,
+                        :valid_from,
+                        :valid_to,
+                        :imported_at
+                    )
+                ON DUPLICATE KEY UPDATE
+                    provider_asset_id = VALUES(provider_asset_id),
+                    exchange_code = VALUES(exchange_code),
+                    market = VALUES(market),
+                    quote_currency = VALUES(quote_currency),
+                    is_primary = VALUES(is_primary),
+                    valid_from = VALUES(valid_from),
+                    valid_to = VALUES(valid_to),
+                    imported_at = VALUES(imported_at)
+                """
+            )
+        with self.engine.begin() as connection:
+            connection.execute(statement, rows)
+        return len(rows)
+
+    def provider_identifier_coverage(
+        self,
+        *,
+        source_role: str,
+        provider_key: str,
+        tickers: Sequence[str],
+        identifier_scheme: str = "ticker",
+    ):
+        from shared.capabilities import ProviderIdentifierCoverage
+
+        requested = tuple(dict.fromkeys(ticker.upper() for ticker in tickers))
+        if not requested:
+            return ProviderIdentifierCoverage(
+                source_role=source_role,
+                provider_key=provider_key,
+                identifier_scheme=identifier_scheme,
+                required_tickers=(),
+                covered_tickers=(),
+            )
+
+        sql = """
+            SELECT DISTINCT ticker
+            FROM asset_provider_identifiers
+            WHERE provider_key = :provider_key
+              AND identifier_scheme = :identifier_scheme
+        """
+        params = {
+            "provider_key": provider_key,
+            "identifier_scheme": identifier_scheme,
+        }
+        sql = self._add_ticker_filter(sql, params, requested)
+        rows = self._mappings(
+            sql,
+            {
+                "provider_key": provider_key,
+                "identifier_scheme": identifier_scheme,
+                "tickers": list(requested),
+            },
+            tickers=requested,
+        )
+        covered = tuple(sorted(row["ticker"].upper() for row in rows))
+        return ProviderIdentifierCoverage(
+            source_role=source_role,
+            provider_key=provider_key,
+            identifier_scheme=identifier_scheme,
+            required_tickers=requested,
+            covered_tickers=covered,
+        )
+
     def mark_fundamental_updated(
         self,
         ticker: str,
@@ -676,6 +973,90 @@ class RawDataRepository:
         if tickers is not None:
             statement = statement.bindparams(bindparam("tickers", expanding=True))
         return statement
+
+    def _default_identifier_statement(self):
+        if self.engine.dialect.name == "sqlite":
+            return text(
+                """
+                INSERT INTO asset_provider_identifiers
+                    (
+                        ticker,
+                        provider_key,
+                        identifier_scheme,
+                        provider_symbol,
+                        provider_asset_id,
+                        exchange_code,
+                        market,
+                        quote_currency,
+                        is_primary,
+                        valid_from,
+                        valid_to,
+                        imported_at
+                    )
+                VALUES
+                    (
+                        :ticker,
+                        COALESCE(:primary_provider_key, 'mysql_fixture'),
+                        'ticker',
+                        :ticker,
+                        NULL,
+                        :exchange_code,
+                        :market,
+                        :quote_currency,
+                        1,
+                        NULL,
+                        NULL,
+                        :sync_time
+                    )
+                ON CONFLICT(ticker, provider_key, identifier_scheme, provider_symbol)
+                DO UPDATE SET
+                    exchange_code = excluded.exchange_code,
+                    market = excluded.market,
+                    quote_currency = excluded.quote_currency,
+                    is_primary = excluded.is_primary,
+                    imported_at = excluded.imported_at
+                """
+            )
+        return text(
+            """
+            INSERT INTO asset_provider_identifiers
+                (
+                    ticker,
+                    provider_key,
+                    identifier_scheme,
+                    provider_symbol,
+                    provider_asset_id,
+                    exchange_code,
+                    market,
+                    quote_currency,
+                    is_primary,
+                    valid_from,
+                    valid_to,
+                    imported_at
+                )
+            VALUES
+                (
+                    :ticker,
+                    COALESCE(:primary_provider_key, 'mysql_fixture'),
+                    'ticker',
+                    :ticker,
+                    NULL,
+                    :exchange_code,
+                    :market,
+                    :quote_currency,
+                    1,
+                    NULL,
+                    NULL,
+                    :sync_time
+                )
+            ON DUPLICATE KEY UPDATE
+                exchange_code = VALUES(exchange_code),
+                market = VALUES(market),
+                quote_currency = VALUES(quote_currency),
+                is_primary = VALUES(is_primary),
+                imported_at = VALUES(imported_at)
+            """
+        )
 
     @staticmethod
     def _add_ticker_filter(
@@ -756,6 +1137,27 @@ def latest_financial_reports(
         report_type,
         tickers,
         as_of_date,
+    )
+
+
+def _ticker_from_row(row: dict[str, Any]) -> Ticker:
+    return Ticker(
+        ticker=row["ticker"],
+        name=row["name"],
+        sector=row["sector"],
+        is_active=bool(row["is_active"]),
+        first_seen=row["first_seen"],
+        last_seen=row["last_seen"],
+        removed_at=row["removed_at"],
+        last_fundamental_update=row["last_fundamental_update"],
+        asset_class=row.get("asset_class") or "equity",
+        canonical_symbol=row.get("canonical_symbol") or row["ticker"],
+        display_symbol=row.get("display_symbol") or row["ticker"],
+        instrument_type=row.get("instrument_type") or "stock",
+        exchange_code=row.get("exchange_code"),
+        market=row.get("market") or "US",
+        quote_currency=row.get("quote_currency") or "USD",
+        primary_provider_key=row.get("primary_provider_key") or "mysql_fixture",
     )
 
 

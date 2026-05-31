@@ -394,6 +394,25 @@ AP19 is complete:
   - `.venv/bin/python -m pytest tests/test_capabilities.py tests/test_orchestration.py`
   - `.venv/bin/python -m compileall shared cli tests`
 
-Next step: AP21, concretize asset catalog metadata and provider identifier
-coverage so the AP20 checker can validate real asset/provider metadata instead
-of only code-level profiles.
+## AP21 Session Notes
+
+- Extended `assets` with asset class, canonical/display symbol, instrument
+  type, exchange, market, quote currency, and primary provider metadata.
+- Added `asset_provider_identifiers` for provider-specific symbols and
+  optional stable provider IDs.
+- Updated `RawDataRepository` models and upserts so default ticker upserts also
+  create a `mysql_fixture` identifier mapping.
+- Added repository reads/upserts for provider identifiers and a read-only
+  provider identifier coverage report.
+- Extended `shared.capabilities` so validation can use supplied asset metadata
+  and provider identifier coverage.
+- Wired strategy orchestration to pass real member metadata and identifier
+  coverage when the provider exposes it.
+- Updated `init.sql`, fixture raw-data schema, setup/client smoke checks,
+  `cli.data_status`, focused tests, and DB-integration expectations.
+- Verification:
+  - `.venv/bin/python -m pytest tests/test_capabilities.py tests/test_data_sync.py tests/test_orchestration.py`
+  - `.venv/bin/python -m compileall data universes indicators strategies simulation evaluation live cli shared tests`
+
+Next step: AP22, use the AP21 identifier basis for provider-specific symbol
+resolution during sync and for more explicit universe metadata.

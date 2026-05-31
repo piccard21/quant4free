@@ -230,10 +230,25 @@ Verifiziert wurde mit
 `.venv/bin/python -m pytest tests/test_capabilities.py tests/test_orchestration.py`
 und `.venv/bin/python -m compileall shared cli tests`.
 
-Als naechster technischer AP ist AP21 geplant: der Asset-Katalog und die
-Provider-Identifier-Basis sollen fuer mehrere Assetklassen konkretisiert
-werden, damit der AP20-Checker spaeter echte Asset-Metadaten und
-Provider-Identifier statt nur Code-Profile pruefen kann.
+AP21 ist abgeschlossen: Der Asset-Katalog ist jetzt technisch konkreter.
+`assets` enthaelt Assetklasse, Canonical-/Display-Symbol, Instrumenttyp,
+Exchange, Markt, Quote-Waehrung und Primaer-Provider.
+Provider-spezifische Symbole und IDs liegen in
+`asset_provider_identifiers`. Repository-Upserts erzeugen fuer den
+Default-Pfad automatisch ein `mysql_fixture`-Ticker-Mapping, die Fixture
+fuellt die Mapping-Tabelle aus den vorhandenen Assets, und der
+Capability-Checker kann optional echte Asset-Metadaten sowie
+Provider-Identifier-Coverage validieren. Die Strategie-Orchestrierung reicht
+diese Daten fuer Provider durch, die Coverage melden koennen. Verifiziert
+wurde mit
+`.venv/bin/python -m pytest tests/test_capabilities.py tests/test_data_sync.py tests/test_orchestration.py`
+und
+`.venv/bin/python -m compileall data universes indicators strategies simulation evaluation live cli shared tests`.
+
+Als naechster technischer AP ist AP22 geplant: die AP21-Identifier-Basis soll
+fuer echte Provider-/Source-Binding-Workflows genutzt werden, insbesondere
+Provider-spezifische Symbolaufloesung im Sync und explizitere
+Universums-Metadaten.
 
 Der Umbau erfolgt ab hier schrittweise. AP4 ist bewusst ein Infrastruktur-
 Schritt, weil AP3 unter Windows mit WSL Toolchain-Probleme gezeigt hat:
@@ -260,7 +275,9 @@ Schritt, weil AP3 unter Windows mit WSL Toolchain-Probleme gezeigt hat:
 17. Read-only Capability- und Provider-Checks fuer Strategie-, Indikator-,
     Benchmark- und Live-Anforderungen einfuehren. Erledigt in AP20.
 18. Asset-Katalog und Provider-Identifier-Basis fuer mehrere Assetklassen
-    konkretisieren. Naechster Schritt AP21.
+    konkretisieren. Erledigt in AP21.
+19. Provider-spezifische Symbolaufloesung und explizitere Universums-Metadaten
+    auf Basis der Identifier-Mappings umsetzen. Naechster Schritt AP22.
 
 Der Arbeitsplan steht in [plan.md](plan.md).
 
@@ -280,7 +297,9 @@ bestehende DB/Fixture-Daten lesen
 
 Verwendete Rohdaten:
 
-- `assets`: handelbare Wertpapiere und Stammdaten
+- `assets`: handelbare Assets und Stammdaten inklusive Assetklasse,
+  Canonical-/Display-Symbol, Markt und Quote-Waehrung
+- `asset_provider_identifiers`: Provider-spezifische Symbole und IDs je Asset
 - `asset_price_bars`: tägliche OHLCV-/Kerzendaten
 - `asset_fundamental_reports`: Fundamentaldaten
 - `asset_market_caps`: Market-Cap-Historie
@@ -319,10 +338,11 @@ docker compose run --rm app python -m cli.backtest_status --start-date 2026-01-0
 docker compose run --rm app python -m cli.operator_smoke --ranking-limit 5 --trade-limit 5
 ```
 
-Die Fixture enthaelt nur `assets`, `asset_price_bars`,
-`asset_fundamental_reports` und `asset_market_caps`. Live-Daten wie Trades,
-Cash Ledger, Real-Positionen und Performance-Snapshots sind bewusst nicht
-enthalten. `init.sql` legt die kanonischen Live-/Operations-Tabellen an.
+Die Fixture enthaelt nur `assets`, `asset_provider_identifiers`,
+`asset_price_bars`, `asset_fundamental_reports` und `asset_market_caps`.
+Live-Daten wie Trades, Cash Ledger, Real-Positionen und Performance-Snapshots
+sind bewusst nicht enthalten. `init.sql` legt die kanonischen
+Live-/Operations-Tabellen an.
 
 AP14-Live-Status und Write-CLIs laufen gegen die kanonischen Live-Tabellen:
 

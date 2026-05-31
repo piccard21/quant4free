@@ -14,6 +14,14 @@ class Ticker:
     last_seen: Optional[datetime]
     removed_at: Optional[datetime]
     last_fundamental_update: Optional[datetime]
+    asset_class: str = "equity"
+    canonical_symbol: Optional[str] = None
+    display_symbol: Optional[str] = None
+    instrument_type: str = "stock"
+    exchange_code: Optional[str] = None
+    market: Optional[str] = "US"
+    quote_currency: str = "USD"
+    primary_provider_key: Optional[str] = "mysql_fixture"
 
 
 @dataclass(frozen=True)
@@ -57,6 +65,30 @@ class TickerUpsert:
     name: str
     sector: Optional[str]
     is_active: bool = True
+    asset_class: str = "equity"
+    canonical_symbol: Optional[str] = None
+    display_symbol: Optional[str] = None
+    instrument_type: str = "stock"
+    exchange_code: Optional[str] = None
+    market: Optional[str] = "US"
+    quote_currency: str = "USD"
+    primary_provider_key: Optional[str] = "mysql_fixture"
+
+
+@dataclass(frozen=True)
+class ProviderIdentifier:
+    ticker: str
+    provider_key: str
+    identifier_scheme: str
+    provider_symbol: str
+    provider_asset_id: Optional[str] = None
+    exchange_code: Optional[str] = None
+    market: Optional[str] = None
+    quote_currency: Optional[str] = None
+    is_primary: bool = False
+    valid_from: Optional[date] = None
+    valid_to: Optional[date] = None
+    imported_at: Optional[datetime] = None
 
 
 @dataclass(frozen=True)

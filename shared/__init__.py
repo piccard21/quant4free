@@ -1,5 +1,7 @@
 from .capabilities import (
+    AssetMetadata,
     CapabilityValidationError,
+    ProviderIdentifierCoverage,
     validate_indicator_run_capabilities,
     validate_live_capabilities,
     validate_strategy_run_capabilities,
@@ -15,6 +17,8 @@ from .db import (
 __all__ = [
     "CapabilityValidationError",
     "DatabaseConfig",
+    "AssetMetadata",
+    "ProviderIdentifierCoverage",
     "connect",
     "get_engine",
     "load_database_config",

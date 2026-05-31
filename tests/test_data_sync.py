@@ -5,7 +5,13 @@ import unittest
 import pandas as pd
 from sqlalchemy import create_engine, text
 
-from data.models import DailyCandle, FinancialReport, MarketCapSnapshot, TickerUpsert
+from data.models import (
+    DailyCandle,
+    FinancialReport,
+    MarketCapSnapshot,
+    ProviderIdentifier,
+    TickerUpsert,
+)
 from data.repository import RawDataRepository
 from data.sync import calculate_price_start_date
 from data.yahoo import normalize_yfinance_prices, ttm_report_from_yfinance
@@ -162,8 +168,24 @@ class DataSyncTests(unittest.TestCase):
 
         with engine.connect() as connection:
             ticker = connection.execute(
-                text("SELECT name, sector, last_fundamental_update FROM assets")
+                text(
+                    """
+                    SELECT
+                        name,
+                        sector,
+                        asset_class,
+                        canonical_symbol,
+                        display_symbol,
+                        quote_currency,
+                        primary_provider_key,
+                        last_fundamental_update
+                    FROM assets
+                    """
+                )
             ).mappings().one()
+            provider_identifier_count = connection.execute(
+                text("SELECT COUNT(*) FROM asset_provider_identifiers")
+            ).scalar_one()
             candle = connection.execute(
                 text("SELECT close, volume FROM asset_price_bars")
             ).mappings().one()
@@ -176,11 +198,52 @@ class DataSyncTests(unittest.TestCase):
 
         self.assertEqual(ticker["name"], "New Name")
         self.assertEqual(ticker["sector"], "Industrials")
+        self.assertEqual(ticker["asset_class"], "equity")
+        self.assertEqual(ticker["canonical_symbol"], "AAA")
+        self.assertEqual(ticker["display_symbol"], "AAA")
+        self.assertEqual(ticker["quote_currency"], "USD")
+        self.assertEqual(ticker["primary_provider_key"], "mysql_fixture")
         self.assertIsNotNone(ticker["last_fundamental_update"])
+        self.assertEqual(provider_identifier_count, 1)
         self.assertEqual(float(candle["close"]), 13.0)
         self.assertEqual(candle["volume"], 200)
         self.assertEqual(report_count, 1)
         self.assertEqual(market_cap, 123)
+
+    def test_repository_reads_provider_identifiers_and_coverage(self):
+        engine = create_engine("sqlite+pysqlite:///:memory:", future=True)
+        _create_raw_tables(engine)
+        repository = RawDataRepository(engine)
+
+        repository.upsert_tickers([TickerUpsert("AAA", "Asset AAA", "Tech")])
+        repository.upsert_provider_identifiers(
+            [
+                ProviderIdentifier(
+                    ticker="AAA",
+                    provider_key="yfinance",
+                    identifier_scheme="ticker",
+                    provider_symbol="AAA",
+                    market="US",
+                    quote_currency="USD",
+                    is_primary=True,
+                )
+            ]
+        )
+
+        identifiers = repository.list_provider_identifiers(
+            provider_key="yfinance",
+            tickers=["AAA"],
+        )
+        coverage = repository.provider_identifier_coverage(
+            source_role="prices",
+            provider_key="yfinance",
+            tickers=["AAA", "BBB"],
+        )
+
+        self.assertEqual(len(identifiers), 1)
+        self.assertEqual(identifiers[0].provider_symbol, "AAA")
+        self.assertEqual(coverage.covered_tickers, ("AAA",))
+        self.assertEqual(coverage.missing_tickers, ("BBB",))
 
 
 def _create_raw_tables(engine) -> None:
@@ -189,9 +252,17 @@ def _create_raw_tables(engine) -> None:
             text(
                 """
                 CREATE TABLE assets (
-                    ticker VARCHAR(10) PRIMARY KEY,
+                    ticker VARCHAR(32) PRIMARY KEY,
                     name VARCHAR(255) NOT NULL,
                     sector VARCHAR(255),
+                    asset_class VARCHAR(32) NOT NULL DEFAULT 'equity',
+                    canonical_symbol VARCHAR(64),
+                    display_symbol VARCHAR(64),
+                    instrument_type VARCHAR(32) NOT NULL DEFAULT 'stock',
+                    exchange_code VARCHAR(64),
+                    market VARCHAR(64) DEFAULT 'US',
+                    quote_currency CHAR(3) NOT NULL DEFAULT 'USD',
+                    primary_provider_key VARCHAR(64) DEFAULT 'mysql_fixture',
                     is_active INTEGER NOT NULL DEFAULT 1,
                     first_seen DATETIME,
                     last_seen DATETIME,
@@ -204,8 +275,34 @@ def _create_raw_tables(engine) -> None:
         connection.execute(
             text(
                 """
+                CREATE TABLE asset_provider_identifiers (
+                    ticker VARCHAR(32) NOT NULL,
+                    provider_key VARCHAR(64) NOT NULL,
+                    identifier_scheme VARCHAR(64) NOT NULL DEFAULT 'ticker',
+                    provider_symbol VARCHAR(128) NOT NULL,
+                    provider_asset_id VARCHAR(128),
+                    exchange_code VARCHAR(64),
+                    market VARCHAR(64),
+                    quote_currency CHAR(3),
+                    is_primary INTEGER NOT NULL DEFAULT 0,
+                    valid_from DATE,
+                    valid_to DATE,
+                    imported_at DATETIME,
+                    PRIMARY KEY (
+                        ticker,
+                        provider_key,
+                        identifier_scheme,
+                        provider_symbol
+                    )
+                )
+                """
+            )
+        )
+        connection.execute(
+            text(
+                """
                 CREATE TABLE asset_price_bars (
-                    ticker VARCHAR(10) NOT NULL,
+                    ticker VARCHAR(32) NOT NULL,
                     date DATE NOT NULL,
                     open NUMERIC,
                     high NUMERIC,
@@ -221,7 +318,7 @@ def _create_raw_tables(engine) -> None:
             text(
                 """
                 CREATE TABLE asset_fundamental_reports (
-                    ticker VARCHAR(10) NOT NULL,
+                    ticker VARCHAR(32) NOT NULL,
                     report_date DATE NOT NULL,
                     report_type VARCHAR(20) NOT NULL,
                     revenue INTEGER,
@@ -242,7 +339,7 @@ def _create_raw_tables(engine) -> None:
             text(
                 """
                 CREATE TABLE asset_market_caps (
-                    ticker VARCHAR(10) NOT NULL,
+                    ticker VARCHAR(32) NOT NULL,
                     date DATE NOT NULL,
                     market_cap INTEGER,
                     imported_at DATETIME,
