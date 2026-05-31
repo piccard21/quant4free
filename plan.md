@@ -2,7 +2,7 @@
 
 ## Umsetzungsstand
 
-Stand: AP25 ist abgeschlossen. Das kanonische AP14-Schema ist der regulaere
+Stand: AP26 ist abgeschlossen. Das kanonische AP14-Schema ist der regulaere
 modulare Betriebspfad, AP15 dokumentiert den Host-Crontab-Betrieb fuer Daily
 und Monthly, und AP16 ergaenzt einen read-only Performance-Report fuer Real
 Portfolio, Shadow Portfolio und Benchmark. AP17 ergaenzt eine isolierte
@@ -17,7 +17,8 @@ Universe-Identitaet sowie historisierte Mitgliedschaft in kanonische
 DB-Tabellen. AP24 ergaenzt einen kanonischen Data-Sync-Audit-Trail fuer Preis-,
 Fundamental- und Membership-Syncs. AP25 macht diesen Trail fuer Operatoren
 filterbar und haertet den Yahoo/yfinance-Sync ueber konfigurierbare
-Request-Policies.
+Request-Policies. AP26 ergaenzt read-only Freshness- und Qualitaetsdiagnosen
+fuer Rohdaten, Provider-Identifier-Coverage und Provider-Sync-Health.
 
 Strategische Anpassung:
 
@@ -38,14 +39,31 @@ Strategische Anpassung:
 
 Naechster AP:
 
-AP26:
+AP27:
 
-- Daten-Freshness- und Qualitaetsdiagnosen fuer Rohpreise, Fundamentals,
-  Market Caps und Provider-Identifier-Abdeckung ausbauen.
-- Ziel ist, fehlende Daten, stale Daten und Provider-Sync-Fehler vor Strategie-
-  oder Live-Laeufen getrennt sichtbar zu machen.
+- Freshness-Policies je Workflow und Source-Binding konfigurierbar machen.
+- Ausgewaehlte Strategie- und Live-Workflows sollen die AP26-Diagnosen optional
+  als fail-fast Preflight-Gates nutzen koennen.
 
 Erledigt:
+
+AP26:
+
+- `data.diagnostics` mit `DataQualityDiagnostics` und formatierten
+  `data_quality.*`-Statuszeilen angelegt.
+- Rohpreise werden fuer Universumsmitglieder plus Benchmark auf Missing/Stale
+  geprueft.
+- TTM-Fundamentals und Market Caps werden fuer aktuelle Universumsmitglieder
+  auf Missing/Stale geprueft.
+- Provider-Identifier-Coverage wird fuer den konfigurierten Provider und das
+  Identifier-Schema sichtbar, inklusive fehlender Ticker-Beispiele.
+- Die juengsten Provider-Syncs fuer Membership, Preise und Fundamentals werden
+  als `ok`, `failed`, `started`, `stale_started` oder `no_runs` eingeordnet.
+- `cli.data_status --details` und `cli.operator_smoke` drucken die neue
+  Preflight-Sicht ohne Schemaaenderung.
+- Verifikation:
+  - `.venv/bin/python -m pytest tests/test_data_sync.py`
+  - `.venv/bin/python -m compileall data cli tests`
 
 AP25:
 
@@ -1666,6 +1684,23 @@ Ziel:
 
 - Fehlende Daten, stale Daten und Provider-Identifier-Luecken vor Strategie-
   oder Live-Laeufen klarer sichtbar machen.
+- Rohpreise, TTM-Fundamentals, Market Caps, Identifier-Coverage und Sync-Health
+  ohne Schemaaenderung als `data_quality.*`-Diagnosen ausgeben.
+
+Status: abgeschlossen in AP26.
+
+Verifikation:
+
+- `.venv/bin/python -m pytest tests/test_data_sync.py`
+- `.venv/bin/python -m compileall data cli tests`
+
+### AP27: Konfigurierbare Freshness-Preflights
+
+Ziel:
+
+- Freshness-Policies je Workflow und Source-Binding konfigurierbar machen.
+- AP26-Diagnosen optional als fail-fast Gates fuer ausgewaehlte Strategie- und
+  Live-Workflows nutzen.
 
 Status: naechster Schritt.
 
@@ -1700,6 +1735,8 @@ Status: naechster Schritt.
 25. Data-Sync-Audit-Trail einfuehren.
 26. Sync-Audit-Bedienung und Betriebshaertung ausbauen.
 27. Daten-Freshness- und Qualitaetsdiagnosen ausbauen.
+28. Freshness-Policies konfigurierbar machen und optional als Preflight-Gates
+    durchsetzen.
 
 ## Testing Und Akzeptanz
 
@@ -1720,8 +1757,8 @@ Status: naechster Schritt.
 - Multi-Asset-Erweiterungen muessen Universen, Assetklassen und verfuegbare
   Datenarten explizit trennen; Krypto darf z. B. ohne Fundamentaldaten
   modellierbar sein. AP18 dokumentiert dieses Zielbild.
-- Der naechste technische Schritt ist Daten-Freshness- und
-  Qualitaetsdiagnostik fuer Rohdaten und Provider-Identifier.
+- Der naechste technische Schritt ist konfigurierbare Freshness-Preflight-
+  Policy auf Basis der AP26-Diagnosen.
 
 ## Annahmen Und Defaults
 

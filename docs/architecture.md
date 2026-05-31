@@ -100,6 +100,11 @@ Operatoren filterbar und haertet Yahoo/yfinance-Abrufe:
 - Seit AP25 meldet `cli.data_status --details` filtered Runs sowie failed/stale
   Diagnosen, und Preis-/Fundamental-Syncs koennen Batch-Groessen, Throttle,
   Retry/Backoff und Circuit-Breaker pro Lauf konfigurieren.
+- Seit AP26 erzeugt `data.diagnostics` eine read-only Preflight-Sicht auf
+  Missing/Stale-Zustaende fuer Preise, TTM-Fundamentals und Market Caps,
+  Provider-Identifier-Coverage sowie die juengste Sync-Health. `cli.data_status
+  --details` und `cli.operator_smoke` geben diese Diagnose als
+  `data_quality.*`-Zeilen aus.
 
 Details stehen in [Assetklassen, Universen und Daten-Capabilities](data-capabilities.md)
 und [Provider-, API- und Source-Binding-Modell](provider-api-model.md).

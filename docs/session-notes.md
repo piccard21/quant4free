@@ -491,5 +491,22 @@ AP19 is complete:
   - `.venv/bin/python -m pytest tests -m "not integration"`
   - `.venv/bin/python -m compileall data universes indicators strategies simulation evaluation live cli shared tests`
 
-Next step: AP26, add data freshness and quality diagnostics for raw prices,
-fundamentals, market caps, and provider identifier coverage.
+## AP26: Data freshness and quality diagnostics
+
+- Added `data.diagnostics` with a reusable read-only
+  `DataQualityDiagnostics` report.
+- Price diagnostics cover current universe members plus benchmark and report
+  missing/stale rows.
+- Fundamental diagnostics cover current universe members with TTM reports.
+- Market-cap diagnostics cover current universe members.
+- Provider identifier coverage is reported for the chosen provider/scheme.
+- Latest membership, price, and fundamental sync runs are classified as `ok`,
+  `failed`, `started`, `stale_started`, or `no_runs`.
+- `cli.data_status --details` and `cli.operator_smoke` now print
+  `data_quality.*` preflight lines without schema changes.
+- Verification:
+  - `.venv/bin/python -m pytest tests/test_data_sync.py`
+  - `.venv/bin/python -m compileall data cli tests`
+
+Next step: AP27, make freshness policies configurable per workflow/source
+binding and optionally enforce them as preflight gates.

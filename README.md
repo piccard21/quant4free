@@ -296,11 +296,20 @@ Operator-Entscheidung ausserhalb der Anwendung. Verifiziert wurde mit
 `.venv/bin/python -m pytest tests -m "not integration"` und
 `.venv/bin/python -m compileall data universes indicators strategies simulation evaluation live cli shared tests`.
 
-Als naechster technischer AP ist AP26 geplant: Daten-Freshness- und
-Qualitaetsdiagnosen fuer Rohpreise, Fundamentals, Market Caps und
-Provider-Identifier-Abdeckung ergaenzen, damit Operatoren fehlende Daten,
-stale Daten und Provider-Sync-Fehler vor Strategie- oder Live-Laeufen
-auseinanderhalten koennen.
+AP26 ist abgeschlossen: `data.diagnostics` liefert jetzt read-only
+Daten-Freshness- und Qualitaetsdiagnosen fuer Rohpreise, TTM-Fundamentals,
+Market Caps, Provider-Identifier-Abdeckung und die juengsten Provider-Syncs.
+`cli.data_status --details` zeigt `data_quality.*`-Zeilen mit
+missing/stale-Zaehlern, Ticker-Beispielen, Identifier-Coverage und Sync-Health;
+`cli.operator_smoke` gibt dieselbe Preflight-Sicht vor Strategie und Backtest
+aus. Die Defaults sind konservativ und schemafrei: Preise 5 Tage,
+Fundamentals 550 Tage, Market Caps 10 Tage.
+Verifiziert wurde mit `.venv/bin/python -m pytest tests/test_data_sync.py` und
+`.venv/bin/python -m compileall data cli tests`.
+
+Als naechster technischer AP ist AP27 geplant: Freshness-Policies je Workflow
+und Source-Binding konfigurierbar machen und optional als fail-fast Preflight
+fuer ausgewaehlte Strategie- und Live-Workflows nutzen.
 
 Der Umbau erfolgt ab hier schrittweise. AP4 ist bewusst ein Infrastruktur-
 Schritt, weil AP3 unter Windows mit WSL Toolchain-Probleme gezeigt hat:
@@ -336,8 +345,9 @@ Schritt, weil AP3 unter Windows mit WSL Toolchain-Probleme gezeigt hat:
 21. Kanonischen Data-Sync-Audit-Trail fuer Provider, Modus, Zeitfenster,
     Status, Zeilenzaehler und Fehler einfuehren. Erledigt in AP24.
 22. Sync-Audit-Bedienung und Betriebshaertung ausbauen. Erledigt in AP25.
-23. Daten-Freshness- und Qualitaetsdiagnosen ausbauen. Naechster Schritt
-    AP26.
+23. Daten-Freshness- und Qualitaetsdiagnosen ausbauen. Erledigt in AP26.
+24. Freshness-Policies konfigurierbar machen und optional als Preflight-Gates
+    durchsetzen. Naechster Schritt AP27.
 
 Der Arbeitsplan steht in [plan.md](plan.md).
 
@@ -380,6 +390,14 @@ docker compose run --rm app python -m cli.sync_data --dry-run
 docker compose run --rm app python -m cli.daily_run --dry-run-sync --model-limit 5
 docker compose run --rm app python -m cli.monthly_run --model-limit 5
 docker compose run --rm app python -m cli.live_performance --curve-limit 5
+```
+
+Seit AP26 enthaelt `cli.data_status --details` zusaetzliche
+`data_quality.*`-Diagnosen fuer den Standardpfad. Beispiel:
+
+```bash
+docker compose run --rm app python -m cli.data_status --details --universe sp500_active --benchmark-ticker SPY
+docker compose run --rm app python -m cli.data_status --details --provider yfinance --identifier-provider yfinance --price-stale-days 5
 ```
 
 Bereinigte Rohdaten-Fixture-Daten aus `fixtures/raw_market_data.sql` koennen

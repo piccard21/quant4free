@@ -219,10 +219,21 @@ Verification for AP25:
 `.venv/bin/python -m compileall data universes indicators strategies simulation evaluation live cli shared tests`,
 plus `scripts/db_integration_tests.sh`.
 
-AP26 is planned next: add data freshness and quality diagnostics around raw
-prices, fundamentals, market caps, and provider identifier coverage so
-operators can distinguish missing data, stale data, and provider sync failures
-before strategy or live workflows run.
+AP26 is complete: read-only data freshness and quality diagnostics now cover
+raw prices, TTM fundamentals, market caps, provider identifier coverage, and
+latest provider sync health. `data.diagnostics` exposes a reusable
+`DataQualityDiagnostics` report, `cli.data_status --details` prints
+`data_quality.*` lines with missing/stale ticker samples and provider sync
+status, and `cli.operator_smoke` includes the same preflight context before the
+strategy/backtest path. The diagnostics are schema-free and use conservative
+default thresholds: prices 5 days, fundamentals 550 days, and market caps 10
+days. Verification for AP26:
+`.venv/bin/python -m pytest tests/test_data_sync.py` and
+`.venv/bin/python -m compileall data cli tests`.
+
+AP27 is planned next: make freshness policies configurable per workflow/source
+binding and optionally enforce them as fail-fast preflight checks for selected
+strategy and live workflows.
 
 ## Build, Test, and Development Commands
 

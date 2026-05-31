@@ -131,6 +131,12 @@ AP18/AP21/AP23-Zielpraezisierung:
   Provider, Source-Rolle, Zeitraum und Limit filtern und meldet
   fehlgeschlagene sowie stale gestartete Runs. Retention bleibt konservativ:
   Audit-Zeilen werden nicht automatisch geloescht.
+- Seit AP26 nutzt `data.diagnostics` die bestehenden Rohdaten- und
+  Audit-Tabellen fuer schemafreie Freshness-/Qualitaetsdiagnosen.
+  `cli.data_status --details` meldet Missing/Stale-Zustaende fuer
+  `asset_price_bars`, TTM-Zeilen in `asset_fundamental_reports`,
+  `asset_market_caps`, Provider-Identifier-Coverage und die juengste
+  Sync-Health als `data_quality.*`-Zeilen.
 
 ### 2. Mandanten, Portfolios und Kataloge
 

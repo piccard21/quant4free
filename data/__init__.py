@@ -1,13 +1,18 @@
 __all__ = [
     "DailyCandle",
     "DataSyncRun",
+    "DataQualityDiagnostics",
+    "DataQualityReport",
     "DataProvider",
     "FinancialSyncPayload",
     "FinancialReport",
+    "FreshnessDiagnostic",
     "FixtureDataProvider",
+    "IdentifierDiagnostic",
     "MarketCapSnapshot",
     "PriceSyncService",
     "RawDataRepository",
+    "SyncRunDiagnostic",
     "Ticker",
     "TickerUpsert",
     "UniverseMemberUpsert",
@@ -20,6 +25,7 @@ __all__ = [
     "load_financial_reports",
     "load_market_caps",
     "load_tickers",
+    "format_data_quality_report",
 ]
 
 
@@ -38,6 +44,18 @@ def __getattr__(name: str):
         from . import models
 
         return getattr(models, name)
+
+    if name in {
+        "DataQualityDiagnostics",
+        "DataQualityReport",
+        "FreshnessDiagnostic",
+        "IdentifierDiagnostic",
+        "SyncRunDiagnostic",
+        "format_data_quality_report",
+    }:
+        from . import diagnostics
+
+        return getattr(diagnostics, name)
 
     if name in {"FundamentalSyncService", "PriceSyncService"}:
         from . import sync

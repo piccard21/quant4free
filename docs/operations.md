@@ -1,6 +1,6 @@
 # Operations Guide
 
-Stand: AP17.
+Stand: AP26.
 
 Der regulaere Betrieb nutzt nur noch die modularen CLIs und das kanonische
 Schema aus `init.sql`. Legacy-CLIs sind kein Operator-Standardpfad mehr.
@@ -438,6 +438,22 @@ Seit AP25 kann der Audit-Trail gezielt gefiltert und diagnostiziert werden:
 ```bash
 docker compose run --rm app python -m cli.data_status --details --sync-status failed --since-days 7
 docker compose run --rm app python -m cli.data_status --details --sync-type prices --provider yfinance --sync-limit 20
+```
+
+Seit AP26 zeigt derselbe Befehl zusaetzlich `data_quality.*`-Zeilen. Diese
+unterscheiden:
+
+- fehlende Rohdaten (`missing`)
+- veraltete Rohdaten (`stale`)
+- fehlende Provider-Identifier fuer den gewaehlten Provider
+- fehlgeschlagene oder stale gestartete Provider-Syncs
+
+Die Defaults sind bewusst konservativ: Preisreihen gelten nach 5 Tagen als
+stale, TTM-Fundamentals nach 550 Tagen und Market Caps nach 10 Tagen.
+
+```bash
+docker compose run --rm app python -m cli.data_status --details --universe sp500_active --benchmark-ticker SPY
+docker compose run --rm app python -m cli.data_status --details --provider yfinance --identifier-provider yfinance --diagnostic-limit 20
 ```
 
 Die Yahoo/yfinance-Syncs sind konservativ haertbar. Fuer freie inoffizielle

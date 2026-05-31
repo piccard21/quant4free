@@ -50,6 +50,12 @@ def parse_args() -> argparse.Namespace:
         default=3,
         help="Number of latest data sync audit rows to print.",
     )
+    parser.add_argument(
+        "--diagnostic-limit",
+        type=int,
+        default=5,
+        help="Number of missing/stale tickers to print in data diagnostics.",
+    )
     return parser.parse_args()
 
 
@@ -58,6 +64,7 @@ def main() -> None:
     _validate_args(args)
 
     from data import FixtureDataProvider
+    from data.diagnostics import DataQualityDiagnostics, format_data_quality_report
     from evaluation import BacktestConfig, create_benchmark, run_backtest
     from indicators import compute_indicators, create_indicators
     from shared import CapabilityValidationError, validate_strategy_run_capabilities
@@ -84,6 +91,15 @@ def main() -> None:
         print(f"sync_runs_recent={len(sync_runs)}")
         for row in sync_runs:
             print(_format_sync_run_status(row))
+        data_quality = DataQualityDiagnostics().build_report(
+            universe_key=args.universe,
+            benchmark_ticker=args.benchmark.upper(),
+        )
+        for line in format_data_quality_report(
+            data_quality,
+            sample_limit=args.diagnostic_limit,
+        ):
+            print(line)
 
     provider = FixtureDataProvider()
     try:

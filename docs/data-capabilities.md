@@ -121,6 +121,13 @@ Capability-Metadaten sollten spaeter mindestens beschreiben:
 | `coverage_policy` | Erforderliche Abdeckung, z. B. 95 Prozent des Universums. |
 | `required_fields` | Fachlich benoetigte Mindestspalten. |
 
+Seit AP26 gibt es eine erste operative, schemafreie Auswertung dieser
+Metadaten-Idee: `data.diagnostics` prueft Preise, TTM-Fundamentals, Market
+Caps und Provider-Identifier-Coverage gegen konservative Default-Freshness-
+Schwellen und meldet die Ergebnisse in `cli.data_status --details` sowie
+`cli.operator_smoke` als `data_quality.*`-Zeilen. AP27 soll diese Schwellen
+workflow-/source-binding-spezifisch konfigurierbar machen.
+
 ## Provider- und API-Bindings
 
 AP19 praezisiert: Ein Universum waehlt Assets aus, aber nicht automatisch die

@@ -14,6 +14,7 @@ from data.models import (
     TickerUpsert,
     UniverseMemberUpsert,
 )
+from data.diagnostics import DataQualityDiagnostics, format_data_quality_report
 from data.repository import RawDataRepository
 from data.sync import (
     FundamentalSyncService,
@@ -306,6 +307,124 @@ class DataSyncTests(unittest.TestCase):
         self.assertEqual(identifiers[0].provider_symbol, "AAA")
         self.assertEqual(coverage.covered_tickers, ("AAA",))
         self.assertEqual(coverage.missing_tickers, ("BBB",))
+
+    def test_data_quality_diagnostics_report_missing_stale_and_identifier_gaps(self):
+        engine = create_engine("sqlite+pysqlite:///:memory:", future=True)
+        _create_raw_tables(engine)
+        repository = RawDataRepository(engine)
+        sync_time = datetime(2026, 5, 29, 12, 0)
+        repository.upsert_tickers(
+            [
+                TickerUpsert("AAA", "Asset AAA", "Tech"),
+                TickerUpsert("BBB", "Asset BBB", "Health"),
+            ],
+            sync_time=sync_time,
+        )
+        repository.ensure_ticker(
+            "SPY",
+            name="SPDR S&P 500 ETF Trust",
+            sector="Benchmark",
+            is_active=False,
+            sync_time=sync_time,
+        )
+        repository.upsert_provider_identifiers(
+            [
+                ProviderIdentifier(
+                    ticker="AAA",
+                    provider_key="yfinance",
+                    identifier_scheme="ticker",
+                    provider_symbol="AAA",
+                    is_primary=True,
+                )
+            ]
+        )
+        repository.upsert_daily_candles(
+            [
+                DailyCandle(
+                    "AAA",
+                    date(2026, 5, 29),
+                    Decimal("10"),
+                    Decimal("11"),
+                    Decimal("9"),
+                    Decimal("10.5"),
+                    100,
+                ),
+                DailyCandle(
+                    "SPY",
+                    date(2026, 5, 20),
+                    Decimal("20"),
+                    Decimal("21"),
+                    Decimal("19"),
+                    Decimal("20.5"),
+                    100,
+                ),
+            ]
+        )
+        repository.upsert_financial_reports(
+            [
+                FinancialReport(
+                    ticker="AAA",
+                    report_date=date(2026, 3, 31),
+                    report_type="ttm",
+                    revenue=100,
+                    net_income=10,
+                    ebit=9,
+                    free_cash_flow=8,
+                    total_debt=7,
+                    total_equity=6,
+                    cash_and_equivalents=5,
+                    source="test",
+                    imported_at=sync_time,
+                )
+            ]
+        )
+        repository.upsert_market_caps(
+            [
+                MarketCapSnapshot(
+                    ticker="AAA",
+                    date=date(2026, 5, 20),
+                    market_cap=123,
+                    imported_at=sync_time,
+                )
+            ]
+        )
+
+        run_id = repository.start_data_sync_run(
+            sync_type="prices",
+            provider_key="yfinance",
+            source_role="prices",
+            mode="daily",
+            dry_run=False,
+            started_at=datetime(2026, 5, 29, 10, 0),
+        )
+        repository.fail_data_sync_run(
+            run_id,
+            error_message="RuntimeError: provider unavailable",
+            finished_at=datetime(2026, 5, 29, 10, 1),
+        )
+
+        report = DataQualityDiagnostics(engine).build_report(
+            universe_key="sp500_active",
+            benchmark_ticker="SPY",
+            as_of_date=date(2026, 5, 31),
+            price_stale_days=5,
+            market_cap_stale_days=5,
+            identifier_provider_key="yfinance",
+            sync_provider_key="yfinance",
+            now=datetime(2026, 5, 31, 12, 0),
+        )
+        lines = format_data_quality_report(report, sample_limit=5)
+
+        self.assertEqual(report.status, "warning")
+        self.assertEqual(report.prices.status, "missing_stale")
+        self.assertEqual(report.prices.missing_tickers, ("BBB",))
+        self.assertEqual(report.prices.stale_tickers, ("SPY",))
+        self.assertEqual(report.fundamentals.status, "missing")
+        self.assertEqual(report.fundamentals.missing_tickers, ("BBB",))
+        self.assertEqual(report.market_caps.status, "missing_stale")
+        self.assertEqual(report.provider_identifiers.status, "missing")
+        self.assertIn("data_quality.prices status=missing_stale", lines[1])
+        self.assertIn("data_quality.sync type=prices status=failed", "\n".join(lines))
 
     def test_price_sync_uses_provider_symbol_and_stores_internal_ticker(self):
         engine = create_engine("sqlite+pysqlite:///:memory:", future=True)

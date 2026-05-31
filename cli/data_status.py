@@ -1,5 +1,5 @@
 import argparse
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any
 
 
@@ -28,6 +28,54 @@ def parse_args() -> argparse.Namespace:
         "--benchmark-ticker",
         default="SPY",
         help="Ticker used to check benchmark price availability.",
+    )
+    parser.add_argument(
+        "--universe",
+        default="sp500_active",
+        help="Universe used for data quality diagnostics with --details.",
+    )
+    parser.add_argument(
+        "--as-of-date",
+        type=_parse_date,
+        default=None,
+        help="As-of date for freshness diagnostics. Defaults to today.",
+    )
+    parser.add_argument(
+        "--price-stale-days",
+        type=int,
+        default=5,
+        help="Price rows older than this many days are reported as stale.",
+    )
+    parser.add_argument(
+        "--fundamental-stale-days",
+        type=int,
+        default=550,
+        help="TTM fundamental rows older than this many days are reported as stale.",
+    )
+    parser.add_argument(
+        "--market-cap-stale-days",
+        type=int,
+        default=10,
+        help="Market-cap rows older than this many days are reported as stale.",
+    )
+    parser.add_argument(
+        "--identifier-provider",
+        default=None,
+        help=(
+            "Provider key used for identifier coverage diagnostics. Defaults to "
+            "--provider when set, otherwise mysql_fixture."
+        ),
+    )
+    parser.add_argument(
+        "--identifier-scheme",
+        default="ticker",
+        help="Provider identifier scheme used for coverage diagnostics.",
+    )
+    parser.add_argument(
+        "--diagnostic-limit",
+        type=int,
+        default=10,
+        help="Number of missing/stale tickers to print per data quality line.",
     )
     parser.add_argument(
         "--sync-limit",
@@ -216,6 +264,36 @@ def main() -> None:
                 {"ticker": args.benchmark_ticker},
             ).mappings().one()
             print(_format_benchmark_status(args.benchmark_ticker, benchmark))
+
+            from data.diagnostics import (
+                DataQualityDiagnostics,
+                format_data_quality_report,
+            )
+
+            identifier_provider = (
+                args.identifier_provider or args.provider or "mysql_fixture"
+            )
+            report = DataQualityDiagnostics().build_report(
+                universe_key=args.universe,
+                benchmark_ticker=args.benchmark_ticker,
+                as_of_date=args.as_of_date,
+                price_stale_days=args.price_stale_days,
+                fundamental_stale_days=args.fundamental_stale_days,
+                market_cap_stale_days=args.market_cap_stale_days,
+                identifier_provider_key=identifier_provider,
+                identifier_scheme=args.identifier_scheme,
+                sync_provider_key=args.provider,
+                stale_started_minutes=args.stale_started_minutes,
+            )
+            for line in format_data_quality_report(
+                report,
+                sample_limit=args.diagnostic_limit,
+            ):
+                print(line)
+
+
+def _parse_date(value: str) -> date:
+    return date.fromisoformat(value)
 
 
 def _format_table_status(table_name: str, row: dict[str, Any]) -> str:

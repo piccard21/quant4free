@@ -82,6 +82,13 @@ Provider-Capabilities sind die Grundlage fuer austauschbare APIs. Zwei Provider
 sind nur dann austauschbar, wenn ihre normalisierten Capabilities den
 Anforderungen des Laufs entsprechen.
 
+Seit AP26 ist die operative Diagnose dazu angebunden: `data.diagnostics`
+vergleicht vorhandene Rohdaten mit Freshness-Schwellen, prueft
+Provider-Identifier-Coverage und zeigt die juengste Sync-Health pro
+Provider-/Sync-Typ in `cli.data_status --details` und `cli.operator_smoke`.
+Diese Diagnose aendert noch keine Provider-Konfiguration; AP27 soll die
+Policies konfigurierbar machen.
+
 ## Identifier- und Symbolmodell
 
 Provider verwenden unterschiedliche Symbole. Das Framework braucht langfristig
