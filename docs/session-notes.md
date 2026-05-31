@@ -473,5 +473,6 @@ AP19 is complete:
   - `.venv/bin/python -m compileall data universes indicators strategies simulation evaluation live cli shared tests`
 
 Next step: AP25, improve sync-audit operation around `data_sync_runs` with
-filtered status output, retention/retry rules, and clearer diagnostics for
-failed or stale syncs.
+filtered status output, retention/retry rules, clearer diagnostics for failed
+or stale syncs, and conservative Yahoo/yfinance hardening through configurable
+batch sizes, throttling, backoff, and a simple circuit breaker.

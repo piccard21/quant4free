@@ -203,8 +203,10 @@ Verification for AP24:
 `.venv/bin/python -m compileall data universes indicators strategies simulation evaluation live cli shared tests`.
 
 AP25 is planned next: improve sync-audit operation around `data_sync_runs`,
-likely dedicated filtered status output, retention/retry rules, and clearer
-operator diagnostics for failed or stale syncs.
+likely dedicated filtered status output, retention/retry rules, clearer
+operator diagnostics for failed or stale syncs, and conservative Yahoo/
+yfinance hardening through configurable batch sizes, throttling, backoff, and
+a simple circuit breaker to reduce rate-limit or temporary-block risk.
 
 ## Build, Test, and Development Commands
 

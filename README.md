@@ -282,7 +282,10 @@ Verifiziert wurde mit
 Als naechster technischer AP ist AP25 geplant: Sync-Audit-Bedienung und
 Betriebshaertung ausbauen, z. B. dedizierte Filter-/Statusausgaben,
 Retention-/Retry-Regeln und klarere Operator-Diagnosen auf Basis von
-`data_sync_runs`.
+`data_sync_runs`. Fuer den aktuellen Yahoo-/yfinance-Pfad soll AP25 zudem
+konfigurierbare Batch-Groessen, Throttling, Backoff und einen einfachen
+Circuit-Breaker einplanen, damit der freie inoffizielle Provider nicht durch
+zu aggressive Abrufmuster in Rate-Limits oder temporäre Sperren laeuft.
 
 Der Umbau erfolgt ab hier schrittweise. AP4 ist bewusst ein Infrastruktur-
 Schritt, weil AP3 unter Windows mit WSL Toolchain-Probleme gezeigt hat:

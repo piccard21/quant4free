@@ -41,6 +41,10 @@ AP25:
 - Sync-Audit-Bedienung und Betriebshaertung ausbauen.
 - Naheliegende Punkte sind dedizierte Filter-/Statusausgaben, Retention-/
   Retry-Regeln und klarere Operator-Diagnosen auf Basis von `data_sync_runs`.
+- Fuer den aktuellen Yahoo-/yfinance-Pfad konfigurierbare Batch-Groessen,
+  Throttling, Backoff und einen einfachen Circuit-Breaker vorsehen, damit
+  Preis- und Fundamental-Syncs nicht durch zu aggressive Request-Muster
+  in Rate-Limits oder temporäre Sperren laufen.
 
 Erledigt:
 
@@ -1622,6 +1626,10 @@ Moeglicher Umfang:
   definieren.
 - Operator-Diagnosen und Troubleshooting auf Basis von `data_sync_runs`
   erweitern.
+- Den aktuellen Yahoo-/yfinance-Sync konservativ haerten:
+  Preis-Init in kleinen Batches, Daily nicht aggressiv parallelisieren,
+  Fundamentals sequentiell lassen, Sleeps/Jitter sowie Retry mit Backoff und
+  Circuit-Breaker fuer wiederholte Provider-Fehler einbauen.
 
 Status: naechster Schritt.
 
