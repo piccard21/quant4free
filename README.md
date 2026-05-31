@@ -267,15 +267,22 @@ Default-Mitgliedschaften bei Asset-Upserts pflegen und aktive
 Mitgliedschaftsintervalle bei Deaktivierungen schliessen. Der modulare
 Universe-Loader nutzt DB-Mitgliedschaften, wenn der Provider sie anbietet, und
 behaelt fuer Tests/Fake-Provider den bisherigen `list_tickers`-Fallback.
-Verifiziert wurde mit
-`.venv/bin/python -m pytest tests -m "not integration"`,
-`.venv/bin/python -m compileall data universes cli tests` und
-`scripts/db_integration_tests.sh`.
 
-Als naechster technischer AP ist AP24 geplant: ein kanonischer
-Data-Sync-Audit-Trail, voraussichtlich `data_sync_runs`, soll Provider, Modus,
-Zeitfenster, Status, Zeilenzaehler und operator-sichtbare Fehler fuer Preis-,
-Fundamental- und Membership-Syncs speichern.
+AP24 ist abgeschlossen: Der kanonische Data-Sync-Audit-Trail
+`data_sync_runs` ist in `init.sql`, der Rohdaten-Fixture, dem
+`RawDataRepository`, den Preis-/Fundamental-/Membership-Syncs und
+`cli.data_status --details` verdrahtet. Echte Sync-Laeufe speichern Provider,
+Source-Rolle, Modus, Zeitfenster, Status, Zaehler und operator-sichtbare
+Fehler. Dry-Runs bleiben weiterhin read-only und schreiben keine Audit-Zeilen.
+Verifiziert wurde mit
+`.venv/bin/python -m pytest tests/test_data_sync.py`,
+`.venv/bin/python -m pytest tests -m "not integration"` und
+`.venv/bin/python -m compileall data universes indicators strategies simulation evaluation live cli shared tests`.
+
+Als naechster technischer AP ist AP25 geplant: Sync-Audit-Bedienung und
+Betriebshaertung ausbauen, z. B. dedizierte Filter-/Statusausgaben,
+Retention-/Retry-Regeln und klarere Operator-Diagnosen auf Basis von
+`data_sync_runs`.
 
 Der Umbau erfolgt ab hier schrittweise. AP4 ist bewusst ein Infrastruktur-
 Schritt, weil AP3 unter Windows mit WSL Toolchain-Probleme gezeigt hat:
@@ -309,7 +316,9 @@ Schritt, weil AP3 unter Windows mit WSL Toolchain-Probleme gezeigt hat:
     DB-identifizierbare und historisierte Universen einfuehren. Erledigt in
     AP23.
 21. Kanonischen Data-Sync-Audit-Trail fuer Provider, Modus, Zeitfenster,
-    Status, Zeilenzaehler und Fehler einfuehren. Naechster Schritt AP24.
+    Status, Zeilenzaehler und Fehler einfuehren. Erledigt in AP24.
+22. Sync-Audit-Bedienung und Betriebshaertung ausbauen. Naechster Schritt
+    AP25.
 
 Der Arbeitsplan steht in [plan.md](plan.md).
 

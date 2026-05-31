@@ -9,6 +9,7 @@ from shared.db import get_engine
 
 from .models import (
     DailyCandle,
+    DataSyncRun,
     FinancialReport,
     MarketCapSnapshot,
     ProviderIdentifier,
@@ -563,6 +564,164 @@ class RawDataRepository:
                 text("SELECT MAX(date) FROM asset_price_bars WHERE ticker = :ticker"),
                 {"ticker": ticker},
             ).scalar_one()
+
+    def start_data_sync_run(
+        self,
+        sync_type: str,
+        provider_key: Optional[str],
+        source_role: Optional[str],
+        mode: str,
+        dry_run: bool,
+        started_at: Optional[datetime] = None,
+        date_from: Optional[date] = None,
+        date_to: Optional[date] = None,
+        requested_tickers_count: Optional[int] = None,
+        planned_items: int = 0,
+    ) -> int:
+        started_at = started_at or datetime.now()
+        with self.engine.begin() as connection:
+            result = connection.execute(
+                text(
+                    """
+                    INSERT INTO data_sync_runs
+                        (
+                            sync_type,
+                            provider_key,
+                            source_role,
+                            mode,
+                            status,
+                            dry_run,
+                            started_at,
+                            date_from,
+                            date_to,
+                            requested_tickers_count,
+                            planned_items
+                        )
+                    VALUES
+                        (
+                            :sync_type,
+                            :provider_key,
+                            :source_role,
+                            :mode,
+                            'started',
+                            :dry_run,
+                            :started_at,
+                            :date_from,
+                            :date_to,
+                            :requested_tickers_count,
+                            :planned_items
+                        )
+                    """
+                ),
+                {
+                    "sync_type": sync_type,
+                    "provider_key": provider_key,
+                    "source_role": source_role,
+                    "mode": mode,
+                    "dry_run": 1 if dry_run else 0,
+                    "started_at": started_at,
+                    "date_from": date_from,
+                    "date_to": date_to,
+                    "requested_tickers_count": requested_tickers_count,
+                    "planned_items": planned_items,
+                },
+            )
+            return int(result.lastrowid)
+
+    def finish_data_sync_run(
+        self,
+        run_id: int,
+        finished_at: Optional[datetime] = None,
+        planned_items: Optional[int] = None,
+        processed_items: int = 0,
+        upserted_rows: int = 0,
+        ticker_upserts: int = 0,
+        deactivated_tickers: int = 0,
+        upserted_candles: int = 0,
+        updated_tickers: int = 0,
+        upserted_reports: int = 0,
+        upserted_market_caps: int = 0,
+    ) -> None:
+        self._complete_data_sync_run(
+            run_id=run_id,
+            status="ok",
+            finished_at=finished_at,
+            planned_items=planned_items,
+            processed_items=processed_items,
+            upserted_rows=upserted_rows,
+            ticker_upserts=ticker_upserts,
+            deactivated_tickers=deactivated_tickers,
+            upserted_candles=upserted_candles,
+            updated_tickers=updated_tickers,
+            upserted_reports=upserted_reports,
+            upserted_market_caps=upserted_market_caps,
+            error_message=None,
+        )
+
+    def fail_data_sync_run(
+        self,
+        run_id: int,
+        error_message: str,
+        finished_at: Optional[datetime] = None,
+        planned_items: Optional[int] = None,
+        processed_items: int = 0,
+        upserted_rows: int = 0,
+        ticker_upserts: int = 0,
+        deactivated_tickers: int = 0,
+        upserted_candles: int = 0,
+        updated_tickers: int = 0,
+        upserted_reports: int = 0,
+        upserted_market_caps: int = 0,
+    ) -> None:
+        self._complete_data_sync_run(
+            run_id=run_id,
+            status="failed",
+            finished_at=finished_at,
+            planned_items=planned_items,
+            processed_items=processed_items,
+            upserted_rows=upserted_rows,
+            ticker_upserts=ticker_upserts,
+            deactivated_tickers=deactivated_tickers,
+            upserted_candles=upserted_candles,
+            updated_tickers=updated_tickers,
+            upserted_reports=upserted_reports,
+            upserted_market_caps=upserted_market_caps,
+            error_message=error_message,
+        )
+
+    def list_data_sync_runs(self, limit: int = 10) -> list[DataSyncRun]:
+        rows = self._mappings(
+            """
+            SELECT
+                id,
+                sync_type,
+                provider_key,
+                source_role,
+                mode,
+                status,
+                dry_run,
+                started_at,
+                finished_at,
+                date_from,
+                date_to,
+                requested_tickers_count,
+                planned_items,
+                processed_items,
+                upserted_rows,
+                ticker_upserts,
+                deactivated_tickers,
+                upserted_candles,
+                updated_tickers,
+                upserted_reports,
+                upserted_market_caps,
+                error_message
+            FROM data_sync_runs
+            ORDER BY started_at DESC, id DESC
+            LIMIT :limit
+            """,
+            {"limit": limit},
+        )
+        return [_data_sync_run_from_row(row) for row in rows]
 
     def upsert_tickers(
         self,
@@ -1305,6 +1464,61 @@ class RawDataRepository:
         with self.engine.connect() as connection:
             return pd.read_sql_query(statement, connection, params=params)
 
+    def _complete_data_sync_run(
+        self,
+        run_id: int,
+        status: str,
+        finished_at: Optional[datetime],
+        planned_items: Optional[int],
+        processed_items: int,
+        upserted_rows: int,
+        ticker_upserts: int,
+        deactivated_tickers: int,
+        upserted_candles: int,
+        updated_tickers: int,
+        upserted_reports: int,
+        upserted_market_caps: int,
+        error_message: Optional[str],
+    ) -> None:
+        finished_at = finished_at or datetime.now()
+        with self.engine.begin() as connection:
+            connection.execute(
+                text(
+                    """
+                    UPDATE data_sync_runs
+                    SET
+                        status = :status,
+                        finished_at = :finished_at,
+                        planned_items = COALESCE(:planned_items, planned_items),
+                        processed_items = :processed_items,
+                        upserted_rows = :upserted_rows,
+                        ticker_upserts = :ticker_upserts,
+                        deactivated_tickers = :deactivated_tickers,
+                        upserted_candles = :upserted_candles,
+                        updated_tickers = :updated_tickers,
+                        upserted_reports = :upserted_reports,
+                        upserted_market_caps = :upserted_market_caps,
+                        error_message = :error_message
+                    WHERE id = :run_id
+                    """
+                ),
+                {
+                    "run_id": run_id,
+                    "status": status,
+                    "finished_at": finished_at,
+                    "planned_items": planned_items,
+                    "processed_items": processed_items,
+                    "upserted_rows": upserted_rows,
+                    "ticker_upserts": ticker_upserts,
+                    "deactivated_tickers": deactivated_tickers,
+                    "upserted_candles": upserted_candles,
+                    "updated_tickers": updated_tickers,
+                    "upserted_reports": upserted_reports,
+                    "upserted_market_caps": upserted_market_caps,
+                    "error_message": error_message,
+                },
+            )
+
     @staticmethod
     def _statement(sql: str, tickers: Optional[Sequence[str]] = None):
         statement = text(sql)
@@ -1650,6 +1864,33 @@ def _universe_from_row(row: dict[str, Any]) -> UniverseRecord:
         membership_rule=row["membership_rule"] or "assets.is_active = 1",
         created_at=row["created_at"],
         updated_at=row["updated_at"],
+    )
+
+
+def _data_sync_run_from_row(row: dict[str, Any]) -> DataSyncRun:
+    return DataSyncRun(
+        id=row["id"],
+        sync_type=row["sync_type"],
+        provider_key=row["provider_key"],
+        source_role=row["source_role"],
+        mode=row["mode"],
+        status=row["status"],
+        dry_run=bool(row["dry_run"]),
+        started_at=row["started_at"],
+        finished_at=row["finished_at"],
+        date_from=row["date_from"],
+        date_to=row["date_to"],
+        requested_tickers_count=row["requested_tickers_count"],
+        planned_items=row["planned_items"] or 0,
+        processed_items=row["processed_items"] or 0,
+        upserted_rows=row["upserted_rows"] or 0,
+        ticker_upserts=row["ticker_upserts"] or 0,
+        deactivated_tickers=row["deactivated_tickers"] or 0,
+        upserted_candles=row["upserted_candles"] or 0,
+        updated_tickers=row["updated_tickers"] or 0,
+        upserted_reports=row["upserted_reports"] or 0,
+        upserted_market_caps=row["upserted_market_caps"] or 0,
+        error_message=row["error_message"],
     )
 
 

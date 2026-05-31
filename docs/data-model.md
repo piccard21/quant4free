@@ -1,6 +1,6 @@
 # Datenmodell-Plan
 
-Stand: AP23.
+Stand: AP24.
 
 Dieses Dokument beschreibt den Zielzustand des neuen modularen Quant-Frameworks.
 AP14 ersetzt die bisherige Uebergangsentscheidung, legacy-kompatible Tabellen
@@ -21,7 +21,9 @@ Capability-/Provider-Pruefung in Python um. AP21 konkretisiert den
 Asset-Katalog im Schema und fuehrt provider-spezifische Identifier-Mappings
 ein. AP22 nutzt diese Mappings im modularen Sync fuer Provider-spezifische
 Symbolaufloesung. AP23 fuehrt kanonische `universes` und `universe_members`
-fuer Universe-Identitaet und historisierte Mitgliedschaften ein.
+fuer Universe-Identitaet und historisierte Mitgliedschaften ein. AP24 setzt
+`data_sync_runs` als kanonischen Audit-Trail fuer echte Preis-, Fundamental-
+und Membership-Syncs um.
 
 ## Leitlinien
 
@@ -94,7 +96,7 @@ Zweck:
 | `asset_price_bars` | Tägliche OHLCV-Preisbars. Ersetzt `daily_candles`. |
 | `asset_fundamental_reports` | Annual-/TTM-Fundamentaldaten. Ersetzt `financial_reports`. |
 | `asset_market_caps` | Market-Cap-Zeitreihe. Ersetzt `market_cap_snapshots`. |
-| `data_sync_runs` | Audit fuer Daten-Syncs, Provider, Zeitfenster, Status und Fehlermeldungen. |
+| `data_sync_runs` | Audit fuer echte Daten-Syncs, Provider, Source-Rollen, Zeitfenster, Status, Zeilenzaehler und Fehlermeldungen. |
 
 `tickers.is_active` wird nicht in `assets` uebernommen. Aktive
 Universumsmitgliedschaft gehoert in `universe_members`.
@@ -118,6 +120,11 @@ AP18/AP21/AP23-Zielpraezisierung:
 - Neue assetklassenspezifische Tabellen, z. B. fuer Krypto-Netzwerkdaten oder
   ETF-Holdings, sollen als eigene Capabilities modelliert werden statt die
   Aktien-Fundamentaltabelle zu ueberladen.
+- Seit AP24 schreibt `data_sync_runs` fuer echte Preis-, Fundamental- und
+  Membership-Syncs Start-/Endzeit, Provider, Source-Rolle, Modus, optionales
+  Datenfenster, geplante/verarbeitete Items, Row Counts, Status und
+  operator-sichtbare Fehler. Dry-Runs bleiben read-only und erzeugen keine
+  Audit-Zeilen.
 
 ### 2. Mandanten, Portfolios und Kataloge
 
@@ -486,6 +493,19 @@ Status: abgeschlossen als Schema-/Repository-AP.
   Membership-Intervalle bei Deaktivierungen.
 - Der modulare Universe-Loader liest DB-Mitgliedschaften, wenn ein Provider
   diese anbietet, und behaelt einen Fallback fuer Tests/Fake-Provider.
+
+### AP24: Data-Sync-Audit-Trail
+
+Status: abgeschlossen als Schema-/Repository-/Sync-AP.
+
+- `data_sync_runs` ist kanonische Tabelle in `init.sql` und der
+  Rohdaten-Fixture.
+- `RawDataRepository` kann Sync-Runs starten, erfolgreich abschliessen,
+  fehlschlagen lassen und die juengsten Runs lesen.
+- Preis-, Fundamental- und Membership-Syncs schreiben echte Runs mit Provider,
+  Source-Rolle, Modus, Zeitfenster, Status, Zaehlern und Fehlermeldung.
+- `cli.data_status --details` zeigt die juengsten Sync-Runs fuer Operatoren.
+- Dry-Runs bleiben read-only und schreiben keine Audit-Zeilen.
 
 ## Initialer Schema-Sketch
 

@@ -93,6 +93,10 @@ def main() -> None:
             f"downloaded_tickers={price_result.downloaded_tickers} "
             f"upserted_candles={price_result.upserted_candles}"
         )
+        if price_result.membership_sync_run_id is not None:
+            print(f"membership_sync_run_id={price_result.membership_sync_run_id}")
+        if price_result.sync_run_id is not None:
+            print(f"price_sync_run_id={price_result.sync_run_id}")
         print(
             "fundamentals "
             f"planned_tickers={len(fundamental_result.planned_tickers)} "
@@ -100,6 +104,8 @@ def main() -> None:
             f"upserted_reports={fundamental_result.upserted_reports} "
             f"upserted_market_caps={fundamental_result.upserted_market_caps}"
         )
+        if fundamental_result.sync_run_id is not None:
+            print(f"fundamental_sync_run_id={fundamental_result.sync_run_id}")
 
     artifacts = run_strategy_snapshot(
         FixtureDataProvider(),

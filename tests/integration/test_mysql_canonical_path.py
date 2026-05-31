@@ -33,6 +33,7 @@ CANONICAL_TABLES = {
     "asset_price_bars",
     "asset_fundamental_reports",
     "asset_market_caps",
+    "data_sync_runs",
     "strategy_instances",
     "strategy_config_snapshots",
     "portfolio_target_items",

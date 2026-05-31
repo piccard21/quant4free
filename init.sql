@@ -272,6 +272,37 @@ CREATE TABLE IF NOT EXISTS asset_market_caps (
 COMMENT='Canonical market-cap time series';
 
 
+CREATE TABLE IF NOT EXISTS data_sync_runs (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    sync_type VARCHAR(32) NOT NULL,
+    provider_key VARCHAR(64),
+    source_role VARCHAR(64),
+    mode VARCHAR(32) NOT NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'started',
+    dry_run TINYINT(1) NOT NULL DEFAULT 0,
+    started_at DATETIME NOT NULL,
+    finished_at DATETIME,
+    date_from DATE,
+    date_to DATE,
+    requested_tickers_count INT,
+    planned_items INT NOT NULL DEFAULT 0,
+    processed_items INT NOT NULL DEFAULT 0,
+    upserted_rows INT NOT NULL DEFAULT 0,
+    ticker_upserts INT NOT NULL DEFAULT 0,
+    deactivated_tickers INT NOT NULL DEFAULT 0,
+    upserted_candles INT NOT NULL DEFAULT 0,
+    updated_tickers INT NOT NULL DEFAULT 0,
+    upserted_reports INT NOT NULL DEFAULT 0,
+    upserted_market_caps INT NOT NULL DEFAULT 0,
+    error_message TEXT,
+
+    KEY idx_data_sync_runs_started_at (started_at),
+    KEY idx_data_sync_runs_type_status (sync_type, status, started_at),
+    KEY idx_data_sync_runs_provider (provider_key, source_role, started_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+COMMENT='Canonical data sync audit trail';
+
+
 -- ###########################################################################
 -- Strategy configuration
 -- ###########################################################################

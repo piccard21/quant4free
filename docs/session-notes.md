@@ -452,6 +452,26 @@ AP19 is complete:
   - `.venv/bin/python -m compileall data universes cli tests`
   - `scripts/db_integration_tests.sh`
 
-Next step: AP24, introduce a canonical data-sync audit trail, likely
-`data_sync_runs`, for provider/mode/date-window/status/row-count/error
-tracking across price, fundamental, and membership syncs.
+## AP24: Data-sync audit trail
+
+- Added canonical `data_sync_runs` to `init.sql`, the raw-data fixture, and
+  SQLite test schemas.
+- Added `DataSyncRun` plus `RawDataRepository` methods to start, finish, fail,
+  and list sync audit runs.
+- Price sync now records real price runs and a separate membership run when it
+  refreshes S&P 500 membership.
+- Fundamental sync now records real fundamental runs with report and
+  market-cap counters.
+- Provider failures are persisted as `failed` audit runs with an
+  operator-visible error before the original exception is re-raised.
+- Sync CLIs print created run IDs; `cli.data_status --details` shows recent
+  sync runs.
+- Dry-runs remain read-only and do not write audit rows.
+- Verification:
+  - `.venv/bin/python -m pytest tests/test_data_sync.py`
+  - `.venv/bin/python -m pytest tests -m "not integration"`
+  - `.venv/bin/python -m compileall data universes indicators strategies simulation evaluation live cli shared tests`
+
+Next step: AP25, improve sync-audit operation around `data_sync_runs` with
+filtered status output, retention/retry rules, and clearer diagnostics for
+failed or stale syncs.

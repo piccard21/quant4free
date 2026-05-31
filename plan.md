@@ -2,7 +2,7 @@
 
 ## Umsetzungsstand
 
-Stand: AP23 ist abgeschlossen. Das kanonische AP14-Schema ist der regulaere
+Stand: AP24 ist abgeschlossen. Das kanonische AP14-Schema ist der regulaere
 modulare Betriebspfad, AP15 dokumentiert den Host-Crontab-Betrieb fuer Daily
 und Monthly, und AP16 ergaenzt einen read-only Performance-Report fuer Real
 Portfolio, Shadow Portfolio und Benchmark. AP17 ergaenzt eine isolierte
@@ -14,7 +14,8 @@ setzt dieses Design als read-only Capability- und Provider-Check fuer den
 bestehenden Pfad um. AP21 konkretisiert den Asset-Katalog und Provider-
 Identifier, AP22 nutzt Provider-Symbole im Sync, und AP23 verlagert
 Universe-Identitaet sowie historisierte Mitgliedschaft in kanonische
-DB-Tabellen.
+DB-Tabellen. AP24 ergaenzt einen kanonischen Data-Sync-Audit-Trail fuer Preis-,
+Fundamental- und Membership-Syncs.
 
 Strategische Anpassung:
 
@@ -35,15 +36,32 @@ Strategische Anpassung:
 
 Naechster AP:
 
-AP24:
+AP25:
 
-- Kanonischen Data-Sync-Audit-Trail einfuehren, voraussichtlich
-  `data_sync_runs`.
-- Preis-, Fundamental- und Membership-Syncs sollen Provider, Modus,
-  Zeitfenster, Status, Zeilenzaehler und operator-sichtbare Fehler
-  nachvollziehbar speichern.
+- Sync-Audit-Bedienung und Betriebshaertung ausbauen.
+- Naheliegende Punkte sind dedizierte Filter-/Statusausgaben, Retention-/
+  Retry-Regeln und klarere Operator-Diagnosen auf Basis von `data_sync_runs`.
 
 Erledigt:
+
+AP24:
+
+- Tabelle `data_sync_runs` in `init.sql`, Fixture und SQLite-Testschema
+  eingefuehrt.
+- `RawDataRepository` kann Sync-Runs starten, erfolgreich abschliessen,
+  fehlschlagen lassen und die juengsten Runs lesen.
+- Preis-Sync schreibt Audit-Runs fuer echte Preisdownloads und, bei
+  Membership-Refresh, einen separaten Membership-Run.
+- Fundamental-Sync schreibt Audit-Runs inklusive Report-/Market-Cap-Zaehlern.
+- Fehler in Provider-Downloads werden als `failed` mit operator-sichtbarer
+  Fehlermeldung persistiert und danach weiterhin an die CLI durchgereicht.
+- `cli.data_status --details` zeigt die juengsten Sync-Runs; Sync-CLIs geben
+  erzeugte Run-IDs aus.
+- Dry-Runs bleiben read-only und schreiben keine Audit-Zeilen.
+- Verifikation:
+  - `.venv/bin/python -m pytest tests/test_data_sync.py`
+  - `.venv/bin/python -m pytest tests -m "not integration"`
+  - `.venv/bin/python -m compileall data universes indicators strategies simulation evaluation live cli shared tests`
 
 AP23:
 
@@ -1582,6 +1600,29 @@ Umfang:
 - Preis-, Fundamental- und Membership-Syncs sollen Runs schreiben.
 - Status-/Smoke-CLIs sollen die juengsten Sync-Runs anzeigen koennen.
 
+Status: abgeschlossen in AP24.
+
+Verifikation:
+
+- `.venv/bin/python -m pytest tests/test_data_sync.py`
+- `.venv/bin/python -m pytest tests -m "not integration"`
+- `.venv/bin/python -m compileall data universes indicators strategies simulation evaluation live cli shared tests`
+
+### AP25: Sync-Audit-Bedienung und Betriebshaertung
+
+Ziel:
+
+- Den AP24-Audit-Trail fuer den laufenden Betrieb besser nutzbar machen.
+
+Moeglicher Umfang:
+
+- Dedizierte Sync-Statusausgaben mit Filtern fuer Provider, Sync-Typ, Status
+  und Zeitraum.
+- Retention- und Retry-Regeln fuer fehlgeschlagene oder haengende Sync-Runs
+  definieren.
+- Operator-Diagnosen und Troubleshooting auf Basis von `data_sync_runs`
+  erweitern.
+
 Status: naechster Schritt.
 
 ## Roadmap
@@ -1612,6 +1653,8 @@ Status: naechster Schritt.
 22. Asset-Katalog und Provider-Identifier-Basis konkretisieren.
 23. Provider-Symbolaufloesung und explizitere Universums-Metadaten umsetzen.
 24. DB-Universen und historisierte Mitgliedschaften einfuehren.
+25. Data-Sync-Audit-Trail einfuehren.
+26. Sync-Audit-Bedienung und Betriebshaertung ausbauen.
 
 ## Testing Und Akzeptanz
 
@@ -1632,8 +1675,8 @@ Status: naechster Schritt.
 - Multi-Asset-Erweiterungen muessen Universen, Assetklassen und verfuegbare
   Datenarten explizit trennen; Krypto darf z. B. ohne Fundamentaldaten
   modellierbar sein. AP18 dokumentiert dieses Zielbild.
-- Der naechste technische Schritt ist ein read-only Capability- und
-  Provider-Check, der den aktuellen Default-Pfad nicht veraendert.
+- Der naechste technische Schritt ist Sync-Audit-Bedienung und
+  Betriebshaertung auf Basis von `data_sync_runs`.
 
 ## Annahmen Und Defaults
 

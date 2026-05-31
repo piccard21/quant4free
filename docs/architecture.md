@@ -1,6 +1,6 @@
 # Architektur
 
-Stand: AP23.
+Stand: AP24.
 
 Das neue Framework ist der regulaere operative Pfad. Legacy-Code liegt nur noch
 als archivierte Referenz unter `legacy/current_system/`.
@@ -13,7 +13,8 @@ als archivierte Referenz unter `legacy/current_system/`.
   `asset_fundamental_reports`, `asset_market_caps`. AP18 ordnet diese
   Tabellen als Capability-Quellen ein; AP21 trennt interne Assets von
   provider-spezifischen Symbolen, AP22 nutzt diese Symbole im Sync, AP23
-  fuehrt DB-Universen und historisierte Mitgliedschaften ein.
+  fuehrt DB-Universen und historisierte Mitgliedschaften ein, AP24 ergaenzt
+  `data_sync_runs` als Audit-Trail fuer echte Sync-Laeufe.
 - `universes/`: Universumsloader. Fachlich sind Universen Asset-Auswahlen und
   keine impliziten Datenanforderungen. Seit AP23 liest der Loader
   `universe_members`, wenn der Provider DB-Mitgliedschaften anbietet.
@@ -39,6 +40,7 @@ Rohdaten:
 - `asset_price_bars`
 - `asset_fundamental_reports`
 - `asset_market_caps`
+- `data_sync_runs`
 
 Live/Operations:
 
@@ -54,13 +56,14 @@ Live/Operations:
 - `live_cash_balances`
 - `live_positions`
 
-## AP18-AP23 Capability- und Provider-Modell
+## AP18-AP24 Capability- und Provider-Modell
 
 AP18 und AP19 richten die Architektur fachlich auf ein Capability- und
 Provider-Binding-Modell aus. AP20 setzt die read-only Pruefung in Code um.
 AP21 verankert Asset-Metadaten und Provider-Identifier im kanonischen Schema.
 AP22 nutzt diese Identifier im modularen Sync. AP23 verankert Universe-Katalog
-und historisierte Mitgliedschaften in der Datenbank:
+und historisierte Mitgliedschaften in der Datenbank. AP24 macht echte Syncs
+ueber `data_sync_runs` auditierbar:
 
 - `assets` ist der allgemeine Asset-Katalog mit Assetklasse,
   Canonical-/Display-Symbol, Instrumenttyp, Markt und Quote-Waehrung.
@@ -89,6 +92,9 @@ und historisierte Mitgliedschaften in der Datenbank:
 - Seit AP23 sind `sp500_active`, `active_tickers` und `all_tickers` als
   DB-Universen geseedet; offene und historische Mitgliedschaften werden in
   `universe_members` abgefragt.
+- Seit AP24 schreiben Preis-, Fundamental- und Membership-Syncs kanonische
+  Audit-Runs mit Provider, Source-Rolle, Modus, Zeitfenster, Status,
+  Zeilenzaehlern und operator-sichtbaren Fehlern. Dry-Runs bleiben read-only.
 
 Details stehen in [Assetklassen, Universen und Daten-Capabilities](data-capabilities.md)
 und [Provider-, API- und Source-Binding-Modell](provider-api-model.md).

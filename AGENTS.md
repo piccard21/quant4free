@@ -191,9 +191,20 @@ Verification for AP23:
 `.venv/bin/python -m compileall data universes cli tests`, and
 `scripts/db_integration_tests.sh`.
 
-AP24 is planned next: introduce a canonical data-sync audit trail, likely
-`data_sync_runs`, so price/fundamental/membership syncs can record provider,
-mode, date window, row counts, status, and operator-visible failures.
+AP24 is complete: canonical `data_sync_runs` now records real price,
+fundamental, and membership sync runs with provider, source role, mode, date
+window, row counters, status, and operator-visible failure messages.
+`RawDataRepository` exposes start/finish/fail/list methods, sync services write
+audit rows, sync CLIs print generated run IDs, and `cli.data_status --details`
+shows the latest runs. Dry-runs remain read-only and do not write audit rows.
+Verification for AP24:
+`.venv/bin/python -m pytest tests/test_data_sync.py`,
+`.venv/bin/python -m pytest tests -m "not integration"`, and
+`.venv/bin/python -m compileall data universes indicators strategies simulation evaluation live cli shared tests`.
+
+AP25 is planned next: improve sync-audit operation around `data_sync_runs`,
+likely dedicated filtered status output, retention/retry rules, and clearer
+operator diagnostics for failed or stale syncs.
 
 ## Build, Test, and Development Commands
 

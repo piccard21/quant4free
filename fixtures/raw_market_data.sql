@@ -7,6 +7,7 @@ SET time_zone = "+00:00";
 SET FOREIGN_KEY_CHECKS = 0;
 
 DROP TABLE IF EXISTS `asset_market_caps`;
+DROP TABLE IF EXISTS `data_sync_runs`;
 DROP TABLE IF EXISTS `asset_fundamental_reports`;
 DROP TABLE IF EXISTS `asset_price_bars`;
 DROP TABLE IF EXISTS `universe_members`;
@@ -142,6 +143,38 @@ CREATE TABLE `asset_market_caps` (
   PRIMARY KEY (`ticker`,`date`),
   KEY `idx_asset_market_caps_ticker_date_desc` (`ticker`,`date` DESC)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Canonical market-cap time series';
+
+--
+-- Table structure for `data_sync_runs`
+--
+CREATE TABLE `data_sync_runs` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `sync_type` varchar(32) NOT NULL COMMENT 'Sync type such as prices, fundamentals, or membership',
+  `provider_key` varchar(64) DEFAULT NULL COMMENT 'Provider used by the sync',
+  `source_role` varchar(64) DEFAULT NULL COMMENT 'Source role such as prices, fundamentals, or membership',
+  `mode` varchar(32) NOT NULL COMMENT 'Sync mode such as init or daily',
+  `status` varchar(32) NOT NULL DEFAULT 'started' COMMENT 'Run status: started, ok, or failed',
+  `dry_run` tinyint(1) NOT NULL DEFAULT '0' COMMENT '1 when the run was a planned dry-run',
+  `started_at` datetime NOT NULL COMMENT 'Run start timestamp',
+  `finished_at` datetime DEFAULT NULL COMMENT 'Run finish timestamp',
+  `date_from` date DEFAULT NULL COMMENT 'Requested data window start',
+  `date_to` date DEFAULT NULL COMMENT 'Requested data window end',
+  `requested_tickers_count` int DEFAULT NULL COMMENT 'Requested ticker count',
+  `planned_items` int NOT NULL DEFAULT '0' COMMENT 'Planned provider items',
+  `processed_items` int NOT NULL DEFAULT '0' COMMENT 'Processed provider items',
+  `upserted_rows` int NOT NULL DEFAULT '0' COMMENT 'Generic rows written by the sync',
+  `ticker_upserts` int NOT NULL DEFAULT '0' COMMENT 'Asset rows upserted',
+  `deactivated_tickers` int NOT NULL DEFAULT '0' COMMENT 'Assets deactivated by membership sync',
+  `upserted_candles` int NOT NULL DEFAULT '0' COMMENT 'Price bars upserted',
+  `updated_tickers` int NOT NULL DEFAULT '0' COMMENT 'Tickers updated by fundamental sync',
+  `upserted_reports` int NOT NULL DEFAULT '0' COMMENT 'Fundamental reports upserted',
+  `upserted_market_caps` int NOT NULL DEFAULT '0' COMMENT 'Market-cap snapshots upserted',
+  `error_message` text COMMENT 'Operator-visible failure message',
+  PRIMARY KEY (`id`),
+  KEY `idx_data_sync_runs_started_at` (`started_at`),
+  KEY `idx_data_sync_runs_type_status` (`sync_type`,`status`,`started_at`),
+  KEY `idx_data_sync_runs_provider` (`provider_key`,`source_role`,`started_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Canonical data sync audit trail';
 
 --
 -- Data for `assets` (506 rows)

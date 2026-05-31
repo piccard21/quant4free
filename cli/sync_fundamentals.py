@@ -61,6 +61,8 @@ def main() -> None:
     print(f"updated_tickers={result.updated_tickers}")
     print(f"upserted_reports={result.upserted_reports}")
     print(f"upserted_market_caps={result.upserted_market_caps}")
+    if result.sync_run_id is not None:
+        print(f"fundamental_sync_run_id={result.sync_run_id}")
     if args.plan_limit > 0:
         for item in result.planned[: args.plan_limit]:
             print(

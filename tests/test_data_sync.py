@@ -346,6 +346,44 @@ class DataSyncTests(unittest.TestCase):
         self.assertIn("BRK-B", candle_tickers)
         self.assertEqual(result.planned[0].ticker, "BRK-B")
         self.assertEqual(result.planned[0].provider_symbol, "BRK.B")
+        self.assertIsNotNone(result.sync_run_id)
+
+        run = repository.list_data_sync_runs(limit=1)[0]
+        self.assertEqual(run.sync_type, "prices")
+        self.assertEqual(run.provider_key, "yfinance")
+        self.assertEqual(run.status, "ok")
+        self.assertEqual(run.planned_items, 2)
+        self.assertEqual(run.processed_items, 2)
+        self.assertEqual(run.upserted_candles, 2)
+
+    def test_price_sync_records_membership_audit_when_refreshing_tickers(self):
+        engine = create_engine("sqlite+pysqlite:///:memory:", future=True)
+        _create_raw_tables(engine)
+        repository = RawDataRepository(engine)
+        ticker_source = FakeTickerSource(
+            [TickerUpsert("AAA", "Asset AAA", "Tech")]
+        )
+        price_source = FakePriceSource()
+
+        result = PriceSyncService(
+            repository=repository,
+            ticker_source=ticker_source,
+            price_source=price_source,
+        ).run(
+            mode="daily",
+            dry_run=False,
+            today=date(2026, 5, 29),
+            now=datetime(2026, 5, 29, 12, 0),
+        )
+
+        runs = repository.list_data_sync_runs(limit=5)
+        run_by_type = {run.sync_type: run for run in runs}
+
+        self.assertIsNotNone(result.membership_sync_run_id)
+        self.assertEqual(run_by_type["membership"].provider_key, "wikipedia_sp500")
+        self.assertEqual(run_by_type["membership"].status, "ok")
+        self.assertEqual(run_by_type["membership"].ticker_upserts, 1)
+        self.assertEqual(run_by_type["prices"].status, "ok")
 
     def test_fundamental_sync_uses_provider_symbol_and_stores_internal_ticker(self):
         engine = create_engine("sqlite+pysqlite:///:memory:", future=True)
@@ -387,6 +425,40 @@ class DataSyncTests(unittest.TestCase):
         self.assertEqual(report_ticker, "AAA")
         self.assertEqual(market_cap_ticker, "AAA")
         self.assertEqual(result.planned[0].provider_symbol, "AAA.DE")
+        self.assertIsNotNone(result.sync_run_id)
+
+        run = repository.list_data_sync_runs(limit=1)[0]
+        self.assertEqual(run.sync_type, "fundamentals")
+        self.assertEqual(run.provider_key, "yfinance")
+        self.assertEqual(run.status, "ok")
+        self.assertEqual(run.planned_items, 1)
+        self.assertEqual(run.processed_items, 1)
+        self.assertEqual(run.updated_tickers, 1)
+        self.assertEqual(run.upserted_reports, 1)
+        self.assertEqual(run.upserted_market_caps, 1)
+
+    def test_price_sync_records_failed_audit_run(self):
+        engine = create_engine("sqlite+pysqlite:///:memory:", future=True)
+        _create_raw_tables(engine)
+        repository = RawDataRepository(engine)
+        repository.upsert_tickers([TickerUpsert("AAA", "Asset AAA", "Tech")])
+
+        with self.assertRaises(RuntimeError):
+            PriceSyncService(
+                repository=repository,
+                price_source=FailingPriceSource(),
+            ).run(
+                mode="daily",
+                tickers=["AAA"],
+                dry_run=False,
+                today=date(2026, 5, 29),
+                now=datetime(2026, 5, 29, 12, 0),
+            )
+
+        run = repository.list_data_sync_runs(limit=1)[0]
+        self.assertEqual(run.sync_type, "prices")
+        self.assertEqual(run.status, "failed")
+        self.assertIn("RuntimeError: provider unavailable", run.error_message)
 
 
 class FakePriceSource:
@@ -405,6 +477,19 @@ class FakePriceSource:
             },
             index=pd.DatetimeIndex([end_date], name="Date"),
         )
+
+
+class FailingPriceSource:
+    def download_prices(self, ticker: str, start_date: date, end_date: date):
+        raise RuntimeError("provider unavailable")
+
+
+class FakeTickerSource:
+    def __init__(self, tickers: list[TickerUpsert]) -> None:
+        self.tickers = tickers
+
+    def list_tickers(self) -> list[TickerUpsert]:
+        return self.tickers
 
 
 class FakeFundamentalSource:
@@ -575,6 +660,36 @@ def _create_raw_tables(engine) -> None:
                     market_cap INTEGER,
                     imported_at DATETIME,
                     PRIMARY KEY (ticker, date)
+                )
+                """
+            )
+        )
+        connection.execute(
+            text(
+                """
+                CREATE TABLE data_sync_runs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    sync_type VARCHAR(32) NOT NULL,
+                    provider_key VARCHAR(64),
+                    source_role VARCHAR(64),
+                    mode VARCHAR(32) NOT NULL,
+                    status VARCHAR(32) NOT NULL DEFAULT 'started',
+                    dry_run INTEGER NOT NULL DEFAULT 0,
+                    started_at DATETIME NOT NULL,
+                    finished_at DATETIME,
+                    date_from DATE,
+                    date_to DATE,
+                    requested_tickers_count INTEGER,
+                    planned_items INTEGER NOT NULL DEFAULT 0,
+                    processed_items INTEGER NOT NULL DEFAULT 0,
+                    upserted_rows INTEGER NOT NULL DEFAULT 0,
+                    ticker_upserts INTEGER NOT NULL DEFAULT 0,
+                    deactivated_tickers INTEGER NOT NULL DEFAULT 0,
+                    upserted_candles INTEGER NOT NULL DEFAULT 0,
+                    updated_tickers INTEGER NOT NULL DEFAULT 0,
+                    upserted_reports INTEGER NOT NULL DEFAULT 0,
+                    upserted_market_caps INTEGER NOT NULL DEFAULT 0,
+                    error_message TEXT
                 )
                 """
             )

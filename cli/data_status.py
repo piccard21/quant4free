@@ -10,6 +10,7 @@ RAW_TABLES = {
     "asset_price_bars": "date",
     "asset_fundamental_reports": "report_date",
     "asset_market_caps": "date",
+    "data_sync_runs": "started_at",
 }
 
 
@@ -149,6 +150,28 @@ def main() -> None:
                     f"scheme={row['identifier_scheme']} "
                     f"rows={row['row_count']}"
                 )
+            for row in connection.execute(
+                text(
+                    """
+                    SELECT
+                        id,
+                        sync_type,
+                        provider_key,
+                        mode,
+                        status,
+                        started_at,
+                        finished_at,
+                        planned_items,
+                        processed_items,
+                        upserted_rows,
+                        error_message
+                    FROM data_sync_runs
+                    ORDER BY started_at DESC, id DESC
+                    LIMIT 5
+                    """
+                )
+            ).mappings():
+                print(_format_data_sync_run(row))
             benchmark = connection.execute(
                 text(
                     """
@@ -201,6 +224,25 @@ def _format_financial_report_status(row: dict[str, Any]) -> str:
         parts.append(
             f"imported={row['min_imported_at']}..{row['max_imported_at']}"
         )
+    return " ".join(parts)
+
+
+def _format_data_sync_run(row: dict[str, Any]) -> str:
+    parts = [
+        f"sync_run={row['id']}",
+        f"type={row['sync_type']}",
+        f"provider={row['provider_key']}",
+        f"mode={row['mode']}",
+        f"status={row['status']}",
+        f"started={row['started_at']}",
+        f"planned={row['planned_items']}",
+        f"processed={row['processed_items']}",
+        f"upserted_rows={row['upserted_rows']}",
+    ]
+    if row.get("finished_at") is not None:
+        parts.append(f"finished={row['finished_at']}")
+    if row.get("error_message"):
+        parts.append(f"error={row['error_message']}")
     return " ".join(parts)
 
 

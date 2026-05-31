@@ -96,6 +96,13 @@ docker compose run --rm app python -m cli.daily_run --dry-run-sync --model-limit
 docker compose run --rm app python -m cli.sync_data --dry-run
 ```
 
+Die letzten echten Sync-Laeufe inklusive Audit-Status, Zaehlern und Fehlern
+anzeigen:
+
+```bash
+docker compose run --rm app python -m cli.data_status --details
+```
+
 Gezielt nur Preise oder Fundamentals pruefen:
 
 ```bash
@@ -422,6 +429,9 @@ docker compose run --rm app python -m cli.sync_prices --dry-run --plan-limit 5
 docker compose run --rm app python -m cli.sync_fundamentals --dry-run --plan-limit 5
 docker compose run --rm app python -m cli.sync_data --dry-run
 ```
+
+Echte Syncs schreiben seit AP24 Audit-Zeilen in `data_sync_runs`. Dry-Runs
+bleiben read-only und erscheinen deshalb nicht als Sync-Run.
 
 ## Monthly Operations
 

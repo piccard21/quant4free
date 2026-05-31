@@ -57,6 +57,10 @@ def main() -> None:
     print(f"planned_tickers={len(result.planned)}")
     print(f"downloaded_tickers={result.downloaded_tickers}")
     print(f"upserted_candles={result.upserted_candles}")
+    if result.membership_sync_run_id is not None:
+        print(f"membership_sync_run_id={result.membership_sync_run_id}")
+    if result.sync_run_id is not None:
+        print(f"price_sync_run_id={result.sync_run_id}")
     if args.plan_limit > 0:
         for item in result.planned[: args.plan_limit]:
             print(

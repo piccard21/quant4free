@@ -1,5 +1,6 @@
 __all__ = [
     "DailyCandle",
+    "DataSyncRun",
     "DataProvider",
     "FinancialSyncPayload",
     "FinancialReport",
@@ -25,6 +26,7 @@ __all__ = [
 def __getattr__(name: str):
     if name in {
         "DailyCandle",
+        "DataSyncRun",
         "FinancialSyncPayload",
         "FinancialReport",
         "MarketCapSnapshot",

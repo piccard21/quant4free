@@ -125,6 +125,32 @@ class UniverseMemberUpsert:
 
 
 @dataclass(frozen=True)
+class DataSyncRun:
+    id: int
+    sync_type: str
+    provider_key: Optional[str]
+    source_role: Optional[str]
+    mode: str
+    status: str
+    dry_run: bool
+    started_at: datetime
+    finished_at: Optional[datetime]
+    date_from: Optional[date]
+    date_to: Optional[date]
+    requested_tickers_count: Optional[int]
+    planned_items: int
+    processed_items: int
+    upserted_rows: int
+    ticker_upserts: int
+    deactivated_tickers: int
+    upserted_candles: int
+    updated_tickers: int
+    upserted_reports: int
+    upserted_market_caps: int
+    error_message: Optional[str]
+
+
+@dataclass(frozen=True)
 class FinancialSyncPayload:
     reports: tuple[FinancialReport, ...]
     market_cap: Optional[MarketCapSnapshot] = None
