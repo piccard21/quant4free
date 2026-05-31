@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from datetime import date
 from typing import TYPE_CHECKING, Optional, Protocol
 
+from shared.capabilities import SOURCE_ROLE_MEMBERSHIP
+
 if TYPE_CHECKING:
     from data.provider import DataProvider
 
@@ -14,6 +16,10 @@ class UniverseDefinition:
     name: str
     description: Optional[str] = None
     active_only: bool = True
+    asset_classes: tuple[str, ...] = ("equity",)
+    membership_source_role: str = SOURCE_ROLE_MEMBERSHIP
+    membership_provider_key: str = "mysql_fixture"
+    membership_rule: str = "assets.is_active = 1"
 
 
 class UniverseLoader(Protocol):
@@ -57,18 +63,27 @@ UNIVERSE_DEFINITIONS: dict[str, UniverseDefinition] = {
             "Fixture-compatible default universe using currently active tickers."
         ),
         active_only=True,
+        asset_classes=("equity",),
+        membership_provider_key="mysql_fixture",
+        membership_rule="assets.is_active = 1",
     ),
     "active_tickers": UniverseDefinition(
         key="active_tickers",
         name="Active tickers",
         description="All tickers where assets.is_active = 1.",
         active_only=True,
+        asset_classes=("equity",),
+        membership_provider_key="mysql_fixture",
+        membership_rule="assets.is_active = 1",
     ),
     "all_tickers": UniverseDefinition(
         key="all_tickers",
         name="All tickers",
         description="All tickers known to the raw-data provider.",
         active_only=False,
+        asset_classes=("equity", "etf"),
+        membership_provider_key="mysql_fixture",
+        membership_rule="all assets",
     ),
 }
 

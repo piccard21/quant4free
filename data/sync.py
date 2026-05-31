@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date, datetime, timedelta
 from typing import Optional, Protocol, Sequence
 
-from .models import FinancialSyncPayload, TickerUpsert
+from .models import FinancialSyncPayload, ProviderIdentifier, TickerUpsert
 from .repository import RawDataRepository
 from .yahoo import (
     WikipediaSP500TickerSource,
@@ -15,6 +15,7 @@ from .yahoo import (
 
 
 BENCHMARK_TICKER = "SPY"
+YFINANCE_PROVIDER_KEY = "yfinance"
 INIT_HISTORY_DAYS = 548
 DAILY_LOOKBACK_DAYS = 3
 NEW_TICKER_FALLBACK_DAYS = 180
@@ -47,8 +48,17 @@ class FundamentalSource(Protocol):
 @dataclass(frozen=True)
 class PlannedPriceSync:
     ticker: str
+    provider_key: str
+    provider_symbol: str
     start_date: date
     end_date: date
+
+
+@dataclass(frozen=True)
+class PlannedFundamentalSync:
+    ticker: str
+    provider_key: str
+    provider_symbol: str
 
 
 @dataclass(frozen=True)
@@ -66,6 +76,7 @@ class PriceSyncResult:
 class FundamentalSyncResult:
     mode: str
     dry_run: bool
+    planned: tuple[PlannedFundamentalSync, ...]
     planned_tickers: tuple[str, ...]
     updated_tickers: int
     upserted_reports: int
@@ -93,10 +104,12 @@ class PriceSyncService:
         repository: Optional[RawDataRepository] = None,
         ticker_source: Optional[TickerSource] = None,
         price_source: Optional[PriceSource] = None,
+        provider_key: str = YFINANCE_PROVIDER_KEY,
     ) -> None:
         self.repository = repository or RawDataRepository()
         self.ticker_source = ticker_source or WikipediaSP500TickerSource()
         self.price_source = price_source or YFinancePriceSource()
+        self.provider_key = provider_key
 
     def run(
         self,
@@ -111,6 +124,7 @@ class PriceSyncService:
         if mode not in {"init", "daily"}:
             raise ValueError("mode must be 'init' or 'daily'")
 
+        benchmark_ticker = benchmark_ticker.strip().upper()
         now = now or datetime.now()
         today = today or now.date()
         ticker_upserts = 0
@@ -129,6 +143,13 @@ class PriceSyncService:
                     ticker_rows,
                     sync_time=now,
                 )
+                self.repository.upsert_provider_identifiers(
+                    _provider_identifiers_for_tickers(
+                        ticker_rows,
+                        provider_key=self.provider_key,
+                        imported_at=now,
+                    )
+                )
                 selected_tickers = current_tickers
             else:
                 selected_tickers = [
@@ -144,10 +165,34 @@ class PriceSyncService:
                 is_active=False,
                 sync_time=now,
             )
+            self.repository.upsert_provider_identifiers(
+                [
+                    ProviderIdentifier(
+                        ticker=benchmark_ticker,
+                        provider_key=self.provider_key,
+                        identifier_scheme="ticker",
+                        provider_symbol=benchmark_ticker,
+                        market="US",
+                        quote_currency="USD",
+                        is_primary=True,
+                        imported_at=now,
+                    )
+                ]
+            )
         symbols = _append_benchmark(selected_tickers, benchmark_ticker)
+        provider_symbols = {
+            mapping.ticker: mapping
+            for mapping in self.repository.resolve_provider_symbols(
+                provider_key=self.provider_key,
+                tickers=symbols,
+                fallback_to_ticker=True,
+            )
+        }
         planned = tuple(
             PlannedPriceSync(
                 ticker=symbol,
+                provider_key=self.provider_key,
+                provider_symbol=provider_symbols[symbol].provider_symbol,
                 start_date=calculate_price_start_date(
                     mode,
                     self.repository.latest_candle_date(symbol),
@@ -173,11 +218,15 @@ class PriceSyncService:
         upserted_candles = 0
         for item in planned:
             raw_prices = self.price_source.download_prices(
-                item.ticker,
+                item.provider_symbol,
                 item.start_date,
                 item.end_date,
             )
-            candles = normalize_yfinance_prices(raw_prices, item.ticker)
+            candles = normalize_yfinance_prices(
+                raw_prices,
+                item.provider_symbol,
+                output_ticker=item.ticker,
+            )
             if candles:
                 downloaded_tickers += 1
                 upserted_candles += self.repository.upsert_daily_candles(candles)
@@ -198,9 +247,11 @@ class FundamentalSyncService:
         self,
         repository: Optional[RawDataRepository] = None,
         fundamental_source: Optional[FundamentalSource] = None,
+        provider_key: str = YFINANCE_PROVIDER_KEY,
     ) -> None:
         self.repository = repository or RawDataRepository()
         self.fundamental_source = fundamental_source or YFinanceFundamentalSource()
+        self.provider_key = provider_key
 
     def run(
         self,
@@ -223,11 +274,28 @@ class FundamentalSyncService:
                 limit=limit,
                 now=now,
             )
+        provider_symbols = {
+            mapping.ticker: mapping
+            for mapping in self.repository.resolve_provider_symbols(
+                provider_key=self.provider_key,
+                tickers=planned,
+                fallback_to_ticker=True,
+            )
+        }
+        planned_items = tuple(
+            PlannedFundamentalSync(
+                ticker=ticker,
+                provider_key=self.provider_key,
+                provider_symbol=provider_symbols[ticker].provider_symbol,
+            )
+            for ticker in planned
+        )
 
         if dry_run:
             return FundamentalSyncResult(
                 mode=mode,
                 dry_run=True,
+                planned=planned_items,
                 planned_tickers=tuple(planned),
                 updated_tickers=0,
                 upserted_reports=0,
@@ -237,11 +305,12 @@ class FundamentalSyncService:
         updated_tickers = 0
         upserted_reports = 0
         upserted_market_caps = 0
-        for ticker in planned:
-            payload = self.fundamental_source.load_fundamentals(
-                ticker,
+        for item in planned_items:
+            raw_payload = self.fundamental_source.load_fundamentals(
+                item.provider_symbol,
                 imported_at=now,
             )
+            payload = _payload_for_internal_ticker(raw_payload, item.ticker)
             reports = list(payload.reports)
             market_caps = [payload.market_cap] if payload.market_cap is not None else []
             if reports:
@@ -249,12 +318,13 @@ class FundamentalSyncService:
             if market_caps:
                 upserted_market_caps += self.repository.upsert_market_caps(market_caps)
             if reports or market_caps:
-                self.repository.mark_fundamental_updated(ticker, updated_at=now)
+                self.repository.mark_fundamental_updated(item.ticker, updated_at=now)
                 updated_tickers += 1
 
         return FundamentalSyncResult(
             mode=mode,
             dry_run=False,
+            planned=planned_items,
             planned_tickers=tuple(planned),
             updated_tickers=updated_tickers,
             upserted_reports=upserted_reports,
@@ -273,3 +343,37 @@ def _append_benchmark(tickers: Sequence[str], benchmark_ticker: str) -> list[str
     if benchmark_ticker and benchmark_ticker not in symbols:
         symbols.append(benchmark_ticker)
     return symbols
+
+
+def _provider_identifiers_for_tickers(
+    tickers: Sequence[TickerUpsert],
+    provider_key: str,
+    imported_at: datetime,
+) -> list[ProviderIdentifier]:
+    return [
+        ProviderIdentifier(
+            ticker=ticker.ticker,
+            provider_key=provider_key,
+            identifier_scheme="ticker",
+            provider_symbol=ticker.ticker,
+            market=ticker.market,
+            quote_currency=ticker.quote_currency,
+            is_primary=ticker.primary_provider_key == provider_key,
+            imported_at=imported_at,
+        )
+        for ticker in tickers
+    ]
+
+
+def _payload_for_internal_ticker(
+    payload: FinancialSyncPayload,
+    ticker: str,
+) -> FinancialSyncPayload:
+    return FinancialSyncPayload(
+        reports=tuple(replace(report, ticker=ticker) for report in payload.reports),
+        market_cap=(
+            None
+            if payload.market_cap is None
+            else replace(payload.market_cap, ticker=ticker)
+        ),
+    )

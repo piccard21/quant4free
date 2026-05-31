@@ -60,7 +60,12 @@ def main() -> None:
     if args.list_configs:
         print("universes:")
         for definition in list_universe_definitions():
-            print(f"  {definition.key}: {definition.name}")
+            asset_classes = ",".join(definition.asset_classes)
+            print(
+                f"  {definition.key}: {definition.name} "
+                f"asset_classes={asset_classes} "
+                f"membership_provider={definition.membership_provider_key}"
+            )
         print("benchmarks:")
         for spec in list_benchmark_specs():
             print(f"  {spec.key}: {spec.ticker} ({spec.name})")

@@ -103,6 +103,10 @@ provider-spezifische Symbole und optionale stabile Provider-IDs. Der
 Capability-Checker kann optional pruefen, ob fuer die relevanten Ticker und
 Source-Rollen Provider-Identifier vorhanden sind.
 
+AP22 nutzt diese Identifier-Basis im modularen Sync: Preis- und
+Fundamental-Sync fragen externe Provider mit `provider_symbol` ab und
+persistieren die normalisierten Daten wieder unter dem internen `ticker`.
+
 ## Binding-Regeln
 
 Ein Lauf besteht aus einer expliziten Kombination von Strategie, Universum,
@@ -202,7 +206,9 @@ AP19 blieb Design. AP20 hat die technische Umsetzung begonnen:
    Kombinationen ergaenzen.
 6. Erledigt in AP21: provider-spezifische Identifier in das Schema
    ueberfuehren.
-7. Spaetere APs koennen `data_providers`, `provider_configs` und echte
+7. Erledigt in AP22: Provider-Symbole im Preis- und Fundamental-Sync
+   verwenden.
+8. Spaetere APs koennen `data_providers`, `provider_configs` und echte
    Multi-Provider-Syncs in das Schema ueberfuehren.
 
 ## AP19-AP21-Abgrenzung
@@ -220,4 +226,5 @@ abgeschlossen: `shared.capabilities` validiert den aktuellen Default-Pfad
 read-only und prueft negative Provider-/Source-Binding-Faelle. AP21 ist
 abgeschlossen: `asset_provider_identifiers` bildet provider-spezifische
 Symbole/IDs ab, und der Capability-Check kann Identifier-Coverage optional
-auswerten.
+auswerten. AP22 ist abgeschlossen: der modulare Sync nutzt Provider-Symbole
+fuer API-Zugriffe und mappt Ergebnisse auf interne Ticker zurueck.

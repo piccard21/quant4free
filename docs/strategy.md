@@ -63,6 +63,13 @@ AP21-Einordnung:
 - Die Strategie selbst arbeitet weiterhin nur mit normalisierten DataFrames und
   bleibt von provider-spezifischen Symbolen entkoppelt.
 
+AP22-Einordnung:
+
+- Provider-spezifische Symbolaufloesung liegt im Sync. Strategien sehen
+  weiterhin interne Ticker und normalisierte Rohdaten.
+- Universe-Definitionen tragen mehr Metadaten zu Assetklassen und
+  Membership-Quellen, ohne dass die Strategie selbst Providerlogik kennen muss.
+
 Smoke-Check:
 
 ```bash

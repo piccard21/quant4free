@@ -114,12 +114,17 @@ class YFinanceFundamentalSource:
         return FinancialSyncPayload(reports=tuple(reports), market_cap=market_cap)
 
 
-def normalize_yfinance_prices(df: pd.DataFrame, ticker: str) -> list[DailyCandle]:
+def normalize_yfinance_prices(
+    df: pd.DataFrame,
+    ticker: str,
+    output_ticker: Optional[str] = None,
+) -> list[DailyCandle]:
     """Normalize a yfinance OHLCV frame into daily candle records."""
 
     if df is None or df.empty:
         return []
 
+    output_ticker = output_ticker or ticker
     frame = _select_ticker_columns(df.copy(), ticker)
     frame = frame.reset_index()
     frame.columns = [str(column).lower().replace(" ", "_") for column in frame.columns]
@@ -143,7 +148,7 @@ def normalize_yfinance_prices(df: pd.DataFrame, ticker: str) -> list[DailyCandle
     for row in frame.itertuples(index=False):
         candles.append(
             DailyCandle(
-                ticker=ticker,
+                ticker=output_ticker,
                 date=row.date,
                 open=_decimal_or_none(row.open),
                 high=_decimal_or_none(row.high),

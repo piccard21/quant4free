@@ -1,6 +1,6 @@
 # Datenmodell-Plan
 
-Stand: AP21.
+Stand: AP22.
 
 Dieses Dokument beschreibt den Zielzustand des neuen modularen Quant-Frameworks.
 AP14 ersetzt die bisherige Uebergangsentscheidung, legacy-kompatible Tabellen
@@ -19,7 +19,8 @@ das Provider-Binding-Modell steht in
 [docs/provider-api-model.md](provider-api-model.md). AP20 setzt diese
 Capability-/Provider-Pruefung in Python um. AP21 konkretisiert den
 Asset-Katalog im Schema und fuehrt provider-spezifische Identifier-Mappings
-ein.
+ein. AP22 nutzt diese Mappings im modularen Sync fuer Provider-spezifische
+Symbolaufloesung.
 
 ## Leitlinien
 
@@ -454,6 +455,17 @@ Status: abgeschlossen als Schema-/Repository-AP.
   `mysql_fixture`-Ticker-Mappings.
 - Der Capability-Checker kann supplied Asset-Metadaten und
   Provider-Identifier-Coverage optional auswerten.
+
+### AP22: Provider-Symbolaufloesung
+
+Status: abgeschlossen als Sync-/Metadaten-AP.
+
+- Preis- und Fundamental-Sync loesen interne Ticker ueber
+  `asset_provider_identifiers` zu Provider-Symbolen auf.
+- Geladene Preise, Reports und Market Caps werden weiter auf interne Ticker
+  normalisiert und in die kanonischen Tabellen geschrieben.
+- Universumsdefinitionen tragen explizite Metadaten fuer Assetklassen,
+  Membership-Quelle und Membership-Regel.
 
 ## Initialer Schema-Sketch
 

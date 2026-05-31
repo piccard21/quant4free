@@ -8,12 +8,17 @@ from sqlalchemy import create_engine, text
 from data.models import (
     DailyCandle,
     FinancialReport,
+    FinancialSyncPayload,
     MarketCapSnapshot,
     ProviderIdentifier,
     TickerUpsert,
 )
 from data.repository import RawDataRepository
-from data.sync import calculate_price_start_date
+from data.sync import (
+    FundamentalSyncService,
+    PriceSyncService,
+    calculate_price_start_date,
+)
 from data.yahoo import normalize_yfinance_prices, ttm_report_from_yfinance
 
 
@@ -244,6 +249,144 @@ class DataSyncTests(unittest.TestCase):
         self.assertEqual(identifiers[0].provider_symbol, "AAA")
         self.assertEqual(coverage.covered_tickers, ("AAA",))
         self.assertEqual(coverage.missing_tickers, ("BBB",))
+
+    def test_price_sync_uses_provider_symbol_and_stores_internal_ticker(self):
+        engine = create_engine("sqlite+pysqlite:///:memory:", future=True)
+        _create_raw_tables(engine)
+        repository = RawDataRepository(engine)
+        repository.upsert_tickers([TickerUpsert("BRK-B", "Berkshire", "Financials")])
+        repository.upsert_provider_identifiers(
+            [
+                ProviderIdentifier(
+                    ticker="BRK-B",
+                    provider_key="yfinance",
+                    identifier_scheme="ticker",
+                    provider_symbol="BRK.B",
+                    is_primary=True,
+                )
+            ]
+        )
+        price_source = FakePriceSource()
+
+        result = PriceSyncService(
+            repository=repository,
+            price_source=price_source,
+        ).run(
+            mode="daily",
+            tickers=["BRK-B"],
+            dry_run=False,
+            today=date(2026, 5, 29),
+            now=datetime(2026, 5, 29, 12, 0),
+        )
+
+        with engine.connect() as connection:
+            candle_tickers = [
+                row[0]
+                for row in connection.execute(
+                    text("SELECT ticker FROM asset_price_bars ORDER BY ticker")
+                )
+            ]
+
+        self.assertIn("BRK.B", [call[0] for call in price_source.calls])
+        self.assertIn("BRK-B", candle_tickers)
+        self.assertEqual(result.planned[0].ticker, "BRK-B")
+        self.assertEqual(result.planned[0].provider_symbol, "BRK.B")
+
+    def test_fundamental_sync_uses_provider_symbol_and_stores_internal_ticker(self):
+        engine = create_engine("sqlite+pysqlite:///:memory:", future=True)
+        _create_raw_tables(engine)
+        repository = RawDataRepository(engine)
+        repository.upsert_tickers([TickerUpsert("AAA", "Asset AAA", "Tech")])
+        repository.upsert_provider_identifiers(
+            [
+                ProviderIdentifier(
+                    ticker="AAA",
+                    provider_key="yfinance",
+                    identifier_scheme="ticker",
+                    provider_symbol="AAA.DE",
+                    is_primary=True,
+                )
+            ]
+        )
+        fundamental_source = FakeFundamentalSource()
+
+        result = FundamentalSyncService(
+            repository=repository,
+            fundamental_source=fundamental_source,
+        ).run(
+            mode="daily",
+            tickers=["AAA"],
+            dry_run=False,
+            now=datetime(2026, 5, 29, 12, 0),
+        )
+
+        with engine.connect() as connection:
+            report_ticker = connection.execute(
+                text("SELECT ticker FROM asset_fundamental_reports")
+            ).scalar_one()
+            market_cap_ticker = connection.execute(
+                text("SELECT ticker FROM asset_market_caps")
+            ).scalar_one()
+
+        self.assertEqual(fundamental_source.calls, ["AAA.DE"])
+        self.assertEqual(report_ticker, "AAA")
+        self.assertEqual(market_cap_ticker, "AAA")
+        self.assertEqual(result.planned[0].provider_symbol, "AAA.DE")
+
+
+class FakePriceSource:
+    def __init__(self) -> None:
+        self.calls = []
+
+    def download_prices(self, ticker: str, start_date: date, end_date: date):
+        self.calls.append((ticker, start_date, end_date))
+        return pd.DataFrame(
+            {
+                "Open": [10.0],
+                "High": [11.0],
+                "Low": [9.0],
+                "Close": [10.5],
+                "Volume": [1000],
+            },
+            index=pd.DatetimeIndex([end_date], name="Date"),
+        )
+
+
+class FakeFundamentalSource:
+    def __init__(self) -> None:
+        self.calls = []
+
+    def load_fundamentals(
+        self,
+        ticker: str,
+        imported_at: datetime | None = None,
+    ) -> FinancialSyncPayload:
+        self.calls.append(ticker)
+        imported_at = imported_at or datetime(2026, 5, 29, 12, 0)
+        return FinancialSyncPayload(
+            reports=(
+                FinancialReport(
+                    ticker=ticker,
+                    report_date=date(2026, 3, 31),
+                    report_type="ttm",
+                    revenue=100,
+                    net_income=10,
+                    ebit=9,
+                    free_cash_flow=8,
+                    total_debt=7,
+                    total_equity=6,
+                    cash_and_equivalents=5,
+                    source="fake",
+                    imported_at=imported_at,
+                ),
+            ),
+            market_cap=MarketCapSnapshot(
+                ticker=ticker,
+                date=imported_at.date(),
+                market_cap=123,
+                imported_at=imported_at,
+            ),
+        )
 
 
 def _create_raw_tables(engine) -> None:

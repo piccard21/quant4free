@@ -12,6 +12,7 @@ from .models import (
     FinancialReport,
     MarketCapSnapshot,
     ProviderIdentifier,
+    ProviderSymbolMapping,
     Ticker,
     TickerUpsert,
 )
@@ -917,6 +918,55 @@ class RawDataRepository:
             required_tickers=requested,
             covered_tickers=covered,
         )
+
+    def resolve_provider_symbols(
+        self,
+        *,
+        provider_key: str,
+        tickers: Sequence[str],
+        identifier_scheme: str = "ticker",
+        fallback_to_ticker: bool = True,
+    ) -> list[ProviderSymbolMapping]:
+        requested = list(dict.fromkeys(ticker.upper() for ticker in tickers))
+        identifiers = self.list_provider_identifiers(
+            provider_key=provider_key,
+            tickers=requested,
+        )
+        selected: dict[str, ProviderIdentifier] = {}
+        for identifier in identifiers:
+            if identifier.identifier_scheme != identifier_scheme:
+                continue
+            key = identifier.ticker.upper()
+            current = selected.get(key)
+            if current is None or identifier.is_primary:
+                selected[key] = identifier
+
+        mappings: list[ProviderSymbolMapping] = []
+        for ticker in requested:
+            identifier = selected.get(ticker)
+            if identifier is not None:
+                mappings.append(
+                    ProviderSymbolMapping(
+                        ticker=ticker,
+                        provider_key=identifier.provider_key,
+                        provider_symbol=identifier.provider_symbol,
+                        identifier_scheme=identifier.identifier_scheme,
+                        provider_asset_id=identifier.provider_asset_id,
+                        is_fallback=False,
+                    )
+                )
+                continue
+            if fallback_to_ticker:
+                mappings.append(
+                    ProviderSymbolMapping(
+                        ticker=ticker,
+                        provider_key=provider_key,
+                        provider_symbol=ticker,
+                        identifier_scheme=identifier_scheme,
+                        is_fallback=True,
+                    )
+                )
+        return mappings
 
     def mark_fundamental_updated(
         self,

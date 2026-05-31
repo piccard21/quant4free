@@ -165,9 +165,23 @@ The fixture and schema include the new table and classify benchmark ETFs as
 and
 `.venv/bin/python -m compileall data universes indicators strategies simulation evaluation live cli shared tests`.
 
-AP22 is planned next: use the AP21 identifier basis for real provider/source
-binding workflows, including provider-specific symbol resolution during sync
-and more explicit universe membership metadata.
+AP22 is complete: provider-specific symbol resolution is now used by modular
+price and fundamental sync. `RawDataRepository.resolve_provider_symbols`
+resolves internal tickers to provider symbols from `asset_provider_identifiers`
+with a ticker fallback. Price sync downloads by provider symbol and stores
+normalized candles under the internal ticker. Fundamental sync loads by
+provider symbol and remaps reports/market caps back to the internal ticker.
+Universe definitions now carry explicit metadata for asset classes, membership
+source role/provider, and membership rule. `shared.capabilities` includes
+Yahoo Finance and Wikipedia S&P 500 provider capabilities. Verification for
+AP22:
+`.venv/bin/python -m pytest tests/test_data_sync.py tests/test_capabilities.py`
+and
+`.venv/bin/python -m compileall data universes shared cli tests`.
+
+AP23 is planned next: introduce canonical `universes` and
+`universe_members` tables so universe identity and historical membership move
+from code-only definitions into the database.
 
 ## Build, Test, and Development Commands
 

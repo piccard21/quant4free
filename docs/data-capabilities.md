@@ -225,4 +225,6 @@ API-Bindings sind dokumentiert. AP20 ist abgeschlossen: `shared.capabilities`
 enthaelt den read-only Capability- und Provider-Checker fuer den aktuellen
 Default-Pfad sowie negative Capability-/Provider-Faelle. AP21 ist
 abgeschlossen: Asset-Metadaten und Provider-Identifier sind im Schema, in der
-Fixture, im Repository und optional im Capability-Check verankert.
+Fixture, im Repository und optional im Capability-Check verankert. AP22 ist
+abgeschlossen: Provider-Identifier werden im Sync fuer Symbolaufloesung
+genutzt, und Universe-Definitionen tragen explizitere Metadaten.

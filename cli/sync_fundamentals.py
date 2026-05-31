@@ -62,8 +62,13 @@ def main() -> None:
     print(f"upserted_reports={result.upserted_reports}")
     print(f"upserted_market_caps={result.upserted_market_caps}")
     if args.plan_limit > 0:
-        for ticker in result.planned_tickers[: args.plan_limit]:
-            print(f"plan ticker={ticker}")
+        for item in result.planned[: args.plan_limit]:
+            print(
+                "plan "
+                f"ticker={item.ticker} "
+                f"provider={item.provider_key} "
+                f"provider_symbol={item.provider_symbol}"
+            )
 
 
 def _parse_tickers(

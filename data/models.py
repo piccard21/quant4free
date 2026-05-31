@@ -92,6 +92,16 @@ class ProviderIdentifier:
 
 
 @dataclass(frozen=True)
+class ProviderSymbolMapping:
+    ticker: str
+    provider_key: str
+    provider_symbol: str
+    identifier_scheme: str = "ticker"
+    provider_asset_id: Optional[str] = None
+    is_fallback: bool = False
+
+
+@dataclass(frozen=True)
 class FinancialSyncPayload:
     reports: tuple[FinancialReport, ...]
     market_cap: Optional[MarketCapSnapshot] = None

@@ -62,6 +62,8 @@ def main() -> None:
             print(
                 "plan "
                 f"ticker={item.ticker} "
+                f"provider={item.provider_key} "
+                f"provider_symbol={item.provider_symbol} "
                 f"start_date={item.start_date} "
                 f"end_date={item.end_date}"
             )

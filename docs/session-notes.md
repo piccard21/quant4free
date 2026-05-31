@@ -414,5 +414,23 @@ AP19 is complete:
   - `.venv/bin/python -m pytest tests/test_capabilities.py tests/test_data_sync.py tests/test_orchestration.py`
   - `.venv/bin/python -m compileall data universes indicators strategies simulation evaluation live cli shared tests`
 
-Next step: AP22, use the AP21 identifier basis for provider-specific symbol
-resolution during sync and for more explicit universe metadata.
+## AP22 Session Notes
+
+- Added `ProviderSymbolMapping` and
+  `RawDataRepository.resolve_provider_symbols`.
+- Price sync now resolves internal tickers to provider symbols before
+  download, then stores normalized candles under the internal ticker.
+- Fundamental sync now resolves provider symbols for API access and remaps
+  reports/market caps back to the internal ticker before persistence.
+- Sync plans now expose `provider_key` and `provider_symbol` in CLI output.
+- Universe definitions now include asset classes, membership source role,
+  membership provider, and membership rule metadata.
+- Added Yahoo Finance and Wikipedia S&P 500 provider capabilities to
+  `shared.capabilities`.
+- Added focused tests for provider-symbol price and fundamental sync behavior.
+- Verification:
+  - `.venv/bin/python -m pytest tests/test_data_sync.py tests/test_capabilities.py`
+  - `.venv/bin/python -m compileall data universes shared cli tests`
+
+Next step: AP23, introduce canonical `universes` and `universe_members` tables
+so universe identity and historical membership can move into the database.

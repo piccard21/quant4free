@@ -32,15 +32,31 @@ Strategische Anpassung:
 
 Naechster AP:
 
-AP22:
+AP23:
 
-- Provider-spezifische Symbolaufloesung in den Data-Sync-Pfad einbauen.
-- Universums-Metadaten expliziter modellieren, damit Membership-Quellen,
-  Asset-Metadaten und Provider-Identifier sauber zusammenspielen.
-- Die AP21-Identifier-Mappings fuer echte Provider-/Source-Binding-Workflows
-  nutzen, ohne den aktuellen `mysql_fixture`-Default-Pfad zu brechen.
+- Echte Tabellen `universes` und `universe_members` einfuehren.
+- Universe-Identitaet und historisierte Mitgliedschaft aus Code-Definitionen
+  in die Datenbank ueberfuehren.
+- Den aktuellen `sp500_active`-Pfad auf die DB-Universen migrieren, ohne die
+  bestehenden Operator-CLIs zu brechen.
 
 Erledigt:
+
+AP22:
+
+- `RawDataRepository.resolve_provider_symbols` loest interne Ticker ueber
+  `asset_provider_identifiers` zu provider-spezifischen Symbolen auf.
+- Preis-Sync nutzt Provider-Symbole fuer Downloads und schreibt Kerzen unter
+  dem internen Ticker zurueck.
+- Fundamental-Sync nutzt Provider-Symbole fuer API-Zugriffe und mappt Reports
+  sowie Market Caps auf interne Ticker zurueck.
+- `UniverseDefinition` traegt explizite Metadaten fuer Assetklassen,
+  Membership-Source-Role/-Provider und Membership-Regel.
+- `shared.capabilities` enthaelt Yahoo-Finance- und Wikipedia-S&P-500-
+  Provider-Capabilities.
+- Verifikation:
+  - `.venv/bin/python -m pytest tests/test_data_sync.py tests/test_capabilities.py`
+  - `.venv/bin/python -m compileall data universes shared cli tests`
 
 AP21:
 
@@ -1494,13 +1510,37 @@ Ziel:
 
 Umfang:
 
-- Provider-spezifische Symbolaufloesung in den modularen Sync-Pfad integrieren.
+- Provider-spezifische Symbolaufloesung in den modularen Sync-Pfad integriert.
 - Explizitere Universums-Metadaten fuer Membership-Quelle, Assetklassen-Policy
-  und Identifier-Anforderungen modellieren.
-- Providerwechsel anhand tatsaechlicher Identifier-Abdeckung im relevanten
-  Universum bewerten.
+  und Identifier-Anforderungen modelliert.
+- Yahoo-Finance- und Wikipedia-S&P-500-Capabilities in den Provider-Katalog
+  aufgenommen.
 - Den bestehenden `mysql_fixture`-Default-Pfad als Referenz unveraendert
   lauffaehig halten.
+
+Status: abgeschlossen in AP22.
+
+Verifikation:
+
+- `.venv/bin/python -m pytest tests/test_data_sync.py tests/test_capabilities.py`
+- `.venv/bin/python -m compileall data universes shared cli tests`
+
+### AP23: DB-Universen und historisierte Mitgliedschaft
+
+Ziel:
+
+- Universen als echte DB-Entitaeten modellieren, statt sie nur ueber
+  Python-Keys und `assets.is_active` abzuleiten.
+
+Umfang:
+
+- Tabellen `universes` und `universe_members` in das kanonische Schema
+  einfuehren.
+- `sp500_active`, `active_tickers` und `all_tickers` als initiale
+  Universe-Definitionen und Memberships migrieren.
+- Universe-Loader so erweitern, dass er DB-Mitgliedschaften lesen kann.
+- Fixture, Setup, Status-CLIs und Regressionstests auf die neuen Tabellen
+  erweitern.
 
 Status: naechster Schritt.
 
@@ -1531,6 +1571,7 @@ Status: naechster Schritt.
     einfuehren.
 22. Asset-Katalog und Provider-Identifier-Basis konkretisieren.
 23. Provider-Symbolaufloesung und explizitere Universums-Metadaten umsetzen.
+24. DB-Universen und historisierte Mitgliedschaften einfuehren.
 
 ## Testing Und Akzeptanz
 

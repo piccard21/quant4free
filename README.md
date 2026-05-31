@@ -245,10 +245,21 @@ wurde mit
 und
 `.venv/bin/python -m compileall data universes indicators strategies simulation evaluation live cli shared tests`.
 
-Als naechster technischer AP ist AP22 geplant: die AP21-Identifier-Basis soll
-fuer echte Provider-/Source-Binding-Workflows genutzt werden, insbesondere
-Provider-spezifische Symbolaufloesung im Sync und explizitere
-Universums-Metadaten.
+AP22 ist abgeschlossen: Die AP21-Identifier-Basis wird jetzt im modularen Sync
+operativ genutzt. `RawDataRepository.resolve_provider_symbols` loest interne
+Ticker ueber `asset_provider_identifiers` zu Provider-Symbolen auf. Preis-Sync
+laedt mit Provider-Symbolen und speichert normalisierte Kerzen weiter unter dem
+internen Ticker. Fundamental-Sync laedt ebenfalls mit Provider-Symbolen und
+mappt Reports/Market Caps auf den internen Ticker zurueck.
+Universumsdefinitionen tragen jetzt explizite Metadaten fuer Assetklassen,
+Membership-Source-Role/-Provider und Membership-Regel. Verifiziert wurde mit
+`.venv/bin/python -m pytest tests/test_data_sync.py tests/test_capabilities.py`
+und
+`.venv/bin/python -m compileall data universes shared cli tests`.
+
+Als naechster technischer AP ist AP23 geplant: echte `universes`- und
+`universe_members`-Tabellen sollen Universe-Identitaet und historisierte
+Mitgliedschaft aus Code-Definitionen in die Datenbank ueberfuehren.
 
 Der Umbau erfolgt ab hier schrittweise. AP4 ist bewusst ein Infrastruktur-
 Schritt, weil AP3 unter Windows mit WSL Toolchain-Probleme gezeigt hat:
@@ -277,7 +288,10 @@ Schritt, weil AP3 unter Windows mit WSL Toolchain-Probleme gezeigt hat:
 18. Asset-Katalog und Provider-Identifier-Basis fuer mehrere Assetklassen
     konkretisieren. Erledigt in AP21.
 19. Provider-spezifische Symbolaufloesung und explizitere Universums-Metadaten
-    auf Basis der Identifier-Mappings umsetzen. Naechster Schritt AP22.
+    auf Basis der Identifier-Mappings umsetzen. Erledigt in AP22.
+20. Echte `universes`- und `universe_members`-Tabellen fuer
+    DB-identifizierbare und historisierte Universen einfuehren. Naechster
+    Schritt AP23.
 
 Der Arbeitsplan steht in [plan.md](plan.md).
 

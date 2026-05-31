@@ -1,6 +1,6 @@
 # Architektur
 
-Stand: AP21.
+Stand: AP22.
 
 Das neue Framework ist der regulaere operative Pfad. Legacy-Code liegt nur noch
 als archivierte Referenz unter `legacy/current_system/`.
@@ -11,9 +11,11 @@ als archivierte Referenz unter `legacy/current_system/`.
   `asset_provider_identifiers`, `asset_price_bars`,
   `asset_fundamental_reports`, `asset_market_caps`. AP18 ordnet diese
   Tabellen als Capability-Quellen ein; AP21 trennt interne Assets von
-  provider-spezifischen Symbolen.
+  provider-spezifischen Symbolen, AP22 nutzt diese Symbole im Sync.
 - `universes/`: Universumsdefinitionen, aktuell ueber aktive Assets. Fachlich
   sind Universen Asset-Auswahlen und keine impliziten Datenanforderungen.
+  Seit AP22 tragen die Definitionen explizite Metadaten zu Assetklassen,
+  Membership-Quelle und Membership-Regel.
 - `indicators/`: modulare Indikatorberechnung.
 - `strategies/`: Value/Quality/Momentum-Strategie und Model Portfolio. Die
   aktuelle Strategie ist eine Aktienstrategie, weil sie Preise,
@@ -49,11 +51,12 @@ Live/Operations:
 - `live_cash_balances`
 - `live_positions`
 
-## AP18-AP21 Capability- und Provider-Modell
+## AP18-AP22 Capability- und Provider-Modell
 
 AP18 und AP19 richten die Architektur fachlich auf ein Capability- und
 Provider-Binding-Modell aus. AP20 setzt die read-only Pruefung in Code um.
-AP21 verankert Asset-Metadaten und Provider-Identifier im kanonischen Schema:
+AP21 verankert Asset-Metadaten und Provider-Identifier im kanonischen Schema.
+AP22 nutzt diese Identifier im modularen Sync:
 
 - `assets` ist der allgemeine Asset-Katalog mit Assetklasse,
   Canonical-/Display-Symbol, Instrumenttyp, Markt und Quote-Waehrung.
@@ -76,6 +79,9 @@ AP21 verankert Asset-Metadaten und Provider-Identifier im kanonischen Schema:
 - Seit AP21 kann der Checker supplied Asset-Metadaten und
   Provider-Identifier-Coverage auswerten; die Strategie-Orchestrierung reicht
   diese Daten durch, wenn der Provider sie melden kann.
+- Seit AP22 loesen Preis- und Fundamental-Sync interne Ticker auf
+  Provider-Symbole auf und schreiben normalisierte Daten wieder unter dem
+  internen Ticker zurueck.
 
 Details stehen in [Assetklassen, Universen und Daten-Capabilities](data-capabilities.md)
 und [Provider-, API- und Source-Binding-Modell](provider-api-model.md).
